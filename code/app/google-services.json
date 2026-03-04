@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1038412627414",
+    "project_id": "tigers-events",
+    "storage_bucket": "tigers-events.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038412627414:android:633d2a1394bb3188b57877",
+        "android_client_info": {
+          "package_name": "com.example.eventsapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJW5Q79ZKhesTwzK5lGTsWL9Na_uzVQCo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
