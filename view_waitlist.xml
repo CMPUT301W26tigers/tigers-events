@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/waitlist_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar_waitlist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:title="Waitlist"
+        app:navigationIcon="@android:drawable/ic_media_previous"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_search_waitlist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Search Entrants"
+        app:startIconDrawable="@android:drawable/ic_menu_sort_by_size"
+        app:endIconMode="custom"
+        app:endIconDrawable="@android:drawable/ic_menu_search"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_waitlist"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_search_waitlist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_waitlist"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:clipToPadding="false"
+        android:paddingBottom="12dp"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@id/til_search_waitlist"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"/>
+
+    <TextView
+        android:id="@+id/tv_waitlist_stats"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Total Accepted: 2\nTotal Invited: 4\nTotal Entrants: 22/30\nWaitlist Deadline: 12-25-2024"
+        android:textSize="12sp"
+        android:alpha="0.8"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/rv_waitlist"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_export_csv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Export as CSV"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/dark_grey"
+        android:textColor="@android:color/white"
+        app:icon="@android:drawable/ic_menu_save"
+        app:iconTint="@android:color/white"
+        app:iconPadding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/tv_waitlist_stats"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_see_cancelled"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="See Cancelled Entrants"
+        android:layout_marginTop="10dp"
+        android:backgroundTint="@color/dark_grey"
+        android:textColor="@android:color/white"
+        app:icon="@android:drawable/ic_menu_view"
+        app:iconTint="@android:color/white"
+        app:iconPadding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_export_csv"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/bottom_nav_waitlist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:menu="@menu/bottom_navigation"
+        app:layout_constraintTop_toBottomOf="@id/btn_see_cancelled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
