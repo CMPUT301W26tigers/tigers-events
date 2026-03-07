@@ -135,12 +135,4 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
     public void onConfirmPressed(String eventName) {
         eventsRef.document(eventName).delete();
     }
-
-    public void addDummyData(){
-        Event m1 = new Event("Edmonton", 1);
-        Event m2 = new Event("Vancouver", 2);
-        eventArrayList.add(m1);
-        eventArrayList.add(m2);
-        eventArrayAdapter.notifyDataSetChanged();
-    }
 }
