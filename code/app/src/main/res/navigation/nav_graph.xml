@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/accountFragment">
+
+    <fragment
+        android:id="@+id/exploreFragment"
+        android:name="com.example.eventsapp.ExploreFragment"
+        android:label="Explore" />
+
+    <fragment
+        android:id="@+id/eventsFragment"
+        android:name="com.example.eventsapp.EventsFragment"
+        android:label="Your Events" />
+
+    <fragment
+        android:id="@+id/accountFragment"
+        android:name="com.example.eventsapp.AccountFragment"
+        android:label="Account" />
+</navigation>
