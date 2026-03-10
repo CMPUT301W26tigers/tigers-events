@@ -23,6 +23,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity implements EventDialogFragment.EventDialogListener, DeleteEventDialogFragment.OnFragmentInteractionListener {
 
@@ -37,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
     private FirebaseFirestore db;
 
     private CollectionReference eventsRef;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 
     public class MainActivity extends AppCompatActivity {
         @Override
