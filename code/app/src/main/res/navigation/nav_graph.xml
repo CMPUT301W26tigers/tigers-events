@@ -18,4 +18,33 @@
         android:id="@+id/accountFragment"
         android:name="com.example.eventsapp.AccountFragment"
         android:label="Account" />
+
+    <fragment
+        android:id="@+id/createEventFragment"
+        android:name="com.example.eventsapp.CreateEventFragment"
+        android:label="Create Event" />
+
+    <fragment
+        android:id="@+id/viewEntrantsFragment"
+        android:name="com.example.eventsapp.ViewEntrantsFragment"
+        android:label="Chosen Entrants">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+        <argument
+            android:name="eventName"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/eventDetailFragment"
+        android:name="com.example.eventsapp.EventDetailFragment"
+        android:label="Event Details">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+    </fragment>
 </navigation>
