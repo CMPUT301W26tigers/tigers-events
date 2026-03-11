@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.navigation.fragment.ktx)
     implementation(libs.navigation.ui.ktx)
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("com.google.zxing:core:3.5.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
