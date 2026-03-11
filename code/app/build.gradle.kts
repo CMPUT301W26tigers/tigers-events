@@ -46,5 +46,6 @@ dependencies {
     implementation(libs.navigation.ui.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
+    androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation(libs.espresso.core)
 }

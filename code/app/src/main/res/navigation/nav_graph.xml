@@ -17,5 +17,14 @@
     <fragment
         android:id="@+id/accountFragment"
         android:name="com.example.eventsapp.AccountFragment"
-        android:label="Account" />
+        android:label="Account">
+        <action
+            android:id="@+id/action_accountFragment_to_inboxFragment"
+            app:destination="@id/inboxFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/inboxFragment"
+        android:name="com.example.eventsapp.InboxFragment"
+        android:label="Inbox" />
 </navigation>
