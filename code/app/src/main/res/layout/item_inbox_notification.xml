@@ -80,6 +80,41 @@
             android:layout_marginTop="6dp"
             android:textColor="#5D5566"
             android:textSize="14sp" />
+
+        <LinearLayout
+            android:id="@+id/notificationActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeclineInvitation"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="@string/decline"
+                android:textColor="#5A1D1D"
+                app:backgroundTint="@color/notification_red"
+                app:cornerRadius="16dp"
+                app:elevation="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAcceptInvitation"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:minWidth="0dp"
+                android:text="@string/accept"
+                android:textColor="#173E20"
+                app:backgroundTint="@color/notification_green"
+                app:cornerRadius="16dp"
+                app:elevation="0dp" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

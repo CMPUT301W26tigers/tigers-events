@@ -3,6 +3,8 @@ package com.example.eventsapp;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class UsersTest {
     @Test
@@ -35,5 +37,43 @@ public class UsersTest {
         assertEquals(2, user.getNotifications().size());
         assertEquals(second, user.getNotifications().get(0));
         assertEquals(first, user.getNotifications().get(1));
+    }
+
+    @Test
+    public void acceptInvitation_movesEventIntoRegisteredList() {
+        Users user = new Users(
+                "Rishawn",
+                "Paramapathy",
+                "rishawn@ualberta.ca",
+                "Edmonton, AB",
+                "Entrant",
+                true
+        );
+
+        user.addInvitedEvent("Campus Startup Showcase");
+
+        user.acceptInvitation("Campus Startup Showcase");
+
+        assertFalse(user.getInvitedEvents().contains("Campus Startup Showcase"));
+        assertTrue(user.getRegisteredEvents().contains("Campus Startup Showcase"));
+    }
+
+    @Test
+    public void declineInvitation_removesPendingInviteAndTracksDecline() {
+        Users user = new Users(
+                "Rishawn",
+                "Paramapathy",
+                "rishawn@ualberta.ca",
+                "Edmonton, AB",
+                "Entrant",
+                true
+        );
+
+        user.addInvitedEvent("Campus Startup Showcase");
+
+        user.declineInvitation("Campus Startup Showcase");
+
+        assertFalse(user.getInvitedEvents().contains("Campus Startup Showcase"));
+        assertTrue(user.getDeclinedInvitations().contains("Campus Startup Showcase"));
     }
 }

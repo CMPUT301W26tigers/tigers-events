@@ -18,6 +18,10 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 public class InboxFragment extends Fragment {
+    private final InvitationResponseController invitationResponseController = new InvitationResponseController();
+    private LinearLayout notificationContainer;
+    private TextView emptyStateView;
+
     public InboxFragment() {
         super(R.layout.fragment_inbox);
     }
@@ -29,30 +33,35 @@ public class InboxFragment extends Fragment {
         ImageButton backButton = view.findViewById(R.id.btnInboxBack);
         backButton.setOnClickListener(v -> NavHostFragment.findNavController(this).popBackStack());
 
-        renderNotifications(view.findViewById(R.id.notificationContainer), view.findViewById(R.id.tvEmptyState));
+        notificationContainer = view.findViewById(R.id.notificationContainer);
+        emptyStateView = view.findViewById(R.id.tvEmptyState);
+        renderNotifications();
     }
 
-    private void renderNotifications(LinearLayout container, TextView emptyState) {
-        container.removeAllViews();
+    private void renderNotifications() {
+        notificationContainer.removeAllViews();
 
         LayoutInflater inflater = LayoutInflater.from(requireContext());
         for (UserNotification notification : UserSession.getCurrentUser().getNotifications()) {
-            View itemView = inflater.inflate(R.layout.item_inbox_notification, container, false);
+            View itemView = inflater.inflate(R.layout.item_inbox_notification, notificationContainer, false);
             bindNotification(itemView, notification);
-            container.addView(itemView);
+            notificationContainer.addView(itemView);
         }
 
-        emptyState.setVisibility(container.getChildCount() == 0 ? View.VISIBLE : View.GONE);
+        emptyStateView.setVisibility(notificationContainer.getChildCount() == 0 ? View.VISIBLE : View.GONE);
     }
 
     private void bindNotification(View itemView, UserNotification notification) {
         View header = itemView.findViewById(R.id.notificationHeader);
         LinearLayout details = itemView.findViewById(R.id.notificationDetails);
+        LinearLayout actions = itemView.findViewById(R.id.notificationActions);
         ImageView icon = itemView.findViewById(R.id.ivNotificationIcon);
         ImageView chevron = itemView.findViewById(R.id.ivNotificationChevron);
         TextView title = itemView.findViewById(R.id.tvNotificationTitle);
         TextView eventName = itemView.findViewById(R.id.tvNotificationEvent);
         TextView message = itemView.findViewById(R.id.tvNotificationMessage);
+        View declineButton = itemView.findViewById(R.id.btnDeclineInvitation);
+        View acceptButton = itemView.findViewById(R.id.btnAcceptInvitation);
 
         title.setText(notification.getTitle());
         eventName.setText(notification.getEventName());
@@ -60,6 +69,7 @@ public class InboxFragment extends Fragment {
 
         header.setBackgroundColor(ContextCompat.getColor(requireContext(), getBackgroundColor(notification.getType())));
         icon.setImageResource(getIcon(notification.getType()));
+        actions.setVisibility(notification.getType() == UserNotification.Type.INVITATION ? View.VISIBLE : View.GONE);
 
         View.OnClickListener toggleListener = v -> {
             boolean isExpanded = details.getVisibility() == View.VISIBLE;
@@ -69,6 +79,18 @@ public class InboxFragment extends Fragment {
 
         header.setOnClickListener(toggleListener);
         chevron.setOnClickListener(toggleListener);
+        title.setOnClickListener(toggleListener);
+
+        declineButton.setOnClickListener(v -> {
+            if (invitationResponseController.declineInvitation(UserSession.getCurrentUser(), notification)) {
+                renderNotifications();
+            }
+        });
+        acceptButton.setOnClickListener(v -> {
+            if (invitationResponseController.acceptInvitation(UserSession.getCurrentUser(), notification)) {
+                renderNotifications();
+            }
+        });
     }
 
     @ColorRes

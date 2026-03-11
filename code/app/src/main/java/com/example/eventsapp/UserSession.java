@@ -1,13 +1,21 @@
 package com.example.eventsapp;
 
 public final class UserSession {
-    private static final Users CURRENT_USER = createDemoEntrant();
+    private static Users currentUser = createDemoEntrant();
 
     private UserSession() {
     }
 
     public static Users getCurrentUser() {
-        return CURRENT_USER;
+        return currentUser;
+    }
+
+    public static void setCurrentUser(Users user) {
+        currentUser = user;
+    }
+
+    public static void resetDemoUser() {
+        currentUser = createDemoEntrant();
     }
 
     private static Users createDemoEntrant() {
@@ -23,7 +31,6 @@ public final class UserSession {
         LotteryNotificationController controller = new LotteryNotificationController();
         controller.notifyWaitlisted(user, "River Valley Night Run");
         controller.notifyChosenFromWaitlist(user, "Campus Startup Showcase");
-        controller.notifyNotChosenFromWaitlist(user, "Winter Food Festival");
         return user;
     }
 }

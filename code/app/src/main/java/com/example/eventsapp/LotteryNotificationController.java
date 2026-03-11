@@ -2,6 +2,7 @@ package com.example.eventsapp;
 
 public class LotteryNotificationController {
     public void notifyWaitlisted(Users user, String eventName) {
+        user.addWaitlistedEvent(eventName);
         addNotification(
                 user,
                 new UserNotification(
@@ -14,6 +15,7 @@ public class LotteryNotificationController {
     }
 
     public void notifyChosenFromWaitlist(Users user, String eventName) {
+        user.addInvitedEvent(eventName);
         addNotification(
                 user,
                 new UserNotification(
@@ -26,6 +28,7 @@ public class LotteryNotificationController {
     }
 
     public void notifyNotChosenFromWaitlist(Users user, String eventName) {
+        user.removeWaitlistedEvent(eventName);
         addNotification(
                 user,
                 new UserNotification(
