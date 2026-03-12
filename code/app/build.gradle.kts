@@ -48,5 +48,6 @@ dependencies {
     implementation("com.google.zxing:core:3.5.2")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
+    androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation(libs.espresso.core)
 }
