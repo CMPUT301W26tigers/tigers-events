@@ -58,7 +58,6 @@
             android:padding="18dp"
             android:background="#F3EAF7">
 
-            <!-- Name row -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
