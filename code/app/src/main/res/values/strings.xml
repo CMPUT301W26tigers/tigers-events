@@ -2,4 +2,7 @@
     <string name="app_name">EventsApp</string>
     <string name="add_event">Add Event</string>
     <string name="delete_event">Delete Event</string>
+    <string name="greeting_format">Hi, %1$s</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
 </resources>

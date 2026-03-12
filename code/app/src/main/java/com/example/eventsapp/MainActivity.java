@@ -4,19 +4,21 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.HashMap;
@@ -32,11 +34,6 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
 
         db = FirebaseFirestore.getInstance();
         eventsRef = db.collection("events");
@@ -45,11 +42,16 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         // Add dummy users
         addDummyUsers();
 
-        NavHostFragment navHost = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
-        if (navHost != null) {
-            BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-            NavigationUI.setupWithNavController(bottomNav, navHost.getNavController());
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.nav_host_fragment);
+
+        if (navHostFragment == null) {
+            return;
         }
+
+        NavController navController = navHostFragment.getNavController();
+        NavigationUI.setupWithNavController(bottomNav, navController);
         handleDeepLink(getIntent());
     }
 
@@ -84,44 +86,66 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
 
     @Override
     public void updateEvent(Event event, String title, int amount) {
+        if (event == null) {
+            Log.w(TAG, "updateEvent called with null event");
+            return;
+        }
+
+        String previousName = event.getName();
         event.setName(title);
         event.setAmount(amount);
 
         String docId = (event.getId() != null && !event.getId().isEmpty()) ? event.getId() : event.getName();
-        DocumentReference docRef = eventsRef.document(docId);
-        docRef.update("name", title, "amount", amount)
-                .addOnSuccessListener(aVoid -> Log.d("Firestore", "DocumentSnapshot successfully updated!"))
-                .addOnFailureListener(e -> Log.e("Firestore", "Error updating event", e));
+        if (docId == null || docId.trim().isEmpty()) {
+            Log.w(TAG, "updateEvent called with empty document id");
+            return;
+        }
+
+        if (previousName != null && !previousName.equals(title)) {
+            Log.d(TAG, "Event renamed from " + previousName + " to " + title);
+        }
+
+        saveEvent(docId, event);
     }
 
     @Override
     public void addEvent(Event event) {
+        if (event == null) {
+            Log.w(TAG, "addEvent called with null event");
+            return;
+        }
+
         String docId = (event.getId() != null && !event.getId().isEmpty()) ? event.getId() : event.getName();
-        DocumentReference docRef = eventsRef.document(docId);
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", event.getId());
-        data.put("name", event.getName());
-        data.put("amount", event.getAmount());
-        data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
-        data.put("sampleSize", event.getSampleSize());
-        docRef.set(data)
-                .addOnSuccessListener(aVoid -> Log.d("Firestore", "DocumentSnapshot successfully written!"))
-                .addOnFailureListener(e -> Log.e("Firestore", "Error writing event", e));
+        saveEvent(docId, event);
     }
 
     @Override
     public void onConfirmPressed(String eventName) {
-        eventsRef.document(eventName).delete()
-                .addOnFailureListener(e -> {
-                    eventsRef.whereEqualTo("name", eventName).get()
-                            .addOnSuccessListener(q -> {
-                                for (QueryDocumentSnapshot doc : q) {
+        if (eventName == null || eventName.trim().isEmpty()) {
+            Log.w(TAG, "onConfirmPressed called with empty event name");
+            return;
+        }
+
+        String trimmedEventName = eventName.trim();
+        eventsRef.document(trimmedEventName).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        snapshot.getReference().delete()
+                                .addOnFailureListener(e -> Log.e(TAG, "Failed to delete event " + trimmedEventName, e));
+                        return;
+                    }
+
+                    eventsRef.whereEqualTo("name", trimmedEventName).get()
+                            .addOnSuccessListener(querySnapshot -> {
+                                for (QueryDocumentSnapshot doc : querySnapshot) {
                                     doc.getReference().delete();
-                                    break;
+                                    return;
                                 }
-                            });
-                });
+                                Log.w(TAG, "No event found to delete: " + trimmedEventName);
+                            })
+                            .addOnFailureListener(e -> Log.e(TAG, "Failed to query event " + trimmedEventName, e));
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to look up event " + trimmedEventName, e));
     }
 
     @Override
@@ -148,5 +172,24 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
                 navHost.getNavController().navigate(R.id.eventDetailFragment, args);
             }
         });
+    }
+
+    private void saveEvent(String documentId, Event event) {
+        if (documentId == null || documentId.trim().isEmpty()) {
+            Log.w(TAG, "Refused to save event with empty document ID");
+            return;
+        }
+
+        DocumentReference docRef = eventsRef.document(documentId.trim());
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+
+        docRef.set(data)
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save event " + documentId, e));
     }
 }

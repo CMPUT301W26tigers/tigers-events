@@ -2,5 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="dark_grey">#FF424242</color>
+    <color name="dark_grey">#4E4E4E</color>
+    <color name="notification_green">#9BDCAD</color>
+    <color name="notification_red">#E8A1A1</color>
+    <color name="notification_grey">#D9D9D9</color>
+    <color name="notification_chip">#F6EEF9</color>
 </resources>
