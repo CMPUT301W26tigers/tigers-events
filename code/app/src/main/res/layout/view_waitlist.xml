@@ -66,55 +66,15 @@
                 android:hint="Search Entrants"
                 app:startIconDrawable="@android:drawable/ic_menu_search">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_search_waitlist"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView
-                android:id="@+id/tv_waitlist_stats"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textSize="14sp"
-                android:lineSpacingExtra="4dp"/>
-            <!-- Stats shown above list for visibility -->
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_waitlist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="120dp"
-                android:nestedScrollingEnabled="false"
-                android:layout_marginTop="8dp"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_export_csv"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Export as CSV"
-                android:backgroundTint="@color/dark_grey"
-                android:textColor="@android:color/white"
-                app:icon="@android:drawable/ic_menu_save"
-                app:iconTint="@android:color/white"
-                app:iconPadding="8dp"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_see_cancelled"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="See Cancelled Entrants"
-                android:backgroundTint="@color/dark_grey"
-                android:textColor="@android:color/white"
-                app:icon="@android:drawable/ic_menu_view"
-                app:iconTint="@android:color/white"
-                app:iconPadding="8dp"/>
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/bottom_nav_waitlist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:menu="@menu/bottom_nav_menu"
+        app:layout_constraintTop_toBottomOf="@id/btn_see_cancelled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
