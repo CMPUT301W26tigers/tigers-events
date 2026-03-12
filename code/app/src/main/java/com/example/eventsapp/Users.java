@@ -1,11 +1,32 @@
 package com.example.eventsapp;
 
+import com.google.firebase.firestore.Exclude;
+
 public class Users {
+    private String id;
     private String name;
     private String email;
     private String password;
-
     private int phoneNumber;
+
+    // No-argument constructor required for Firestore
+    public Users() {}
+
+    public Users(String name, String email, String password, int phoneNumber) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.phoneNumber = phoneNumber;
+    }
+
+    @Exclude
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -39,13 +60,7 @@ public class Users {
         this.phoneNumber = phoneNumber;
     }
 
-    public Users(String name, String email, String password, int phoneNumber) {
-        this.name = name;
-        this.email = email;
-        this.password = password;
-    }
-
     public boolean login(String email, String password) {
-        return email.equals(this.email) && password.equals(this.password);
+        return email != null && email.equals(this.email) && password != null && password.equals(this.password);
     }
 }

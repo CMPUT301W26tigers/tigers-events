@@ -3,16 +3,12 @@ package com.example.eventsapp;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-
 import android.util.Log;
-import android.widget.Button;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
@@ -23,14 +19,14 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity implements EventDialogFragment.EventDialogListener, DeleteEventDialogFragment.OnFragmentInteractionListener {
 
-    private Button addEventButton;
-    private Button deleteEventButton;
-
     private FirebaseFirestore db;
-
     private CollectionReference eventsRef;
+    private CollectionReference userRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,23 +38,12 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
             return insets;
         });
 
-        // Set views
-        addEventButton = findViewById(R.id.buttonAddEvent);
-        deleteEventButton = findViewById(R.id.buttonDeleteEvent);
-
-        // Set listeners
-        addEventButton.setOnClickListener(view -> {
-            EventDialogFragment eventDialogFragment = new EventDialogFragment();
-            eventDialogFragment.show(getSupportFragmentManager(),"Add Event");
-        });
-
-        deleteEventButton.setOnClickListener(view -> {
-            DeleteEventDialogFragment deleteEventDialogFragment = new DeleteEventDialogFragment();
-            deleteEventDialogFragment.show(getSupportFragmentManager(), "Delete Event");
-        });
-
         db = FirebaseFirestore.getInstance();
         eventsRef = db.collection("events");
+        userRef = db.collection("users");
+
+        // Add dummy users
+        addDummyUsers();
 
         NavHostFragment navHost = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment);
         if (navHost != null) {
@@ -66,7 +51,35 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
             NavigationUI.setupWithNavController(bottomNav, navHost.getNavController());
         }
         handleDeepLink(getIntent());
+    }
 
+    private void addDummyUsers() {
+        Users[] dummyUsers = {
+                new Users("John Doe", "john@example.com", "password123", 1234567890),
+                new Users("Jane Smith", "jane@example.com", "securePass", 1987654321),
+                new Users("Tiger Wood", "tiger@tigers.com", "roaring", 1122334455),
+        };
+
+        for (Users user : dummyUsers) {
+            addUser(user);
+        }
+    }
+
+    public void addUser(Users user) {
+        // Query to see if user already exists by email
+        userRef.whereEqualTo("email", user.getEmail()).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        // Create a new document with auto-generated ID
+                        DocumentReference newDocRef = userRef.document();
+                        user.setId(newDocRef.getId()); // Set the ID in the object before saving
+                        newDocRef.set(user)
+                                .addOnSuccessListener(aVoid -> Log.d("Firestore", "User added: " + user.getName()))
+                                .addOnFailureListener(e -> Log.e("Firestore", "Error adding user", e));
+                    } else {
+                        Log.d("Firestore", "User with email " + user.getEmail() + " already exists.");
+                    }
+                });
     }
 
     @Override
@@ -76,23 +89,16 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
 
         String docId = (event.getId() != null && !event.getId().isEmpty()) ? event.getId() : event.getName();
         DocumentReference docRef = eventsRef.document(docId);
-        docRef.update("name", title,
-                        "amount", amount)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d("Firestore", "DocumentSnapshot successfully written!");
-                    }
-                });
-        // Updating the database using delete + addition
+        docRef.update("name", title, "amount", amount)
+                .addOnSuccessListener(aVoid -> Log.d("Firestore", "DocumentSnapshot successfully updated!"))
+                .addOnFailureListener(e -> Log.e("Firestore", "Error updating event", e));
     }
 
     @Override
-    public void addEvent(Event event){
-
+    public void addEvent(Event event) {
         String docId = (event.getId() != null && !event.getId().isEmpty()) ? event.getId() : event.getName();
         DocumentReference docRef = eventsRef.document(docId);
-        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
@@ -100,20 +106,14 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
         docRef.set(data)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d("Firestore", "DocumentSnapshot successfully written!");
-                    }
-                });
-
+                .addOnSuccessListener(aVoid -> Log.d("Firestore", "DocumentSnapshot successfully written!"))
+                .addOnFailureListener(e -> Log.e("Firestore", "Error writing event", e));
     }
 
     @Override
     public void onConfirmPressed(String eventName) {
         eventsRef.document(eventName).delete()
                 .addOnFailureListener(e -> {
-                    // If doc ID is UUID, try query by name
                     eventsRef.whereEqualTo("name", eventName).get()
                             .addOnSuccessListener(q -> {
                                 for (QueryDocumentSnapshot doc : q) {
