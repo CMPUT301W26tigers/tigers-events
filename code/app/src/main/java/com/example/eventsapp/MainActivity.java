@@ -26,6 +26,7 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements EventDialogFragment.EventDialogListener, DeleteEventDialogFragment.OnFragmentInteractionListener {
 
+    private static final String TAG = "MainActivity";
     private FirebaseFirestore db;
     private CollectionReference eventsRef;
     private CollectionReference userRef;

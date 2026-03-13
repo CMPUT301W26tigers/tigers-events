@@ -9,18 +9,40 @@ import java.util.List;
 public class Users {
     private String id;
     private String name;
+    private String firstName;
+    private String lastName;
     private String email;
     private String password;
     private int phoneNumber;
+    private String location;
+    private String accountType;
+    private List<UserNotification> notifications = new ArrayList<>();
+    private List<String> invitedEvents = new ArrayList<>();
+    private List<String> registeredEvents = new ArrayList<>();
+    private List<String> declinedInvitations = new ArrayList<>();
+    private List<String> waitlistedEvents = new ArrayList<>();
+    private boolean notificationsEnabled;
 
     // No-argument constructor required for Firestore
     public Users() {}
 
+    // Constructor used in MainActivity
     public Users(String name, String email, String password, int phoneNumber) {
         this.name = name;
         this.email = email;
         this.password = password;
         this.phoneNumber = phoneNumber;
+    }
+
+    // Constructor used in UserSession
+    public Users(String firstName, String lastName, String email, String location, String accountType, boolean notificationsEnabled) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.name = firstName + " " + lastName;
+        this.email = email;
+        this.location = location;
+        this.accountType = accountType;
+        this.notificationsEnabled = notificationsEnabled;
     }
 
     @Exclude
@@ -67,55 +89,44 @@ public class Users {
     public boolean login(String email, String password) {
         return email != null && email.equals(this.email) && password != null && password.equals(this.password);
     }
-    private final String firstName;
-    private final String lastName;
-    private final String email;
-    private final String location;
-    private final String accountType;
-    private final List<UserNotification> notifications;
-    private final List<String> invitedEvents;
-    private final List<String> registeredEvents;
-    private final List<String> declinedInvitations;
-    private final List<String> waitlistedEvents;
-    private boolean notificationsEnabled;
-
-    public Users(String firstName,
-                 String lastName,
-                 String email,
-                 String location,
-                 String accountType,
-                 boolean notificationsEnabled) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.location = location;
-        this.accountType = accountType;
-        this.notificationsEnabled = notificationsEnabled;
-        this.notifications = new ArrayList<>();
-        this.invitedEvents = new ArrayList<>();
-        this.registeredEvents = new ArrayList<>();
-        this.declinedInvitations = new ArrayList<>();
-        this.waitlistedEvents = new ArrayList<>();
-    }
 
     public String getFirstName() {
         return firstName;
     }
 
-    public String getFullName() {
-        return firstName + " " + lastName;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 
-    public String getEmail() {
-        return email;
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getFullName() {
+        if (firstName != null && lastName != null) {
+            return firstName + " " + lastName;
+        }
+        return name;
     }
 
     public String getLocation() {
         return location;
     }
 
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
     public String getAccountType() {
         return accountType;
+    }
+
+    public void setAccountType(String accountType) {
+        this.accountType = accountType;
     }
 
     public boolean isNotificationsEnabled() {
@@ -127,58 +138,88 @@ public class Users {
     }
 
     public void addNotification(UserNotification notification) {
+        if (notifications == null) notifications = new ArrayList<>();
         notifications.add(0, notification);
     }
 
     public void removeNotification(UserNotification notification) {
-        notifications.remove(notification);
+        if (notifications != null) {
+            notifications.remove(notification);
+        }
     }
 
     public List<UserNotification> getNotifications() {
-        return Collections.unmodifiableList(notifications);
+        return notifications != null ? Collections.unmodifiableList(notifications) : new ArrayList<>();
+    }
+
+    public void setNotifications(List<UserNotification> notifications) {
+        this.notifications = notifications;
     }
 
     public void addInvitedEvent(String eventName) {
-        waitlistedEvents.remove(eventName);
+        if (waitlistedEvents != null) waitlistedEvents.remove(eventName);
+        if (invitedEvents == null) invitedEvents = new ArrayList<>();
         addUnique(invitedEvents, eventName);
     }
 
     public void addWaitlistedEvent(String eventName) {
+        if (waitlistedEvents == null) waitlistedEvents = new ArrayList<>();
         addUnique(waitlistedEvents, eventName);
     }
 
     public void removeWaitlistedEvent(String eventName) {
-        waitlistedEvents.remove(eventName);
+        if (waitlistedEvents != null) {
+            waitlistedEvents.remove(eventName);
+        }
     }
 
     public void acceptInvitation(String eventName) {
-        invitedEvents.remove(eventName);
-        waitlistedEvents.remove(eventName);
+        if (invitedEvents != null) invitedEvents.remove(eventName);
+        if (waitlistedEvents != null) waitlistedEvents.remove(eventName);
+        if (registeredEvents == null) registeredEvents = new ArrayList<>();
         addUnique(registeredEvents, eventName);
     }
 
     public void declineInvitation(String eventName) {
-        invitedEvents.remove(eventName);
+        if (invitedEvents != null) invitedEvents.remove(eventName);
+        if (declinedInvitations == null) declinedInvitations = new ArrayList<>();
         addUnique(declinedInvitations, eventName);
     }
 
     public List<String> getInvitedEvents() {
-        return Collections.unmodifiableList(invitedEvents);
+        return invitedEvents != null ? Collections.unmodifiableList(invitedEvents) : new ArrayList<>();
+    }
+
+    public void setInvitedEvents(List<String> invitedEvents) {
+        this.invitedEvents = invitedEvents;
     }
 
     public List<String> getRegisteredEvents() {
-        return Collections.unmodifiableList(registeredEvents);
+        return registeredEvents != null ? Collections.unmodifiableList(registeredEvents) : new ArrayList<>();
+    }
+
+    public void setRegisteredEvents(List<String> registeredEvents) {
+        this.registeredEvents = registeredEvents;
     }
 
     public List<String> getDeclinedInvitations() {
-        return Collections.unmodifiableList(declinedInvitations);
+        return declinedInvitations != null ? Collections.unmodifiableList(declinedInvitations) : new ArrayList<>();
+    }
+
+    public void setDeclinedInvitations(List<String> declinedInvitations) {
+        this.declinedInvitations = declinedInvitations;
     }
 
     public List<String> getWaitlistedEvents() {
-        return Collections.unmodifiableList(waitlistedEvents);
+        return waitlistedEvents != null ? Collections.unmodifiableList(waitlistedEvents) : new ArrayList<>();
+    }
+
+    public void setWaitlistedEvents(List<String> waitlistedEvents) {
+        this.waitlistedEvents = waitlistedEvents;
     }
 
     private void addUnique(List<String> events, String eventName) {
+        if (events == null) return;
         if (!events.contains(eventName)) {
             events.add(eventName);
         }
