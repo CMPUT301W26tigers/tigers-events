@@ -44,5 +44,6 @@ public class QRCodeUtil {
         } catch (WriterException e) {
             return null;
         }
+        //add ability to scan qr code and oen that event page
     }
 }
