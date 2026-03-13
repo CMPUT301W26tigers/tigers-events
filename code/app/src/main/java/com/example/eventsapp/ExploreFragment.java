@@ -13,6 +13,8 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import androidx.navigation.Navigation;
+
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -36,8 +38,10 @@ public class ExploreFragment extends Fragment {
         rvEvents = view.findViewById(R.id.rvEvents);
 
         adapter = new ExploreEventAdapter(eventList, event -> {
-            EventDialogFragment.newInstance(event)
-                    .show(requireActivity().getSupportFragmentManager(), "Event Details");
+            Bundle args = new Bundle();
+            args.putString("eventId", event.getId());
+            Navigation.findNavController(view)
+                    .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
         });
         rvEvents.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvEvents.setAdapter(adapter);

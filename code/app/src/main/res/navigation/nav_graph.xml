@@ -12,7 +12,11 @@
     <fragment
         android:id="@+id/exploreFragment"
         android:name="com.example.eventsapp.ExploreFragment"
-        android:label="Explore" />
+        android:label="Explore">
+        <action
+            android:id="@+id/action_exploreFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/eventsFragment"
