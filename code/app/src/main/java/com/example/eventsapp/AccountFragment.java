@@ -116,7 +116,8 @@ public class AccountFragment extends Fragment {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null) {
             if (tvGreeting != null) {
-                tvGreeting.setText("Hi, " + currentUser.getName());
+                String firstName = currentUser.getFirstName();
+                tvGreeting.setText("Hi, " + (firstName != null && !firstName.isEmpty() ? firstName : currentUser.getName()));
             }
             if (tvNameValue != null) {
                 tvNameValue.setText(currentUser.getName());
