@@ -206,6 +206,7 @@ public class EventDetailFragment extends Fragment {
         entrantData.put("email", currentUser.getEmail());
         entrantData.put("status", "APPLIED");
         entrantData.put("userId", currentUser.getId());
+        entrantData.put("statusCode", 0);
 
         db.collection("events").document(eventId)
                 .collection("entrants").document(entrantId)

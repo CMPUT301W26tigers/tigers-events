@@ -29,6 +29,7 @@ public class Entrant implements Serializable {
     private String name;
     private String email;
     private Status status;
+    private int statusCode;
 
     /**
      * Constructs a new Entrant.
@@ -112,5 +113,13 @@ public class Entrant implements Serializable {
      */
     public boolean isChosenInvited() {
         return status == Status.INVITED || status == Status.ACCEPTED;
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public void setStatusCode(int statusCode) {
+        this.statusCode = statusCode;
     }
 }
