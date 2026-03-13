@@ -21,6 +21,11 @@ import com.google.android.material.button.MaterialButton;
 
 import java.util.Calendar;
 
+/**
+ * A fragment that allows an organizer to edit the details of an existing event.
+ * Currently focuses on managing event dates and registration periods, and
+ * providing navigation to the waitlist and enrolled entrants views.
+ */
 public class EditEventFragment extends Fragment {
 
     private EditText editEventDate;
@@ -29,11 +34,21 @@ public class EditEventFragment extends Fragment {
     private MaterialButton btnViewWaitlist;
     private MaterialButton btnViewEnrolled;
 
-
+    /**
+     * Default constructor for EditEventFragment.
+     * Uses the layout R.layout.edit_event.
+     */
     public EditEventFragment() {
         super(R.layout.edit_event);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes views, date pickers, and button listeners.
+     *
+     * @param view The View returned by {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -43,6 +58,11 @@ public class EditEventFragment extends Fragment {
         setupButtons();
     }
 
+    /**
+     * Binds UI components from the layout to class variables.
+     *
+     * @param view The root view of the fragment.
+     */
     private void bindViews(@NonNull View view) {
 
         editEventDate = view.findViewById(R.id.edit_event_date);
@@ -52,6 +72,9 @@ public class EditEventFragment extends Fragment {
         btnViewEnrolled = view.findViewById(R.id.btn_view_enrolled);
     }
 
+    /**
+     * Sets up click listeners for the buttons in the fragment.
+     */
     private void setupButtons() {
         btnViewWaitlist.setOnClickListener(v -> {
             if (validateFields()) {
@@ -63,10 +86,11 @@ public class EditEventFragment extends Fragment {
                 openEnrolledFragment();
             }
         });
-
-
     }
 
+    /**
+     * Configures EditText fields to show a {@link DatePickerDialog} when clicked.
+     */
     private void setupDatePickers() {
         editEventDate.setOnClickListener(v -> showDatePicker(editEventDate));
         editRegistrationStart.setOnClickListener(v -> showDatePicker(editRegistrationStart));
@@ -77,7 +101,11 @@ public class EditEventFragment extends Fragment {
         editRegistrationEnd.setFocusable(false);
     }
 
-
+    /**
+     * Displays a {@link DatePickerDialog} and updates the target EditText with the selected date.
+     *
+     * @param target The EditText to be updated with the selected date string.
+     */
     private void showDatePicker(EditText target) {
         Calendar calendar = Calendar.getInstance();
 
@@ -95,6 +123,12 @@ public class EditEventFragment extends Fragment {
         picker.show();
     }
 
+    /**
+     * Validates that the date fields are not empty and that the dates are logically consistent
+     * (e.g., registration ends before the event starts).
+     *
+     * @return True if all fields are valid, false otherwise.
+     */
     private boolean validateFields() {
         editEventDate.setError(null);
         editRegistrationStart.setError(null);
@@ -151,6 +185,10 @@ public class EditEventFragment extends Fragment {
 
         return true;
     }
+
+    /**
+     * Navigates to the {@link WaitlistFragment} for the current event.
+     */
     private void openWaitlistFragment() {
         String currentEventId = "EventId";
 
@@ -162,6 +200,9 @@ public class EditEventFragment extends Fragment {
                 .commit();
     }
 
+    /**
+     * Navigates to the {@link EnrolledFragment} for the current event.
+     */
     private void openEnrolledFragment() {
         String currentEventId = event.getId();
 

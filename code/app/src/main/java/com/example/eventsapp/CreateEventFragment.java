@@ -32,8 +32,11 @@ import java.util.Calendar;
 import java.util.Date;
 
 /**
- * US 02.01.01: Create event with description, poster, and unique promotional QR code.
- * Uses edit_event.xml layout.
+ * A fragment that allows users to create a new event.
+ * Handles user stories for event creation (US 02.01.01) including:
+ * - Setting event description and poster.
+ * - Generating a unique promotional QR code for the event.
+ * - Specifying event capacity and lottery sample size.
  */
 public class CreateEventFragment extends Fragment {
 
@@ -50,6 +53,17 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
 
+    /**
+     * Called to have the fragment instantiate its user interface view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     * @return Return the View for the fragment's UI, or null.
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -57,6 +71,14 @@ public class CreateEventFragment extends Fragment {
         return inflater.inflate(R.layout.edit_event, container, false);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components, generates a random UUID for the new event,
+     * and sets up listeners for saving and sharing.
+     *
+     * @param view The View returned by {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -139,6 +161,10 @@ public class CreateEventFragment extends Fragment {
         picker.show();
     }
 
+     * Generates a QR code bitmap for the event's deep link and updates the ImageView.
+     *
+     * @param event The event object whose deep link will be encoded.
+     */
     private void updateQRCode(Event event) {
         String link = event.getEventDeepLink();
         Bitmap qrBitmap = QRCodeUtil.generateQRCode(link, QR_SIZE, QR_SIZE);
@@ -147,6 +173,12 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Validates input fields, updates the {@link Event} object, saves the event to Firestore,
+     * and navigates to the waitlist management screen upon success.
+     *
+     * @param event The event object being created and saved.
+     */
     private void saveAndNavigateToWaitlist(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
@@ -222,6 +254,12 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+
+        // Store who created this event for filtering on the Events page
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
 
         DocumentReference docRef = db.collection("events").document(event.getId());
         docRef.set(data)

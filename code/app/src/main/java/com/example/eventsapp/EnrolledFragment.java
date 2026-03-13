@@ -45,10 +45,20 @@ public class EnrolledFragment extends Fragment {
 
     private String eventId;
 
+    /**
+     * Default constructor for EnrolledFragment.
+     * Uses the layout R.layout.view_enrolled.
+     */
     public EnrolledFragment() {
         super(R.layout.view_enrolled);
     }
 
+    /**
+     * Creates a new instance of EnrolledFragment with the specified event ID.
+     *
+     * @param eventId The unique ID of the event to display enrolled entrants for.
+     * @return A new instance of EnrolledFragment.
+     */
     public static EnrolledFragment newInstance(String eventId) {
         EnrolledFragment fragment = new EnrolledFragment();
         Bundle args = new Bundle();
@@ -57,6 +67,11 @@ public class EnrolledFragment extends Fragment {
         return fragment;
     }
 
+    /**
+     * Called when the fragment is being created. Retrieves the event ID from the arguments.
+     *
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

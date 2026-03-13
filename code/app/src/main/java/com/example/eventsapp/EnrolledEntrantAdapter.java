@@ -76,11 +76,20 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
         return entrants.size();
     }
 
+    /**
+     * ViewHolder class for enrolled entrant items.
+     * Holds references to the UI components for each list item.
+     */
     static class EnrolledViewHolder extends RecyclerView.ViewHolder {
         TextView tvName;
         TextView tvEmail;
         TextView tvStatus;
 
+        /**
+         * Constructs an EnrolledViewHolder.
+         *
+         * @param itemView The view representing a single list item.
+         */
         public EnrolledViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_name);
