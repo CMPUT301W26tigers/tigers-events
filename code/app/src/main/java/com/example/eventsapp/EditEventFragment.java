@@ -1,5 +1,3 @@
-/**
- THIS CLASS IS OBSOLETE NOW, IMPORTANT FUNCTIONALITY HAS BEEN MOVED TO CreateEventFragment
 package com.example.eventsapp;
 
 import android.app.DatePickerDialog;
@@ -8,10 +6,6 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,7 +13,15 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.button.MaterialButton;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+
+/**
+ * THIS CLASS IS OBSOLETE NOW, IMPORTANT FUNCTIONALITY HAS BEEN MOVED TO CreateEventFragment
+ */
 
 /**
  * A fragment that allows an organizer to edit the details of an existing event.
@@ -204,7 +206,7 @@ public class EditEventFragment extends Fragment {
      * Navigates to the {@link EnrolledFragment} for the current event.
      */
     private void openEnrolledFragment() {
-        String currentEventId = event.getId();
+        String currentEventId = "EventId"; // Using placeholder as 'event' was undefined
 
         requireActivity()
                 .getSupportFragmentManager()
@@ -215,4 +217,3 @@ public class EditEventFragment extends Fragment {
     }
 
 }
- */

@@ -160,7 +160,7 @@ public class CreateEventFragment extends Fragment {
 
         picker.show();
     }
-
+/**
      * Generates a QR code bitmap for the event's deep link and updates the ImageView.
      *
      * @param event The event object whose deep link will be encoded.

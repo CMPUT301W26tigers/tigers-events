@@ -1,5 +1,3 @@
-/**
-THIS CLASS IS OBSOLETE NOW, IMPORTANT FUNCTIONALITY HAS BEEN MOVED TO ViewEntrantsFragment
 package com.example.eventsapp;
 
 import android.os.Bundle;
@@ -10,8 +8,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.example.eventsapp.CancelledFragment;
-import com.example.eventsapp.NotificationItem;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -25,6 +21,8 @@ import java.util.Arrays;
  * - Notify chosen entrants (those with status INVITED or ACCEPTED) via in-app notifications.
  * - Export the list of entrants as a CSV file.
  * - Navigate to view cancelled entrants.
+ *
+ * NOTE: This class is being phased out in favor of ViewEntrantsFragment.
  */
 public class WaitlistFragment extends Fragment {
 
@@ -144,7 +142,7 @@ public class WaitlistFragment extends Fragment {
                     final int[] sentCount = {0};
                     final int[] skippedCount = {0};
 
-                    for (var doc : querySnapshot.getDocuments()) {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         String userId = doc.getString("userId");
                         if (userId == null || userId.trim().isEmpty()) {
                             skippedCount[0]++;
@@ -203,4 +201,3 @@ public class WaitlistFragment extends Fragment {
                 .commit();
     }
 }
-*/
