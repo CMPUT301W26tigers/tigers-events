@@ -4,36 +4,163 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="@color/colorSurface">
 
     <TextView
-        android:id="@+id/tv_events_title"
-        android:layout_width="wrap_content"
+        android:id="@+id/tvMyEventsTitle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Your Events"
+        android:text="My Events"
+        android:textColor="@color/colorTextPrimary"
         android:textSize="24sp"
         android:textStyle="bold"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="20dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_create_event"
-        android:layout_width="wrap_content"
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/toggleEventType"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Create Event"
-        android:layout_marginTop="12dp"
-        app:layout_constraintTop_toBottomOf="@id/tv_events_title"
-        app:layout_constraintStart_toStartOf="parent"/>
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="16dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:checkedButton="@id/btnRegistered"
+        app:layout_constraintTop_toBottomOf="@id/tvMyEventsTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <ListView
-        android:id="@+id/list_events"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRegistered"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Registered"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            app:cornerRadius="22dp"
+            app:strokeColor="@color/colorPrimaryPurple" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreated"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Created"
+            android:textSize="14sp"
+            android:textAllCaps="false"
+            app:cornerRadius="22dp"
+            app:strokeColor="@color/colorPrimaryPurple" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <HorizontalScrollView
+        android:id="@+id/chipScrollView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:scrollbars="none"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/toggleEventType"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedChip="@id/chipUpcoming"
+            app:singleLine="true"
+            app:chipSpacingHorizontal="8dp">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipUpcoming"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Upcoming"
+                android:textSize="13sp"
+                android:checked="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipPast"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Past"
+                android:textSize="13sp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipAll"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All"
+                android:textSize="13sp" />
+
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMyEvents"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-        android:divider="@android:color/darker_gray"
-        android:dividerHeight="1dp"
-        app:layout_constraintTop_toBottomOf="@id/btn_create_event"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/chipScrollView"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/emptyStateContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/chipScrollView"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:contentDescription="No events"
+            app:srcCompat="@android:drawable/ic_menu_my_calendar"
+            app:tint="@color/colorAvatarBackground"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:id="@+id/tvEmptyState"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No events yet"
+            android:textColor="@color/colorTextHint"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Events you register for will appear here"
+            android:textColor="@color/colorTextHint"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

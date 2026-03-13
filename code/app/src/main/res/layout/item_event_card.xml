@@ -3,29 +3,28 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="72dp"
-    android:layout_marginBottom="12dp"
-    app:cardCornerRadius="10dp"
-    app:cardElevation="0dp"
-    app:strokeColor="#E6E6E6"
-    app:strokeWidth="1dp">
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="1dp"
+    app:cardBackgroundColor="@android:color/white"
+    app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp">
+        android:layout_height="wrap_content"
+        android:padding="14dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/avatarCircle"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            app:cardCornerRadius="18dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            app:cardCornerRadius="21dp"
             app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/colorAvatarBackground"
+            app:strokeWidth="0dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:cardBackgroundColor="#E9D9F4">
+            app:layout_constraintTop_toTopOf="parent">
 
             <TextView
                 android:id="@+id/tvAvatarLetter"
@@ -34,8 +33,8 @@
                 android:gravity="center"
                 android:text="A"
                 android:textStyle="bold"
-                android:textColor="#5B3B7A"
-                android:textSize="14sp"/>
+                android:textColor="@color/colorPrimaryPurpleDark"
+                android:textSize="16sp" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -43,35 +42,86 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Event Name"
-            android:textColor="@android:color/black"
+            android:textColor="@color/colorTextPrimary"
             android:textStyle="bold"
-            android:textSize="14sp"
+            android:textSize="15sp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
             app:layout_constraintTop_toTopOf="@id/avatarCircle"
-            app:layout_constraintEnd_toStartOf="@id/ivThumb"/>
+            app:layout_constraintEnd_toStartOf="@id/ivThumb" />
 
         <TextView
             android:id="@+id/tvEventHost"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Event Host"
-            android:textColor="#777777"
+            android:textColor="@color/colorTextHint"
             android:textSize="12sp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
             app:layout_constraintTop_toBottomOf="@id/tvEventName"
-            app:layout_constraintEnd_toStartOf="@id/ivThumb"/>
+            app:layout_constraintEnd_toStartOf="@id/ivThumb" />
 
-        <ImageView
-            android:id="@+id/ivThumb"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:contentDescription="Thumbnail"
+        <TextView
+            android:id="@+id/tvEventDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Mar 15, 2026"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="6dp"
+            app:layout_constraintStart_toEndOf="@id/avatarCircle"
+            app:layout_constraintTop_toBottomOf="@id/tvEventHost" />
+
+        <TextView
+            android:id="@+id/tvEventTimeSeparator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=" \u2022 "
+            android:textColor="@color/colorTextHint"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/tvEventDate"
+            app:layout_constraintTop_toTopOf="@id/tvEventDate"
+            app:layout_constraintBottom_toBottomOf="@id/tvEventDate" />
+
+        <TextView
+            android:id="@+id/tvEventTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="7:00 PM"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/tvEventTimeSeparator"
+            app:layout_constraintTop_toTopOf="@id/tvEventDate"
+            app:layout_constraintBottom_toBottomOf="@id/tvEventDate" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardThumb"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/colorCardBackground"
+            app:strokeWidth="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:srcCompat="@android:drawable/ic_menu_gallery" />
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/ivThumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="Event image"
+                android:scaleType="centerCrop"
+                app:srcCompat="@android:drawable/ic_menu_gallery" />
+        </com.google.android.material.card.MaterialCardView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
