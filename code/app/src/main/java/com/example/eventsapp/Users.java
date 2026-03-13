@@ -13,7 +13,8 @@ public class Users {
     private String lastName;
     private String email;
     private String password;
-    private int phoneNumber;
+    private String phoneNumber;
+    private String deviceId;
     private String location;
     private String accountType;
     private List<UserNotification> notifications = new ArrayList<>();
@@ -27,7 +28,7 @@ public class Users {
     public Users() {}
 
     // Constructor used in MainActivity
-    public Users(String name, String email, String password, int phoneNumber) {
+    public Users(String name, String email, String password, String phoneNumber) {
         this.name = name;
         this.email = email;
         this.password = password;
@@ -43,6 +44,18 @@ public class Users {
         this.location = location;
         this.accountType = accountType;
         this.notificationsEnabled = notificationsEnabled;
+    }
+
+    // Constructor used for sign-up
+    public Users(String firstName, String lastName, String email, String password, String phoneNumber, String deviceId) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.name = firstName + " " + lastName;
+        this.email = email;
+        this.password = password;
+        this.phoneNumber = phoneNumber;
+        this.deviceId = deviceId;
+        this.accountType = "Entrant";
     }
 
     @Exclude
@@ -78,12 +91,20 @@ public class Users {
         this.password = password;
     }
 
-    public int getPhoneNumber() {
+    public String getPhoneNumber() {
         return phoneNumber;
     }
 
-    public void setPhoneNumber(int phoneNumber) {
+    public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
     }
 
     public boolean login(String email, String password) {
