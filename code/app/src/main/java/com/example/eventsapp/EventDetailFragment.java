@@ -23,7 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Shows full event details including waitlist counter and join/leave waitlist button.
+ * A fragment that displays the full details of a specific event.
+ * It provides functionality for users to:
+ * - View event description, date, and registration period.
+ * - See current waitlist statistics (e.g., "5/50 on waitlist").
+ * - Join or leave the event's waitlist.
  */
 public class EventDetailFragment extends Fragment {
 
@@ -42,6 +46,12 @@ public class EventDetailFragment extends Fragment {
     private int waitlistCount = 0;
     private int eventCapacity = 0;
 
+    /**
+     * Called when the fragment is being created. Initializes Firestore and
+     * retrieves the event ID from the arguments.
+     *
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,6 +63,14 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Called to have the fragment instantiate its user interface view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate views.
+     * @param container If non-null, this is the parent view that the fragment's UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     * @return Return the View for the fragment's UI.
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -60,6 +78,13 @@ public class EventDetailFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_event_detail, container, false);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components and sets up listeners for the waitlist button.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -95,6 +120,9 @@ public class EventDetailFragment extends Fragment {
         });
     }
 
+    /**
+     * Fetches the event details from Firestore and updates the UI.
+     */
     private void loadEventDetails() {
         db.collection("events").document(eventId)
                 .get()
@@ -124,6 +152,9 @@ public class EventDetailFragment extends Fragment {
                 });
     }
 
+    /**
+     * Fetches the current waitlist status for the event and the current user.
+     */
     private void loadWaitlistStatus() {
         // Load total waitlist count
         db.collection("events").document(eventId)
@@ -155,6 +186,9 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Adds the current user to the event's waitlist in Firestore.
+     */
     private void joinWaitlist() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
@@ -168,7 +202,7 @@ public class EventDetailFragment extends Fragment {
         Map<String, Object> entrantData = new HashMap<>();
         entrantData.put("id", entrantId);
         entrantData.put("eventId", eventId);
-        entrantData.put("name", currentUser.getFullName());
+        entrantData.put("name", currentUser.getName());
         entrantData.put("email", currentUser.getEmail());
         entrantData.put("status", "APPLIED");
         entrantData.put("userId", currentUser.getId());
@@ -194,6 +228,9 @@ public class EventDetailFragment extends Fragment {
                 });
     }
 
+    /**
+     * Removes the current user from the event's waitlist in Firestore.
+     */
     private void leaveWaitlist() {
         if (currentEntrantDocId == null) return;
 
@@ -220,6 +257,9 @@ public class EventDetailFragment extends Fragment {
                 });
     }
 
+    /**
+     * Updates the text and color of the waitlist button based on whether the user is on the waitlist.
+     */
     private void updateButtonState() {
         if (isOnWaitlist) {
             btnWaitlist.setText("Leave Waitlist");
@@ -234,10 +274,21 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Updates the waitlist counter text view with current statistics.
+     */
     private void updateWaitlistCounter() {
         tvWaitlistCounter.setText(waitlistCount + "/" + eventCapacity + " on waitlist");
     }
 
+    /**
+     * Helper method to get a string field from a {@link DocumentSnapshot} or a default value if missing.
+     *
+     * @param doc The document snapshot.
+     * @param field The field name.
+     * @param defaultValue The default value to return if the field is null or empty.
+     * @return The field value or the default value.
+     */
     private String getFieldOrDefault(DocumentSnapshot doc, String field, String defaultValue) {
         String value = doc.getString(field);
         return (value != null && !value.isEmpty()) ? value : defaultValue;

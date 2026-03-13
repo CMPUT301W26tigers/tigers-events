@@ -20,13 +20,29 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+/**
+ * A fragment that handles user authentication, including sign-in and sign-up.
+ * It also supports automatic login if a device ID is recognized and remembered.
+ */
 public class SignInFragment extends Fragment {
     private boolean isSignUpMode = false;
 
+    /**
+     * Default constructor for SignInFragment.
+     * Uses the layout R.layout.fragment_sign_in.
+     */
     public SignInFragment() {
         super(R.layout.fragment_sign_in);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Sets up auto-login logic, UI component references, and listeners for
+     * mode toggling and authentication actions.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -115,6 +131,14 @@ public class SignInFragment extends Fragment {
         });
     }
 
+    /**
+     * Processes a sign-in request by verifying credentials against Firestore.
+     *
+     * @param view The current view.
+     * @param db The Firestore database instance.
+     * @param email The user's email.
+     * @param password The user's password.
+     */
     private void handleSignIn(View view, FirebaseFirestore db, String email, String password) {
         db.collection("users").whereEqualTo("email", email).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -139,6 +163,20 @@ public class SignInFragment extends Fragment {
                         Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Processes a sign-up request by creating a new user document in Firestore.
+     *
+     * @param view The current view.
+     * @param db The Firestore database instance.
+     * @param etFirstName Input field for first name.
+     * @param etLastName Input field for last name.
+     * @param etPhoneNumber Input field for phone number.
+     * @param etConfirmPassword Input field for password confirmation.
+     * @param cbRememberDevice Checkbox for remembering the device.
+     * @param email The user's email.
+     * @param password The user's password.
+     * @param deviceId The unique ID of the device.
+     */
     private void handleSignUp(View view, FirebaseFirestore db,
                               TextInputEditText etFirstName, TextInputEditText etLastName,
                               TextInputEditText etPhoneNumber, TextInputEditText etConfirmPassword,
@@ -184,6 +222,11 @@ public class SignInFragment extends Fragment {
                         Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Navigates to the explore events screen and removes the sign-in fragment from the back stack.
+     *
+     * @param view The current view.
+     */
     private void navigateToExplore(View view) {
         NavOptions navOptions = new NavOptions.Builder()
                 .setPopUpTo(R.id.signInFragment, true)

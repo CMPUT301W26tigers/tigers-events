@@ -164,4 +164,11 @@ public class UsersTest {
         user.setPhoneNumber("7809876543");
         assertEquals("7809876543", user.getPhoneNumber());
     }
+
+    @Test
+    public void phoneNumber_handlesLongFormat() {
+        Users user = new Users();
+        user.setPhoneNumber(7801234567L);
+        assertEquals("7801234567", user.getPhoneNumber());
+    }
 }

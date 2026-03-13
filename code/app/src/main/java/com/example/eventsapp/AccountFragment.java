@@ -24,6 +24,11 @@ import com.google.firebase.firestore.SetOptions;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A fragment that allows the user to view and manage their account information.
+ * Users can update their name, email, and device tracking preferences.
+ * They can also sign out from this fragment.
+ */
 public class AccountFragment extends Fragment {
 
     private ImageButton editNameButton;
@@ -37,10 +42,22 @@ public class AccountFragment extends Fragment {
 
     private FirebaseFirestore db;
 
+    /**
+     * Default constructor for AccountFragment.
+     * Uses the layout R.layout.fragment_account.
+     */
     public AccountFragment() {
         super(R.layout.fragment_account);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned, but before any saved state has been restored in to the view.
+     * Initializes the UI components and sets up click listeners for editing account details.
+     *
+     * @param view The View returned by {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -77,8 +94,7 @@ public class AccountFragment extends Fragment {
 
         // Remember device checkbox
         MaterialCheckBox cbRememberDevice = view.findViewById(R.id.cbRememberDevice);
-        String deviceId = Settings.Secure.getString(
-                requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        String deviceId = Settings.Secure.getString(requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
         Users currentUser = UserManager.getInstance().getCurrentUser();
 
         if (cbRememberDevice != null && currentUser != null) {
@@ -112,6 +128,9 @@ public class AccountFragment extends Fragment {
         }
     }
 
+    /**
+     * Updates the UI text views with the current user's information from the {@link UserManager}.
+     */
     private void displayUserData() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null) {
@@ -132,6 +151,13 @@ public class AccountFragment extends Fragment {
         }
     }
 
+    /**
+     * Displays an {@link AlertDialog} allowing the user to edit a specific field of their profile.
+     *
+     * @param field The name of the field being edited (e.g., "name", "email").
+     * @param title The title to display on the dialog.
+     * @param inputType The input type for the EditText in the dialog.
+     */
     private void showEditDialog(String field, String title, int inputType) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) return;
@@ -160,6 +186,12 @@ public class AccountFragment extends Fragment {
         builder.show();
     }
 
+    /**
+     * Updates a specific user field in the Firestore database and the local {@link Users} object.
+     *
+     * @param field The name of the field to update in Firestore.
+     * @param newValue The new value for the field.
+     */
     private void updateUserField(String field, String newValue) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {

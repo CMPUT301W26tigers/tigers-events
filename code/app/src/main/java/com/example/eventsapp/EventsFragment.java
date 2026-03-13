@@ -27,6 +27,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * A fragment that displays a list of events associated with the current user.
+ * It provides a toggle to switch between events created by the user and events
+ * the user is registered for or waitlisted on.
+ */
 public class EventsFragment extends Fragment {
     private static final String TAG = "EventsFragment";
 
@@ -36,8 +41,20 @@ public class EventsFragment extends Fragment {
     private LinearLayout emptyStateContainer;
     private MaterialButtonToggleGroup toggleEventType;
 
+    /**
+     * Default constructor for EventsFragment.
+     * Uses the layout R.layout.fragment_events.
+     */
     public EventsFragment() { super(R.layout.fragment_events); }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components, sets up the RecyclerView with a custom adapter,
+     * and triggers the initial event loading.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -69,6 +86,9 @@ public class EventsFragment extends Fragment {
         });
     }
 
+    /**
+     * Determines which events to load based on the current toggle state (Created vs. Registered).
+     */
     private void loadEvents() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
@@ -89,7 +109,9 @@ public class EventsFragment extends Fragment {
     }
 
     /**
-     * Load events where createdBy == current user's ID.
+     * Fetches events from Firestore where the `createdBy` field matches the current user's ID.
+     *
+     * @param userId The unique ID of the current user.
      */
     private void loadCreatedEvents(String userId) {
         FirebaseFirestore.getInstance().collection("events")
@@ -114,7 +136,10 @@ public class EventsFragment extends Fragment {
     }
 
     /**
-     * Load events where the current user has an entrant doc in the entrants subcollection.
+     * Fetches events from Firestore where the current user is listed in the `entrants` subcollection.
+     * This method iterates through all events and checks for the user's presence in each subcollection.
+     *
+     * @param userId The unique ID of the current user.
      */
     private void loadRegisteredEvents(String userId) {
         FirebaseFirestore.getInstance().collection("events")
@@ -174,6 +199,12 @@ public class EventsFragment extends Fragment {
                 });
     }
 
+    /**
+     * Parses a Firestore {@link QueryDocumentSnapshot} into an {@link Event} object.
+     *
+     * @param snapshot The document snapshot from Firestore.
+     * @return A new Event object, or null if the data is invalid (e.g., amount is 0).
+     */
     private Event parseEvent(QueryDocumentSnapshot snapshot) {
         String id = snapshot.getString("id");
         String name = snapshot.getString("name");
@@ -194,6 +225,9 @@ public class EventsFragment extends Fragment {
         return null;
     }
 
+    /**
+     * Updates the visibility of the RecyclerView and the empty state message based on the event list size.
+     */
     private void updateEmptyState() {
         if (eventList.isEmpty()) {
             rvMyEvents.setVisibility(View.GONE);
@@ -204,14 +238,29 @@ public class EventsFragment extends Fragment {
         }
     }
 
+    /**
+     * Inner adapter class for displaying events in a card-based RecyclerView.
+     */
     private static class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.ViewHolder> {
         private final List<Event> events;
         private final OnEventClickListener listener;
 
+        /**
+         * Interface for handling click events on individual event cards.
+         */
         interface OnEventClickListener {
+            /**
+             * Called when an event card is clicked.
+             * @param event The event object associated with the clicked card.
+             */
             void onEventClick(Event event);
         }
 
+        /**
+         * Constructs an EventCardAdapter.
+         * @param events The list of events to display.
+         * @param listener The listener for click events.
+         */
         EventCardAdapter(List<Event> events, OnEventClickListener listener) {
             this.events = events;
             this.listener = listener;
@@ -241,10 +290,17 @@ public class EventsFragment extends Fragment {
             return events.size();
         }
 
+        /**
+         * ViewHolder for event card items.
+         */
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime;
             ImageView ivThumb;
 
+            /**
+             * Constructs a ViewHolder and binds UI components.
+             * @param itemView The root view of the item layout.
+             */
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvEventName = itemView.findViewById(R.id.tvEventName);
