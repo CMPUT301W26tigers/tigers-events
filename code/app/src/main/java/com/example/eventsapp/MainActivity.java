@@ -41,9 +41,6 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         eventsRef = db.collection("events");
         userRef = db.collection("users");
 
-        // Add dummy users
-        addDummyUsers();
-
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
@@ -65,18 +62,6 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         });
 
         handleDeepLink(getIntent());
-    }
-
-    private void addDummyUsers() {
-        Users[] dummyUsers = {
-                new Users("John Doe", "john@example.com", "password123", "1234567890"),
-                new Users("Jane Smith", "jane@example.com", "securePass", "1987654321"),
-                new Users("Tiger Wood", "tiger@tigers.com", "roaring", "1122334455"),
-        };
-
-        for (Users user : dummyUsers) {
-            addUser(user);
-        }
     }
 
     public void addUser(Users user) {

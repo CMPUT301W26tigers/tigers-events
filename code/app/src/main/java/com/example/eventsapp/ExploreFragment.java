@@ -27,6 +27,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A fragment that allows users to explore and search for all available events.
+ * It features a main list of events and a search mode with real-time filtering.
+ */
 public class ExploreFragment extends Fragment {
     private static final String TAG = "ExploreFragment";
     private final List<Event> allEvents = new ArrayList<>();
@@ -38,8 +42,20 @@ public class ExploreFragment extends Fragment {
     private ConstraintLayout normalContainer;
     private ConstraintLayout searchContainer;
 
+    /**
+     * Default constructor for ExploreFragment.
+     * Uses the layout R.layout.fragment_explore.
+     */
     public ExploreFragment() { super(R.layout.fragment_explore); }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components, sets up RecyclerViews for both normal and search modes,
+     * and sets up the search bar with filtering logic.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -83,6 +99,12 @@ public class ExploreFragment extends Fragment {
         loadAllEvents();
     }
 
+    /**
+     * Navigates to the {@link EventDetailFragment} for the selected event.
+     *
+     * @param view The current view.
+     * @param event The event object to display details for.
+     */
     private void navigateToDetail(View view, Event event) {
         Bundle args = new Bundle();
         args.putString("eventId", event.getId());
@@ -90,6 +112,9 @@ public class ExploreFragment extends Fragment {
                 .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
     }
 
+    /**
+     * Switches the UI to search mode, showing the search container and hiding the normal list.
+     */
     private void showSearchMode() {
         normalContainer.setVisibility(View.GONE);
         searchContainer.setVisibility(View.VISIBLE);
@@ -98,6 +123,9 @@ public class ExploreFragment extends Fragment {
         searchAdapter.notifyDataSetChanged();
     }
 
+    /**
+     * Exits search mode, showing the normal list and clearing the search input.
+     */
     private void hideSearchMode() {
         searchContainer.setVisibility(View.GONE);
         normalContainer.setVisibility(View.VISIBLE);
@@ -105,6 +133,11 @@ public class ExploreFragment extends Fragment {
         etSearch.setText("");
     }
 
+    /**
+     * Filters the list of all events based on the provided query string and updates the search adapter.
+     *
+     * @param query The search query.
+     */
     private void filterEvents(String query) {
         filteredEvents.clear();
         if (query.isEmpty()) {
@@ -120,6 +153,10 @@ public class ExploreFragment extends Fragment {
         searchAdapter.notifyDataSetChanged();
     }
 
+    /**
+     * Fetches all events from Firestore and updates the main event list.
+     * Listens for real-time updates.
+     */
     private void loadAllEvents() {
         CollectionReference eventsRef = FirebaseFirestore.getInstance().collection("events");
         eventsRef.addSnapshotListener((value, error) -> {
@@ -152,14 +189,29 @@ public class ExploreFragment extends Fragment {
         });
     }
 
+    /**
+     * Inner adapter class for displaying events in a card-based RecyclerView within the Explore fragment.
+     */
     private static class ExploreEventAdapter extends RecyclerView.Adapter<ExploreEventAdapter.ViewHolder> {
         private final List<Event> events;
         private final OnEventClickListener listener;
 
+        /**
+         * Interface for handling click events on event cards in the Explore view.
+         */
         interface OnEventClickListener {
+            /**
+             * Called when an event card is clicked.
+             * @param event The event object associated with the clicked card.
+             */
             void onEventClick(Event event);
         }
 
+        /**
+         * Constructs an ExploreEventAdapter.
+         * @param events The list of events to display.
+         * @param listener The listener for click events.
+         */
         ExploreEventAdapter(List<Event> events, OnEventClickListener listener) {
             this.events = events;
             this.listener = listener;
@@ -189,10 +241,17 @@ public class ExploreFragment extends Fragment {
             return events.size();
         }
 
+        /**
+         * ViewHolder for event card items in the Explore fragment.
+         */
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime;
             ImageView ivThumb;
 
+            /**
+             * Constructs a ViewHolder and binds UI components.
+             * @param itemView The root view of the item layout.
+             */
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvEventName = itemView.findViewById(R.id.tvEventName);

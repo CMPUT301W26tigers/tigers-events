@@ -14,13 +14,38 @@ import androidx.fragment.app.DialogFragment;
 
 import java.util.Objects;
 
+/**
+ * A dialog fragment for adding or editing basic event details (name and capacity).
+ * It communicates with the host through the {@link EventDialogListener} interface.
+ */
 public class EventDialogFragment extends DialogFragment {
+
+    /**
+     * Interface for receiving event addition or update callbacks.
+     */
     interface EventDialogListener {
+        /**
+         * Called when an existing event is updated.
+         * @param event The original event being updated.
+         * @param title The new title for the event.
+         * @param amount The new capacity for the event.
+         */
         void updateEvent(Event event, String title, int amount);
+
+        /**
+         * Called when a new event is added.
+         * @param event The new event object.
+         */
         void addEvent(Event event);
     }
+
     private EventDialogListener listener;
 
+    /**
+     * Creates a new instance of EventDialogFragment for editing an existing event.
+     * @param event The event to be edited.
+     * @return A new instance of EventDialogFragment.
+     */
     public static EventDialogFragment newInstance(Event event){
         Bundle args = new Bundle();
         args.putSerializable("Event", event);
@@ -30,6 +55,11 @@ public class EventDialogFragment extends DialogFragment {
         return fragment;
     }
 
+    /**
+     * Called when a fragment is first attached to its context.
+     * @param context The context to attach to.
+     * @throws RuntimeException if the context does not implement {@link EventDialogListener}.
+     */
     @Override
     public void onAttach(@NonNull Context context) {
         super.onAttach(context);
@@ -41,6 +71,11 @@ public class EventDialogFragment extends DialogFragment {
         }
     }
 
+    /**
+     * Override to build your own custom Dialog container.
+     * @param savedInstanceState The last saved instance state of the Fragment.
+     * @return Return a new Dialog instance to be displayed by the Fragment.
+     */
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
