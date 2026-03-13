@@ -21,7 +21,11 @@
     <fragment
         android:id="@+id/eventsFragment"
         android:name="com.example.eventsapp.EventsFragment"
-        android:label="Your Events" />
+        android:label="Your Events">
+        <action
+            android:id="@+id/action_eventsFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/accountFragment"

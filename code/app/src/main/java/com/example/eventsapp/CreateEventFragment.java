@@ -130,6 +130,12 @@ public class CreateEventFragment extends Fragment {
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
 
+        // Store who created this event for filtering on the Events page
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
+
         DocumentReference docRef = db.collection("events").document(event.getId());
         docRef.set(data)
                 .addOnSuccessListener(aVoid -> {
