@@ -4,14 +4,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="@color/colorSurface">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:title="Event Details"
-        app:navigationIcon="@android:drawable/ic_media_previous"
+        app:navigationIcon="@android:drawable/ic_menu_revert"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -20,38 +20,165 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/btnWaitlist"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <ImageView
-                android:id="@+id/iv_poster"
+            <!-- Event Poster -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:scaleType="centerCrop"
-                android:contentDescription="Event poster"
-                android:src="@android:color/darker_gray"
-                android:layout_marginTop="16dp"/>
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                android:layout_marginBottom="16dp">
 
+                <ImageView
+                    android:id="@+id/iv_poster"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Event poster"
+                    android:src="@android:color/darker_gray"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Event Name -->
             <TextView
                 android:id="@+id/tv_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="24sp"
                 android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Waitlist Counter -->
+            <TextView
+                android:id="@+id/tv_waitlist_counter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/colorPrimaryPurple"
+                android:textStyle="bold"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/colorDivider"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Description"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextHint"
+                android:layout_marginBottom="4dp"/>
 
             <TextView
                 android:id="@+id/tv_description"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
-                android:layout_marginTop="8dp"/>
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Event Date -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Event Date"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextHint"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_event_date"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Registration Start -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Registration Opens"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextHint"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_registration_start"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Registration End -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Registration Closes"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextHint"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_registration_end"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Capacity -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Capacity"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/colorTextHint"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tv_capacity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="@color/colorTextPrimary"
+                android:layout_marginBottom="16dp"/>
+
         </LinearLayout>
     </ScrollView>
+
+    <!-- Join/Leave Waitlist Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnWaitlist"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Join Waitlist"
+        android:textSize="16sp"
+        app:cornerRadius="8dp"
+        app:backgroundTint="@color/colorPrimaryPurple"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
