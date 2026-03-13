@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -53,14 +54,24 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
 
         NavController navController = navHostFragment.getNavController();
         NavigationUI.setupWithNavController(bottomNav, navController);
+
+        // Hide bottom nav on sign-in page
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            if (destination.getId() == R.id.signInFragment) {
+                bottomNav.setVisibility(View.GONE);
+            } else {
+                bottomNav.setVisibility(View.VISIBLE);
+            }
+        });
+
         handleDeepLink(getIntent());
     }
 
     private void addDummyUsers() {
         Users[] dummyUsers = {
-                new Users("John Doe", "john@example.com", "password123", 1234567890),
-                new Users("Jane Smith", "jane@example.com", "securePass", 1987654321),
-                new Users("Tiger Wood", "tiger@tigers.com", "roaring", 1122334455),
+                new Users("John Doe", "john@example.com", "password123", "1234567890"),
+                new Users("Jane Smith", "jane@example.com", "securePass", "1987654321"),
+                new Users("Tiger Wood", "tiger@tigers.com", "roaring", "1122334455"),
         };
 
         for (Users user : dummyUsers) {

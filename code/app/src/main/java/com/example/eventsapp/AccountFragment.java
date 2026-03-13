@@ -2,6 +2,7 @@ package com.example.eventsapp;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
@@ -13,7 +14,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
@@ -69,6 +72,42 @@ public class AccountFragment extends Fragment {
         if (deleteAccountButton != null) {
             deleteAccountButton.setOnClickListener(v -> {
                 // Handle delete account button click
+            });
+        }
+
+        // Remember device checkbox
+        MaterialCheckBox cbRememberDevice = view.findViewById(R.id.cbRememberDevice);
+        String deviceId = Settings.Secure.getString(
+                requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+
+        if (cbRememberDevice != null && currentUser != null) {
+            // Set initial state based on whether deviceId is already saved
+            cbRememberDevice.setChecked(
+                    currentUser.getDeviceId() != null && currentUser.getDeviceId().equals(deviceId));
+
+            cbRememberDevice.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                String newDeviceId = isChecked ? deviceId : null;
+                currentUser.setDeviceId(newDeviceId);
+                updateUserField("deviceId", newDeviceId);
+            });
+        }
+
+        // Sign out button
+        MaterialButton btnSignOut = view.findViewById(R.id.btnSignOut);
+        if (btnSignOut != null) {
+            btnSignOut.setOnClickListener(v -> {
+                Users user = UserManager.getInstance().getCurrentUser();
+                if (user != null && user.getId() != null && user.getDeviceId() != null) {
+                    // Clear deviceId in Firestore to prevent auto-login
+                    user.setDeviceId(null);
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("deviceId", null);
+                    db.collection("users").document(user.getId())
+                            .set(updates, SetOptions.merge());
+                }
+                UserManager.getInstance().setCurrentUser(null);
+                Navigation.findNavController(view).navigate(R.id.signInFragment);
             });
         }
     }
@@ -138,6 +177,8 @@ public class AccountFragment extends Fragment {
                         currentUser.setName(newValue);
                     } else if (field.equals("email")) {
                         currentUser.setEmail(newValue);
+                    } else if (field.equals("deviceId")) {
+                        currentUser.setDeviceId(newValue);
                     }
                     displayUserData();
                     Toast.makeText(getContext(), field + " updated", Toast.LENGTH_SHORT).show();

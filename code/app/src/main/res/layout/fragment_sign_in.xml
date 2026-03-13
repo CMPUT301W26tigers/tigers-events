@@ -57,10 +57,97 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
+                <!-- Sign-up only: First Name -->
+                <TextView
+                    android:id="@+id/tvFirstName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="First Name"
+                    android:textColor="#1F1B24"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilFirstName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="1dp"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etFirstName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="First Name"
+                        android:imeOptions="actionNext"
+                        android:inputType="textPersonName"
+                        android:minHeight="56dp"
+                        android:paddingStart="16dp"
+                        android:paddingTop="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="16dp"
+                        android:textColor="#1F1B24"
+                        android:textColorHint="#A19AA8" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Sign-up only: Last Name -->
+                <TextView
+                    android:id="@+id/tvLastName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Last Name"
+                    android:textColor="#1F1B24"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilLastName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="1dp"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etLastName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Last Name"
+                        android:imeOptions="actionNext"
+                        android:inputType="textPersonName"
+                        android:minHeight="56dp"
+                        android:paddingStart="16dp"
+                        android:paddingTop="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="16dp"
+                        android:textColor="#1F1B24"
+                        android:textColorHint="#A19AA8" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Email (always visible) -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Username"
+                    android:layout_marginTop="20dp"
+                    android:text="Email"
                     android:textColor="#1F1B24"
                     android:textSize="18sp" />
 
@@ -94,6 +181,50 @@
                         android:textColorHint="#A19AA8" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Sign-up only: Phone Number -->
+                <TextView
+                    android:id="@+id/tvPhoneNumber"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Phone Number"
+                    android:textColor="#1F1B24"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPhoneNumber"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="1dp"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPhoneNumber"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Phone Number"
+                        android:imeOptions="actionNext"
+                        android:inputType="phone"
+                        android:minHeight="56dp"
+                        android:paddingStart="16dp"
+                        android:paddingTop="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="16dp"
+                        android:textColor="#1F1B24"
+                        android:textColorHint="#A19AA8" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password (always visible) -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -122,6 +253,50 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Password"
+                        android:imeOptions="actionNext"
+                        android:inputType="textPassword"
+                        android:minHeight="56dp"
+                        android:paddingStart="16dp"
+                        android:paddingTop="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="16dp"
+                        android:textColor="#1F1B24"
+                        android:textColorHint="#A19AA8" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Sign-up only: Confirm Password -->
+                <TextView
+                    android:id="@+id/tvConfirmPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Confirm Password"
+                    android:textColor="#1F1B24"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilConfirmPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxCornerRadiusBottomEnd="10dp"
+                    app:boxCornerRadiusBottomStart="10dp"
+                    app:boxCornerRadiusTopEnd="10dp"
+                    app:boxCornerRadiusTopStart="10dp"
+                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeWidth="1dp"
+                    app:boxStrokeWidthFocused="1dp"
+                    app:endIconMode="password_toggle"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etConfirmPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Confirm Password"
                         android:imeOptions="actionDone"
                         android:inputType="textPassword"
                         android:minHeight="56dp"
@@ -133,6 +308,19 @@
                         android:textColorHint="#A19AA8" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Remember device checkbox (sign-up only) -->
+                <CheckBox
+                    android:id="@+id/cbRememberDevice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:buttonTint="#231F29"
+                    android:text="Remember device"
+                    android:textColor="#8A858F"
+                    android:textSize="16sp"
+                    android:visibility="gone" />
+
+                <!-- Submit button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSignIn"
                     android:layout_width="match_parent"
@@ -147,16 +335,17 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <CheckBox
-            android:id="@+id/cbRememberDevice"
+        <!-- Toggle between Sign In and Sign Up -->
+        <TextView
+            android:id="@+id/tvToggleMode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:buttonTint="#231F29"
-            android:text="Remember device"
-            android:textColor="#8A858F"
+            android:text="Don't have an account? Sign Up"
+            android:textColor="#5A3E9B"
             android:textSize="16sp"
-            app:layout_constraintStart_toStartOf="@id/signInCard"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/signInCard" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
