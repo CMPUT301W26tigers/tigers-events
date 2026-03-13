@@ -19,8 +19,14 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 
 /**
- * A fragment that displays a list of entrants who are currently enrolled in a specific event.
- * It fetches the data from Firestore and updates the UI in real-time.
+ * Fragment that displays the final list of entrants enrolled in an event.
+ *
+ * Fulfills US 02.06.03 - As an organizer I want to see a final list of entrants
+ * who enrolled for the event.
+ *
+ * The fragment retrieves enrolled users from the Firestore
+ *
+ * Each entrant is displayed using the EnrolledEntrantAdapter.
  */
 public class EnrolledFragment extends Fragment {
 
@@ -76,11 +82,12 @@ public class EnrolledFragment extends Fragment {
     }
 
     /**
-     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
-     * has returned. Initializes the UI components, sets up the RecyclerView, and starts loading data.
+     * Initializes UI components and loads enrolled entrants from Firestore.
      *
-     * @param view The View returned by onCreateView.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     * Sets up RecyclerView and adapter, Firestore listener to retrieve enrolled entrants
+     *
+     * @param view fragment layout view
+     * @param savedInstanceState previously saved state
      */
     @Override
     public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
@@ -119,7 +126,11 @@ public class EnrolledFragment extends Fragment {
     }
 
     /**
-     * Fetches enrolled entrants from Firestore and listens for real-time updates.
+     * Loads the enrolled entrants for the current event from Firestore
+     *
+     * Each Firestore document is converted into an EnrolledEntrant object
+     *
+     * Displays the total number of enrolled entrants in the statistics TextView
      */
     private void loadEnrolledEntrants() {
         enrolledRef.addSnapshotListener((value, error) -> {

@@ -24,29 +24,19 @@ public class Event implements Serializable {
      * @param amount The maximum capacity/amount for the event. Must not be zero.
      */
     public Event(String name, int amount) {
-        this(null, name, amount, "", "", 0);
+        this(null, name, amount, "", "", "", "", "", 0);
     }
 
-    /**
-     * Constructs an Event with full details.
-     * @param id The unique ID of the event. If null, a random UUID is generated.
-     * @param name The name of the event.
-     * @param amount The maximum capacity for the event. Must not be zero.
-     * @param description A description of the event.
-     * @param posterUrl The URL for the event's poster image.
-     * @param sampleSize The number of attendees to sample or invite from the waitlist.
-     * @throws IllegalArgumentException if amount is zero.
-     */
-    public Event(String id, String name, int amount, String description, String posterUrl, int sampleSize) {
+    public Event(String id, String name, int amount, String registration_start, String registration_end, String event_date, String description, String posterUrl, int sampleSize) {
         if (amount == 0) {
             throw new IllegalArgumentException("Amount cannot be zero");
         }
         this.id = id != null ? id : java.util.UUID.randomUUID().toString();
         this.name = name;
         this.amount = amount;
-        this.registration_start = ""; // Initialized to empty string if not provided
-        this.registration_end = "";
-        this.event_date = "";
+        this.registration_start = registration_start != null ? registration_start : "";
+        this.registration_end = registration_end != null ? registration_end : "";
+        this.event_date = event_date != null ? event_date : "";
         this.description = description != null ? description : "";
         this.posterUrl = posterUrl != null ? posterUrl : "";
         this.sampleSize = Math.max(0, sampleSize);
@@ -133,7 +123,7 @@ public class Event implements Serializable {
      * @param registration_start The start date to set.
      */
     public void setRegistration_start(String registration_start) {
-        this.registration_start = registration_start;
+        this.registration_start = registration_start != null ? registration_start : "";
     }
 
     /**
@@ -141,7 +131,7 @@ public class Event implements Serializable {
      * @param registration_end The end date to set.
      */
     public void setRegistration_end(String registration_end) {
-        this.registration_end = registration_end;
+        this.registration_end = registration_end != null ? registration_end : "";
     }
 
     /**
@@ -149,7 +139,7 @@ public class Event implements Serializable {
      * @param event_date The event date to set.
      */
     public void setEvent_date(String event_date) {
-        this.event_date = event_date;
+        this.event_date = event_date != null ? event_date : "";
     }
 
     /**

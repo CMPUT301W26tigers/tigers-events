@@ -1,3 +1,5 @@
+/**
+THIS CLASS IS OBSOLETE NOW, IMPORTANT FUNCTIONALITY HAS BEEN MOVED TO ViewEntrantsFragment
 package com.example.eventsapp;
 
 import android.os.Bundle;
@@ -8,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.example.eventsapp.CancelledFragment;
+import com.example.eventsapp.NotificationItem;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -199,3 +203,4 @@ public class WaitlistFragment extends Fragment {
                 .commit();
     }
 }
+*/

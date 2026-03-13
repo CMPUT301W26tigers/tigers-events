@@ -1,3 +1,5 @@
+/**
+ THIS CLASS IS OBSOLETE NOW, IMPORTANT FUNCTIONALITY HAS BEEN MOVED TO CreateEventFragment
 package com.example.eventsapp;
 
 import android.app.DatePickerDialog;
@@ -202,7 +204,7 @@ public class EditEventFragment extends Fragment {
      * Navigates to the {@link EnrolledFragment} for the current event.
      */
     private void openEnrolledFragment() {
-        String currentEventId = "exampleEventId"; // replace real event id
+        String currentEventId = event.getId();
 
         requireActivity()
                 .getSupportFragmentManager()
@@ -213,3 +215,4 @@ public class EditEventFragment extends Fragment {
     }
 
 }
+ */
