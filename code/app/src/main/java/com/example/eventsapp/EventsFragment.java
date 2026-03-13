@@ -70,6 +70,7 @@ public class EventsFragment extends Fragment {
             Navigation.findNavController(view)
                     .navigate(R.id.action_eventsFragment_to_eventDetailFragment, args);
         });
+
         rvMyEvents.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvMyEvents.setAdapter(adapter);
 
@@ -79,33 +80,6 @@ public class EventsFragment extends Fragment {
             if (isChecked) {
                 loadEvents();
             }
-            if (value != null && isAdded()) {
-                eventArrayList.clear();
-                for (QueryDocumentSnapshot snapshot : value) {
-                    String id = snapshot.getString("id");
-                    String name = snapshot.getString("name");
-                    Long amountLong = snapshot.getLong("amount");
-                    int amount = (amountLong != null) ? amountLong.intValue() : 0;
-                    String description = snapshot.getString("description");
-                    String posterUrl = snapshot.getString("posterUrl");
-                    Long sampleLong = snapshot.getLong("sampleSize");
-                    int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
-
-                    String registrationStart = snapshot.getString("registration_start");
-                    String registrationEnd = snapshot.getString("registration_end");
-                    String eventDate = snapshot.getString("event_date");
-
-                    if (registrationStart == null) registrationStart = "";
-                    if (registrationEnd == null) registrationEnd = "";
-                    if (eventDate == null) eventDate = "";
-
-                    if (id == null) id = snapshot.getId();
-                    if (name == null) name = "";
-                    if (description == null) description = "";
-                    if (posterUrl == null) posterUrl = "";
-
-                    if (amount != 0) {
-                        eventArrayList.add(new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize));
         });
 
         chipGroupFilter.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -237,17 +211,25 @@ public class EventsFragment extends Fragment {
         String name = snapshot.getString("name");
         Long amountLong = snapshot.getLong("amount");
         int amount = (amountLong != null) ? amountLong.intValue() : 0;
+        
+        String registrationStart = snapshot.getString("registration_start");
+        String registrationEnd = snapshot.getString("registration_end");
+        String eventDate = snapshot.getString("event_date");
+        
         String description = snapshot.getString("description");
         String posterUrl = snapshot.getString("posterUrl");
         Long sampleLong = snapshot.getLong("sampleSize");
         int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
         if (id == null) id = snapshot.getId();
         if (name == null) name = "";
+        if (registrationStart == null) registrationStart = "";
+        if (registrationEnd == null) registrationEnd = "";
+        if (eventDate == null) eventDate = "";
         if (description == null) description = "";
         if (posterUrl == null) posterUrl = "";
 
         if (amount != 0) {
-            return new Event(id, name, amount, description, posterUrl, sampleSize);
+            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate,description, posterUrl, sampleSize);
         }
         return null;
     }
