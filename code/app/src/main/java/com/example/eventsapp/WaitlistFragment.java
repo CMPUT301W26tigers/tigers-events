@@ -21,6 +21,8 @@ import java.util.Arrays;
  * - Notify chosen entrants (those with status INVITED or ACCEPTED) via in-app notifications.
  * - Export the list of entrants as a CSV file.
  * - Navigate to view cancelled entrants.
+ *
+ * NOTE: This class is being phased out in favor of ViewEntrantsFragment.
  */
 public class WaitlistFragment extends Fragment {
 
@@ -140,7 +142,7 @@ public class WaitlistFragment extends Fragment {
                     final int[] sentCount = {0};
                     final int[] skippedCount = {0};
 
-                    for (var doc : querySnapshot.getDocuments()) {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         String userId = doc.getString("userId");
                         if (userId == null || userId.trim().isEmpty()) {
                             skippedCount[0]++;

@@ -181,7 +181,7 @@ public class ExploreFragment extends Fragment {
                     if (posterUrl == null) posterUrl = "";
 
                     if (amount != 0) {
-                        allEvents.add(new Event(id, name, amount, description, posterUrl, sampleSize));
+                        allEvents.add(new Event(id, name, amount, "", "", "", description, posterUrl, sampleSize));
                     }
                 }
                 adapter.notifyDataSetChanged();

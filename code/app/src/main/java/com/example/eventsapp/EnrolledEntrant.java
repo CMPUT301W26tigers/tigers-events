@@ -1,8 +1,17 @@
 package com.example.eventsapp;
 
 /**
- * Represents an entrant who is specifically enrolled in an event's list (e.g., waitlist or accepted list).
- * This class is typically used for displaying entrant information in lists or adapters.
+ * Represents a user who has successfully enrolled in an event.
+ *
+ * Each EnrolledEntrant contains identifying information about
+ * a participant who is confirmed participating in the event.
+ *
+ * userId: unique identifier of the participant
+ * name: participant name
+ * email: participant contact email
+ * status: enrollment status (typically "Enrolled")
+ *
+ * Displayed in the recyclerview within EnrolledFragment.
  */
 public class EnrolledEntrant {
 

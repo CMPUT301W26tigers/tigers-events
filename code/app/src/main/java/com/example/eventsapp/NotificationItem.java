@@ -1,8 +1,15 @@
 package com.example.eventsapp;
 
+
 /**
- * Represents a single notification item stored in the database for a user.
- * This class is used for serializing and deserializing notification data to/from Firestore.
+ * Represents a notification sent to a user in the event application.
+ *
+ * Each notification contains:
+ * -title: short heading describing the notification
+ * -message: detailed notification text
+ * -eventId: identifier of the related event
+ * -type: category of notification (e.g., invitation, update, reminder)
+ * -read: whether the notification has been viewed by the user
  */
 public class NotificationItem {
     private String title;

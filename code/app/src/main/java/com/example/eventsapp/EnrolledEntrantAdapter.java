@@ -12,8 +12,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 
 /**
- * Adapter class for a {@link RecyclerView} that displays a list of {@link EnrolledEntrant} objects.
- * This adapter manages the creation and binding of view holders for entrants enrolled in an event.
+ * RecyclerView adapter used to display enrolled entrants
+ *
+ * The adapter binds EnrolledEntrant objects to the enrolled_entrant.xml
+ *
+ * Displays: participant name, participant email, enrollment status
+ *
+ * Used by EnrolledFragment to render the list of confirmed participants
  */
 public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrantAdapter.EnrolledViewHolder> {
 
@@ -21,26 +26,25 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
     private ArrayList<EnrolledEntrant> entrants;
 
     /**
-     * Constructs an EnrolledEntrantAdapter.
+     * Creates a new adapter for enrolled entrants
      *
-     * @param context The context in which the adapter is operating.
-     * @param entrants The list of enrolled entrants to be displayed.
+     * @param context application context
+     * @param entrants list of enrolled entrants
      */
     public EnrolledEntrantAdapter(Context context, ArrayList<EnrolledEntrant> entrants) {
         this.context = context;
         this.entrants = entrants;
     }
 
-    /**
-     * Called when RecyclerView needs a new {@link EnrolledViewHolder} of the given type to represent
-     * an item.
-     *
-     * @param parent The ViewGroup into which the new View will be added after it is bound to
-     * an adapter position.
-     * @param viewType The view type of the new View.
-     * @return A new EnrolledViewHolder that holds a View of the given view type.
-     */
+
     @NonNull
+    /**
+     * Creates a new ViewHolder for an entrant row.
+     *
+     * @param parent parent view group
+     * @param viewType type of view
+     * @return a new EnrolledViewHolder
+     */
     @Override
     public EnrolledViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.enrolled_entrant, parent, false);
@@ -48,13 +52,10 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
     }
 
     /**
-     * Called by RecyclerView to display the data at the specified position. This method should
-     * update the contents of the {@link EnrolledViewHolder#itemView} to reflect the item at the given
-     * position.
+     * Binds entrant data to the row.
      *
-     * @param holder The ViewHolder which should be updated to represent the contents of the
-     * item at the given position in the data set.
-     * @param position The position of the item within the adapter's data set.
+     * @param holder ViewHolder for the row
+     * @param position position of the entrant in the list
      */
     @Override
     public void onBindViewHolder(@NonNull EnrolledViewHolder holder, int position) {
@@ -66,9 +67,9 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
     }
 
     /**
-     * Returns the total number of items in the data set held by the adapter.
+     * Returns the number of enrolled entrants in the list.
      *
-     * @return The total number of entrants in the list.
+     * @return number of entrants
      */
     @Override
     public int getItemCount() {

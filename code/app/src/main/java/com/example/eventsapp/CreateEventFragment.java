@@ -1,5 +1,6 @@
 package com.example.eventsapp;
 
+import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
@@ -22,7 +23,13 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * A fragment that allows users to create a new event.
@@ -42,6 +49,9 @@ public class CreateEventFragment extends Fragment {
     private ImageView ivPoster;
     private ImageView ivQR;
     private FirebaseFirestore db;
+    private TextInputEditText editEventDate;
+    private TextInputEditText editRegistrationStart;
+    private TextInputEditText editRegistrationEnd;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -80,6 +90,10 @@ public class CreateEventFragment extends Fragment {
         editSampleSize = view.findViewById(R.id.edit_sample_size);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
+        editEventDate = view.findViewById(R.id.edit_event_date);
+        editRegistrationStart = view.findViewById(R.id.edit_registration_start);
+        editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
@@ -88,7 +102,7 @@ public class CreateEventFragment extends Fragment {
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
         // Create new event - generate unique ID and QR
-        Event event = new Event(null, "", 1, "", "", 0);
+        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
@@ -105,6 +119,48 @@ public class CreateEventFragment extends Fragment {
     }
 
     /**
+     * Attaches DatePicker dialogs to the event date and registration date input fields.
+     *
+     * When a field is clicked a DatePickerDialog allows the organizer to select a date.
+     *
+     * Dates are formatted as YYYY-MM-DD and inserted into the corresponding input field.
+     */
+    private void setupDatePickers() {
+        editEventDate.setOnClickListener(v -> showDatePicker(editEventDate));
+        editRegistrationStart.setOnClickListener(v -> showDatePicker(editRegistrationStart));
+        editRegistrationEnd.setOnClickListener(v -> showDatePicker(editRegistrationEnd));
+
+        editEventDate.setFocusable(false);
+        editRegistrationStart.setFocusable(false);
+        editRegistrationEnd.setFocusable(false);
+    }
+
+    /**
+     * Displays a DatePicker dialog for selecting a date.
+     *
+     * The selected date is formatted YYYY-MM-DD and placed into TextInputEditText.
+     *
+     * @param target the input field that will receive the selected date
+     */
+    private void showDatePicker(TextInputEditText target) {
+        Calendar calendar = Calendar.getInstance();
+
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog picker = new DatePickerDialog(
+                requireContext(),
+                (view, selectedYear, selectedMonth, selectedDay) -> {
+                    String date = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay);
+                    target.setText(date);
+                },
+                year, month, day
+        );
+
+        picker.show();
+    }
+/**
      * Generates a QR code bitmap for the event's deep link and updates the ImageView.
      *
      * @param event The event object whose deep link will be encoded.
@@ -129,6 +185,32 @@ public class CreateEventFragment extends Fragment {
         String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
                 ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
         int capacity;
         int sampleSize;
         try {
@@ -144,6 +226,10 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
         if (name.isEmpty()) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return;
@@ -154,6 +240,9 @@ public class CreateEventFragment extends Fragment {
         event.setAmount(capacity);
         event.setSampleSize(sampleSize);
         updateQRCode(event);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -162,6 +251,9 @@ public class CreateEventFragment extends Fragment {
         data.put("description", event.getDescription());
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
 
         // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -184,5 +276,67 @@ public class CreateEventFragment extends Fragment {
                     Log.e("CreateEvent", "Failed to save", e);
                     Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    /**
+     * Validates the event registration period.
+     *
+     * Ensures that:
+     * - registration start occurs before registration end
+     * - registration end occurs before the event date
+     *
+     * Dates must be in YYYY-MM-DD format.
+     *
+     * @param eventDateStr event date string
+     * @param registrationStartStr registration start date
+     * @param registrationEndStr registration end date
+     *
+     * @return true if the registration period is valid, false otherwise
+     */
+    private boolean isValidRegistrationPeriod(String eventDateStr,
+                                              String registrationStartStr,
+                                              String registrationEndStr) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+        sdf.setLenient(false);
+
+        try {
+            Date eventDate = sdf.parse(eventDateStr);
+            Date registrationStart = sdf.parse(registrationStartStr);
+            Date registrationEnd = sdf.parse(registrationEndStr);
+
+            if (eventDate == null || registrationStart == null || registrationEnd == null) {
+                Toast.makeText(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            if (registrationStart.after(registrationEnd)) {
+                editRegistrationStart.setError("Start must be before end");
+                editRegistrationEnd.setError("End must be after start");
+                return false;
+            }
+
+            if (registrationEnd.after(eventDate)) {
+                editRegistrationEnd.setError("Registration must end before event date");
+                editEventDate.setError("Event date must be after registration ends");
+                return false;
+            }
+
+        } catch (ParseException e) {
+            Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Attaches DatePicker dialogs to the event date and registration date input
+     *
+     * When a field is clicked DatePickerDialog appears allowing the organizer to select date
+     */
+    private String getText(TextInputEditText editText) {
+        return editText != null && editText.getText() != null
+                ? editText.getText().toString().trim()
+                : "";
     }
 }
