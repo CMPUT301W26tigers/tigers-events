@@ -15,19 +15,19 @@ public class Event implements Serializable {
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
 
     public Event(String name, int amount) {
-        this(null, name, amount, "", "", 0);
+        this(null, name, amount, "", "", "", "", "", 0);
     }
 
-    public Event(String id, String name, int amount, String description, String posterUrl, int sampleSize) {
+    public Event(String id, String name, int amount, String registration_start, String registration_end, String event_date, String description, String posterUrl, int sampleSize) {
         if (amount == 0) {
             throw new IllegalArgumentException("Amount cannot be zero");
         }
         this.id = id != null ? id : java.util.UUID.randomUUID().toString();
         this.name = name;
         this.amount = amount;
-        this.registration_start = registration_start;
-        this.registration_end = registration_end;
-        this.event_date = event_date;
+        this.registration_start = registration_start != null ? registration_start : "";
+        this.registration_end = registration_end != null ? registration_end : "";
+        this.event_date = event_date != null ? event_date : "";
         this.description = description != null ? description : "";
         this.posterUrl = posterUrl != null ? posterUrl : "";
         this.sampleSize = Math.max(0, sampleSize);
@@ -70,13 +70,15 @@ public class Event implements Serializable {
         return event_date;
     }
     public void setRegistration_start(String registration_start) {
-        this.registration_start = registration_start;
+        this.registration_start = registration_start != null ? registration_start : "";
     }
+
     public void setRegistration_end(String registration_end) {
-        this.registration_end = registration_end;
+        this.registration_end = registration_end != null ? registration_end : "";
     }
+
     public void setEvent_date(String event_date) {
-        this.event_date = event_date;
+        this.event_date = event_date != null ? event_date : "";
     }
 
     public String getDescription() {

@@ -11,23 +11,52 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 
+/**
+ * RecyclerView adapter used to display enrolled entrants
+ *
+ * The adapter binds EnrolledEntrant objects to the enrolled_entrant.xml
+ *
+ * Displays: participant name, participant email, enrollment status
+ *
+ * Used by EnrolledFragment to render the list of confirmed participants
+ */
 public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrantAdapter.EnrolledViewHolder> {
 
     private Context context;
     private ArrayList<EnrolledEntrant> entrants;
 
+    /**
+     * Creates a new adapter for enrolled entrants
+     *
+     * @param context application context
+     * @param entrants list of enrolled entrants
+     */
     public EnrolledEntrantAdapter(Context context, ArrayList<EnrolledEntrant> entrants) {
         this.context = context;
         this.entrants = entrants;
     }
 
+
     @NonNull
+    /**
+     * Creates a new ViewHolder for an entrant row.
+     *
+     * @param parent parent view group
+     * @param viewType type of view
+     * @return a new EnrolledViewHolder
+     */
     @Override
     public EnrolledViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.enrolled_entrant, parent, false);
         return new EnrolledViewHolder(view);
     }
 
+    /**
+     * Binds entrant data to the row.
+     *
+     * @param holder ViewHolder for the row
+     * @param position position of the entrant in the list
+     */
     @Override
     public void onBindViewHolder(@NonNull EnrolledViewHolder holder, int position) {
         EnrolledEntrant entrant = entrants.get(position);
@@ -37,6 +66,11 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
         holder.tvStatus.setText(entrant.getStatus());
     }
 
+    /**
+     * Returns the number of enrolled entrants in the list.
+     *
+     * @return number of entrants
+     */
     @Override
     public int getItemCount() {
         return entrants.size();

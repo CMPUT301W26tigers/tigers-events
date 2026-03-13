@@ -18,6 +18,16 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 
+/**
+ * Fragment that displays the final list of entrants enrolled in an event.
+ *
+ * Fulfills US 02.06.03 - As an organizer I want to see a final list of entrants
+ * who enrolled for the event.
+ *
+ * The fragment retrieves enrolled users from the Firestore
+ *
+ * Each entrant is displayed using the EnrolledEntrantAdapter.
+ */
 public class EnrolledFragment extends Fragment {
 
     private static final String ARG_EVENT_ID = "event_id";
@@ -56,6 +66,14 @@ public class EnrolledFragment extends Fragment {
         }
     }
 
+    /**
+     * Initializes UI components and loads enrolled entrants from Firestore.
+     *
+     * Sets up RecyclerView and adapter, Firestore listener to retrieve enrolled entrants
+     *
+     * @param view fragment layout view
+     * @param savedInstanceState previously saved state
+     */
     @Override
     public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -92,6 +110,13 @@ public class EnrolledFragment extends Fragment {
         loadEnrolledEntrants();
     }
 
+    /**
+     * Loads the enrolled entrants for the current event from Firestore
+     *
+     * Each Firestore document is converted into an EnrolledEntrant object
+     *
+     * Displays the total number of enrolled entrants in the statistics TextView
+     */
     private void loadEnrolledEntrants() {
         enrolledRef.addSnapshotListener((value, error) -> {
             if (error != null) {

@@ -1,5 +1,16 @@
 package com.example.eventsapp;
 
+
+/**
+ * Represents a notification sent to a user in the event application.
+ *
+ * Each notification contains:
+ * -title: short heading describing the notification
+ * -message: detailed notification text
+ * -eventId: identifier of the related event
+ * -type: category of notification (e.g., invitation, update, reminder)
+ * -read: whether the notification has been viewed by the user
+ */
 public class NotificationItem {
     private String title;
     private String message;
@@ -9,6 +20,15 @@ public class NotificationItem {
 
     public NotificationItem() {
     }
+    /**
+     * Creates a new notification.
+     *
+     * @param title   title of the notification
+     * @param message notification message content
+     * @param eventId ID of the related event
+     * @param type    type of notification (e.g., invitation, update)
+     * @param read    indicates whether the notification has been read
+     */
     public NotificationItem(String title, String message, String eventId, String type, boolean read) {
         this.title = title;
         this.message = message;

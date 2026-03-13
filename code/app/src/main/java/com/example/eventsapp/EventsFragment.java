@@ -56,13 +56,22 @@ public class EventsFragment extends Fragment {
                     String posterUrl = snapshot.getString("posterUrl");
                     Long sampleLong = snapshot.getLong("sampleSize");
                     int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
+
+                    String registrationStart = snapshot.getString("registration_start");
+                    String registrationEnd = snapshot.getString("registration_end");
+                    String eventDate = snapshot.getString("event_date");
+
+                    if (registrationStart == null) registrationStart = "";
+                    if (registrationEnd == null) registrationEnd = "";
+                    if (eventDate == null) eventDate = "";
+
                     if (id == null) id = snapshot.getId();
                     if (name == null) name = "";
                     if (description == null) description = "";
                     if (posterUrl == null) posterUrl = "";
 
                     if (amount != 0) {
-                        eventArrayList.add(new Event(id, name, amount, description, posterUrl, sampleSize));
+                        eventArrayList.add(new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize));
                     }
                 }
                 eventArrayAdapter.notifyDataSetChanged();

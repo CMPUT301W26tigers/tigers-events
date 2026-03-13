@@ -1,5 +1,18 @@
 package com.example.eventsapp;
 
+/**
+ * Represents a user who has successfully enrolled in an event.
+ *
+ * Each EnrolledEntrant contains identifying information about
+ * a participant who is confirmed participating in the event.
+ *
+ * userId: unique identifier of the participant
+ * name: participant name
+ * email: participant contact email
+ * status: enrollment status (typically "Enrolled")
+ *
+ * Displayed in the recyclerview within EnrolledFragment.
+ */
 public class EnrolledEntrant {
 
     private String userId;
@@ -10,6 +23,14 @@ public class EnrolledEntrant {
     public EnrolledEntrant() {
     }
 
+    /**
+     * Creates a new enrolled entrant.
+     *
+     * @param userId unique identifier of the user
+     * @param name participant name
+     * @param email participant email
+     * @param status enrollment status
+     */
     public EnrolledEntrant(String userId, String name, String email, String status) {
         this.userId = userId;
         this.name = name;
