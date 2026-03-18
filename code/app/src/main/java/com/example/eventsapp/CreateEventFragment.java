@@ -30,7 +30,6 @@ import java.util.Map;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -276,9 +275,6 @@ public class CreateEventFragment extends Fragment {
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
         updateQRCode(event);
-        event.setEvent_date(eventDate);
-        event.setRegistration_start(registrationStart);
-        event.setRegistration_end(registrationEnd);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -309,6 +305,100 @@ public class CreateEventFragment extends Fragment {
                             .navigate(R.id.viewEntrantsFragment, args);
                 })
                 .addOnFailureListener(e -> {
+                    Log.e("CreateEvent", "Failed to save", e);
+                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    /**
+     * Validates inputs, saves the event to Firestore, then returns to the previous screen.
+     * This is used by the \"Done\" button for a natural completion flow.
+     */
+    private void saveAndGoBack(Event event) {
+        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+                ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
+        int capacity;
+        int sampleSize;
+        try {
+            capacity = Integer.parseInt(capacityStr);
+            if (capacity <= 0) {
+                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sampleSize = Integer.parseInt(sampleStr);
+            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
+        event.setName(name);
+        event.setDescription(description);
+        event.setAmount(capacity);
+        event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
+        updateQRCode(event);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
+
+        db.collection("events").document(event.getId())
+                .set(data)
+                .addOnSuccessListener(aVoid -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    Navigation.findNavController(requireView()).popBackStack();
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
                     Log.e("CreateEvent", "Failed to save", e);
                     Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
                 });
