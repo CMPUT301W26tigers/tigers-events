@@ -13,17 +13,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Generates QR code bitmaps for event deep links.
+ * Utility class for generating QR codes.
+ * This class uses the ZXing library to create QR code Bitmaps from string content,
+ * specifically for event deep links.
  */
 public class QRCodeUtil {
 
     /**
-     * Generate a QR code Bitmap for the given content.
+     * Generates a QR code Bitmap for the given content.
      *
-     * @param content The string to encode (e.g., tigers-events://event/xyz)
-     * @param width   Width in pixels
-     * @param height  Height in pixels
-     * @return Bitmap of the QR code, or null on error
+     * @param content The string to encode (e.g., a deep link like tigers-events://event/xyz).
+     * @param width   The desired width of the generated Bitmap in pixels.
+     * @param height  The desired height of the generated Bitmap in pixels.
+     * @return A Bitmap of the QR code, or null if an error occurs during encoding.
      */
     public static Bitmap generateQRCode(String content, int width, int height) {
         try {

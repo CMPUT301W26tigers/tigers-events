@@ -98,11 +98,23 @@ public class ViewEntrantsFragment extends Fragment {
 
         view.findViewById(R.id.btn_add_applicant).setOnClickListener(v -> showAddApplicantDialog());
         view.findViewById(R.id.btn_run_sampling).setOnClickListener(v -> runSampling());
+        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> openEnrolledFragment());
+        view.findViewById(R.id.btn_notify_chosen).setOnClickListener(v -> notifyChosenEntrants());
+
 
         view.findViewById(R.id.btn_export_csv).setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
         view.findViewById(R.id.btn_see_cancelled).setOnClickListener(v ->
                 Toast.makeText(requireContext(), "See Cancelled Entrants", Toast.LENGTH_SHORT).show());
+    }
+
+    private void openEnrolledFragment() {
+        requireActivity()
+                .getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.nav_host_fragment, EnrolledFragment.newInstance(eventId))
+                .addToBackStack(null)
+                .commit();
     }
 
     private void loadChosenEntrants() {
@@ -250,11 +262,71 @@ public class ViewEntrantsFragment extends Fragment {
                 .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show());
     }
 
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         if (listenerRegistration != null) {
             listenerRegistration.remove();
         }
+    }
+
+    /**
+     * Sends notifications to all entrants who were selected in the lottery.
+     *
+     * Filters the list of entrants and identifies those with the status "INVITED".
+     * These entrants are considered chosen entrants and should receive a notification informing
+     * them that they have been selected to sign up for the event.
+     *
+     * For each invited entrant NotificationItem is created and stored
+     * in that user's Firestore notifications collection.
+     *
+     * If no invited entrants exist, a message is displayed to the organizer indicating that
+     * there are no entrants to notify.
+     *
+     * This method fulfills US 02.02.01: organizer sends notifications
+     * to entrants who won the event lottery.
+     */
+    private void notifyChosenEntrants() {
+
+        if (allEntrants == null || allEntrants.isEmpty()) {
+            Toast.makeText(requireContext(), "No entrants available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        List<Entrant> chosenEntrants = new ArrayList<>();
+
+        for (Entrant entrant : allEntrants) {
+            if (entrant != null && entrant.getStatus() == Entrant.Status.INVITED) {
+                chosenEntrants.add(entrant);
+            }
+        }
+
+        if (chosenEntrants.isEmpty()) {
+            Toast.makeText(requireContext(), "No chosen entrants to notify", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        for (Entrant entrant : chosenEntrants) {
+
+            NotificationItem notification = new NotificationItem(
+                    "You've been selected!",
+                    "You were chosen to sign up for this event.",
+                    eventId,
+                    "invitation",
+                    false
+            );
+
+            db.collection("users")
+                    .document(entrant.getId())
+                    .collection("notifications")
+                    .add(notification);
+        }
+
+        Toast.makeText(requireContext(),
+                "Notifications sent to " + chosenEntrants.size() + " entrants",
+                Toast.LENGTH_SHORT).show();
     }
 }
