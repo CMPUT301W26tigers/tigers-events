@@ -1,5 +1,6 @@
 package com.example.eventsapp;
 
+import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.util.Log;
@@ -22,11 +23,20 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
 /**
- * US 02.01.01: Create event with description, poster, and unique promotional QR code.
- * Uses edit_event.xml layout.
+ * A fragment that allows users to create a new event.
+ * Handles user stories for event creation (US 02.01.01) including:
+ * - Setting event description and poster.
+ * - Generating a unique promotional QR code for the event.
+ * - Specifying event capacity and lottery sample size.
  */
 public class CreateEventFragment extends Fragment {
 
@@ -39,7 +49,21 @@ public class CreateEventFragment extends Fragment {
     private ImageView ivPoster;
     private ImageView ivQR;
     private FirebaseFirestore db;
+    private TextInputEditText editEventDate;
+    private TextInputEditText editRegistrationStart;
+    private TextInputEditText editRegistrationEnd;
 
+    /**
+     * Called to have the fragment instantiate its user interface view.
+     *
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment.
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     * @return Return the View for the fragment's UI, or null.
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -47,6 +71,14 @@ public class CreateEventFragment extends Fragment {
         return inflater.inflate(R.layout.edit_event, container, false);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components, generates a random UUID for the new event,
+     * and sets up listeners for saving and sharing.
+     *
+     * @param view The View returned by {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -58,6 +90,10 @@ public class CreateEventFragment extends Fragment {
         editSampleSize = view.findViewById(R.id.edit_sample_size);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
+        editEventDate = view.findViewById(R.id.edit_event_date);
+        editRegistrationStart = view.findViewById(R.id.edit_registration_start);
+        editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
@@ -66,12 +102,16 @@ public class CreateEventFragment extends Fragment {
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
         // Create new event - generate unique ID and QR
-        Event event = new Event(null, "", 1, "", "", 0);
+        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
-        // Save event
-        view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+        // Create flow: show Create Event button, hide edit-only buttons
+        MaterialButton btnCreateEvent = view.findViewById(R.id.btn_create_event);
+        view.findViewById(R.id.btn_view_waitlist).setVisibility(View.GONE);
+        view.findViewById(R.id.btn_view_enrolled).setVisibility(View.GONE);
+        btnCreateEvent.setVisibility(View.VISIBLE);
+        btnCreateEvent.setOnClickListener(v -> saveEvent(event, view));
 
         // Share QR
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
@@ -82,6 +122,53 @@ public class CreateEventFragment extends Fragment {
         });
     }
 
+    /**
+     * Attaches DatePicker dialogs to the event date and registration date input fields.
+     *
+     * When a field is clicked a DatePickerDialog allows the organizer to select a date.
+     *
+     * Dates are formatted as YYYY-MM-DD and inserted into the corresponding input field.
+     */
+    private void setupDatePickers() {
+        editEventDate.setOnClickListener(v -> showDatePicker(editEventDate));
+        editRegistrationStart.setOnClickListener(v -> showDatePicker(editRegistrationStart));
+        editRegistrationEnd.setOnClickListener(v -> showDatePicker(editRegistrationEnd));
+
+        editEventDate.setFocusable(false);
+        editRegistrationStart.setFocusable(false);
+        editRegistrationEnd.setFocusable(false);
+    }
+
+    /**
+     * Displays a DatePicker dialog for selecting a date.
+     *
+     * The selected date is formatted YYYY-MM-DD and placed into TextInputEditText.
+     *
+     * @param target the input field that will receive the selected date
+     */
+    private void showDatePicker(TextInputEditText target) {
+        Calendar calendar = Calendar.getInstance();
+
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog picker = new DatePickerDialog(
+                requireContext(),
+                (view, selectedYear, selectedMonth, selectedDay) -> {
+                    String date = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay);
+                    target.setText(date);
+                },
+                year, month, day
+        );
+
+        picker.show();
+    }
+/**
+     * Generates a QR code bitmap for the event's deep link and updates the ImageView.
+     *
+     * @param event The event object whose deep link will be encoded.
+     */
     private void updateQRCode(Event event) {
         String link = event.getEventDeepLink();
         Bitmap qrBitmap = QRCodeUtil.generateQRCode(link, QR_SIZE, QR_SIZE);
@@ -90,12 +177,55 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Saves the event and navigates back to Your Events list.
+     */
+    private void saveEvent(Event event, View view) {
+        saveAndNavigateToWaitlist(event, /* goToWaitlist= */ false);
+    }
+
+    /**
+     * Validates input fields, updates the {@link Event} object, saves the event to Firestore,
+     * and navigates to the waitlist management screen upon success.
+     *
+     * @param event The event object being created and saved.
+     */
     private void saveAndNavigateToWaitlist(Event event) {
+        saveAndNavigateToWaitlist(event, /* goToWaitlist= */ true);
+    }
+
+    private void saveAndNavigateToWaitlist(Event event, boolean goToWaitlist) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
         String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
                 ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
         int capacity;
         int sampleSize;
         try {
@@ -111,6 +241,10 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
         if (name.isEmpty()) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return;
@@ -121,6 +255,9 @@ public class CreateEventFragment extends Fragment {
         event.setAmount(capacity);
         event.setSampleSize(sampleSize);
         updateQRCode(event);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -129,21 +266,96 @@ public class CreateEventFragment extends Fragment {
         data.put("description", event.getDescription());
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+
+        // Store who created this event for filtering on the Events page
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
 
         DocumentReference docRef = db.collection("events").document(event.getId());
         docRef.set(data)
                 .addOnSuccessListener(aVoid -> {
                     Log.d("CreateEvent", "Event saved");
-                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
-                    Bundle args = new Bundle();
-                    args.putString("eventId", event.getId());
-                    args.putString("eventName", event.getName());
-                    Navigation.findNavController(requireView())
-                            .navigate(R.id.viewEntrantsFragment, args);
+                    Toast.makeText(requireContext(), "Event created!", Toast.LENGTH_SHORT).show();
+                    NavController navController = Navigation.findNavController(requireView());
+                    if (goToWaitlist) {
+                        Bundle args = new Bundle();
+                        args.putString("eventId", event.getId());
+                        args.putString("eventName", event.getName());
+                        navController.navigate(R.id.viewEntrantsFragment, args);
+                    } else {
+                        navController.navigate(R.id.eventsFragment);
+                    }
                 })
                 .addOnFailureListener(e -> {
                     Log.e("CreateEvent", "Failed to save", e);
                     Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    /**
+     * Validates the event registration period.
+     *
+     * Ensures that:
+     * - registration start occurs before registration end
+     * - registration end occurs before the event date
+     *
+     * Dates must be in YYYY-MM-DD format.
+     *
+     * @param eventDateStr event date string
+     * @param registrationStartStr registration start date
+     * @param registrationEndStr registration end date
+     *
+     * @return true if the registration period is valid, false otherwise
+     */
+    private boolean isValidRegistrationPeriod(String eventDateStr,
+                                              String registrationStartStr,
+                                              String registrationEndStr) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+        sdf.setLenient(false);
+
+        try {
+            Date eventDate = sdf.parse(eventDateStr);
+            Date registrationStart = sdf.parse(registrationStartStr);
+            Date registrationEnd = sdf.parse(registrationEndStr);
+
+            if (eventDate == null || registrationStart == null || registrationEnd == null) {
+                Toast.makeText(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            if (registrationStart.after(registrationEnd)) {
+                editRegistrationStart.setError("Start must be before end");
+                editRegistrationEnd.setError("End must be after start");
+                return false;
+            }
+
+            if (registrationEnd.after(eventDate)) {
+                editRegistrationEnd.setError("Registration must end before event date");
+                editEventDate.setError("Event date must be after registration ends");
+                return false;
+            }
+
+        } catch (ParseException e) {
+            Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Attaches DatePicker dialogs to the event date and registration date input
+     *
+     * When a field is clicked DatePickerDialog appears allowing the organizer to select date
+     */
+    private String getText(TextInputEditText editText) {
+        return editText != null && editText.getText() != null
+                ? editText.getText().toString().trim()
+                : "";
     }
 }
