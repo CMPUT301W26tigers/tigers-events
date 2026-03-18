@@ -248,9 +248,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Event Date"
-                app:boxBackgroundMode="none"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
                 app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -269,9 +266,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Registration Start"
-                app:boxBackgroundMode="none"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
                 app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -290,9 +284,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Registration End (Waitlist Deadline)"
-                app:boxBackgroundMode="none"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp"
                 app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
