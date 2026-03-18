@@ -25,9 +25,6 @@
         <action
             android:id="@+id/action_eventsFragment_to_eventDetailFragment"
             app:destination="@id/eventDetailFragment" />
-        <action
-            android:id="@+id/action_eventsFragment_to_createEventFragment"
-            app:destination="@id/createEventFragment" />
     </fragment>
 
     <fragment

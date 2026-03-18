@@ -119,27 +119,9 @@
         android:layout_marginTop="12dp"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
-        android:paddingBottom="80dp"
+        android:paddingBottom="8dp"
         android:clipToPadding="false"
         app:layout_constraintTop_toBottomOf="@id/chipScrollView"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCreateEvent"
-        style="@style/Widget.Material3.Button"
-        android:layout_width="wrap_content"
-        android:layout_height="52dp"
-        android:text="+ Create Event"
-        android:textSize="15sp"
-        android:textAllCaps="false"
-        android:paddingStart="28dp"
-        android:paddingEnd="28dp"
-        android:visibility="gone"
-        app:cornerRadius="26dp"
-        app:backgroundTint="@color/colorPrimaryPurple"
-        android:layout_marginBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

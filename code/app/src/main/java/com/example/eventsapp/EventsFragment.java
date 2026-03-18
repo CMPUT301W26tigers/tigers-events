@@ -8,8 +8,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.android.material.button.MaterialButton;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -42,7 +40,6 @@ public class EventsFragment extends Fragment {
     private RecyclerView rvMyEvents;
     private LinearLayout emptyStateContainer;
     private MaterialButtonToggleGroup toggleEventType;
-    private MaterialButton btnCreateEvent;
 
     /**
      * Default constructor for EventsFragment.
@@ -65,12 +62,7 @@ public class EventsFragment extends Fragment {
         rvMyEvents = view.findViewById(R.id.rvMyEvents);
         emptyStateContainer = view.findViewById(R.id.emptyStateContainer);
         toggleEventType = view.findViewById(R.id.toggleEventType);
-        btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
         ChipGroup chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
-
-        btnCreateEvent.setOnClickListener(v ->
-                Navigation.findNavController(view)
-                        .navigate(R.id.action_eventsFragment_to_createEventFragment));
 
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
@@ -83,11 +75,8 @@ public class EventsFragment extends Fragment {
 
         loadEvents();
 
-        updateCreateButtonVisibility();
-
         toggleEventType.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                updateCreateButtonVisibility();
                 loadEvents();
             }
         });
@@ -95,11 +84,6 @@ public class EventsFragment extends Fragment {
         chipGroupFilter.setOnCheckedStateChangeListener((group, checkedIds) -> {
             loadEvents();
         });
-    }
-
-    private void updateCreateButtonVisibility() {
-        boolean isCreatedTab = toggleEventType.getCheckedButtonId() == R.id.btnCreated;
-        btnCreateEvent.setVisibility(isCreatedTab ? View.VISIBLE : View.GONE);
     }
 
     /**

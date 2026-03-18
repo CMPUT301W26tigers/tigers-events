@@ -25,7 +25,13 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * A fragment that allows users to create a new event.
@@ -107,8 +113,8 @@ public class CreateEventFragment extends Fragment {
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
-        // Create new event with a fixed unique ID so QR always links to this event
-        Event event = new Event(null, "", 1, "", "", "", "", "", 0);
+        // Create new event - generate unique ID and QR
+        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
@@ -253,14 +259,11 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
-        EventValidator.PeriodResult periodResult =
-                EventValidator.validateRegistrationPeriod(eventDate, registrationStart, registrationEnd);
-        if (periodResult != EventValidator.PeriodResult.VALID) {
-            handlePeriodError(periodResult);
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
             return;
         }
 
-        if (!EventValidator.isValidName(name)) {
+        if (name.isEmpty()) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -273,6 +276,9 @@ public class CreateEventFragment extends Fragment {
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
         updateQRCode(event);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -285,6 +291,7 @@ public class CreateEventFragment extends Fragment {
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
 
+        // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
             data.put("createdBy", currentUser.getId());
@@ -308,125 +315,54 @@ public class CreateEventFragment extends Fragment {
     }
 
     /**
-     * Translates a {@link EventValidator.PeriodResult} into user-facing error messages
-     * and field-level error indicators.
+     * Validates the event registration period.
      *
-     * @param result the validation result to handle
+     * Ensures that:
+     * - registration start occurs before registration end
+     * - registration end occurs before the event date
+     *
+     * Dates must be in YYYY-MM-DD format.
+     *
+     * @param eventDateStr event date string
+     * @param registrationStartStr registration start date
+     * @param registrationEndStr registration end date
+     *
+     * @return true if the registration period is valid, false otherwise
      */
-    private void handlePeriodError(EventValidator.PeriodResult result) {
-        switch (result) {
-            case INVALID_FORMAT:
-                Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
-                break;
-            case START_AFTER_END:
+    private boolean isValidRegistrationPeriod(String eventDateStr,
+                                              String registrationStartStr,
+                                              String registrationEndStr) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+        sdf.setLenient(false);
+
+        try {
+            Date eventDate = sdf.parse(eventDateStr);
+            Date registrationStart = sdf.parse(registrationStartStr);
+            Date registrationEnd = sdf.parse(registrationEndStr);
+
+            if (eventDate == null || registrationStart == null || registrationEnd == null) {
+                Toast.makeText(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+
+            if (registrationStart.after(registrationEnd)) {
                 editRegistrationStart.setError("Start must be before end");
                 editRegistrationEnd.setError("End must be after start");
-                break;
-            case END_AFTER_EVENT:
+                return false;
+            }
+
+            if (registrationEnd.after(eventDate)) {
                 editRegistrationEnd.setError("Registration must end before event date");
                 editEventDate.setError("Event date must be after registration ends");
-                break;
-            default:
-                break;
-        }
-    }
-
-    /**
-     * Validates input, saves the event to Firestore, and navigates back to Your Events.
-     *
-     * @param event The event object being created.
-     */
-    private void saveAndGoBack(Event event) {
-        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
-        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
-
-        String eventDate = getText(editEventDate);
-        String registrationStart = getText(editRegistrationStart);
-        String registrationEnd = getText(editRegistrationEnd);
-
-        if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (eventDate.isEmpty()) {
-            editEventDate.setError("Event date required");
-            return;
-        }
-        if (registrationStart.isEmpty()) {
-            editRegistrationStart.setError("Registration start required");
-            return;
-        }
-        if (registrationEnd.isEmpty()) {
-            editRegistrationEnd.setError("Registration end required");
-            return;
-        }
-
-        int capacity;
-        int sampleSize;
-        try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return;
+                return false;
             }
-            sampleSize = sampleStr.isEmpty() ? 0 : Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
+
+        } catch (ParseException e) {
+            Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
+            return false;
         }
 
-        EventValidator.PeriodResult goBackPeriodResult =
-                EventValidator.validateRegistrationPeriod(eventDate, registrationStart, registrationEnd);
-        if (goBackPeriodResult != EventValidator.PeriodResult.VALID) {
-            handlePeriodError(goBackPeriodResult);
-            return;
-        }
-
-        event.setName(name);
-        event.setDescription(description);
-        event.setAmount(capacity);
-        event.setSampleSize(sampleSize);
-        event.setEvent_date(eventDate);
-        event.setRegistration_start(registrationStart);
-        event.setRegistration_end(registrationEnd);
-        updateQRCode(event);
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", event.getId());
-        data.put("name", event.getName());
-        data.put("amount", event.getAmount());
-        data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
-        data.put("sampleSize", event.getSampleSize());
-        data.put("event_date", event.getEvent_date());
-        data.put("registration_start", event.getRegistration_start());
-        data.put("registration_end", event.getRegistration_end());
-
-        Users currentUser = UserManager.getInstance().getCurrentUser();
-        if (currentUser != null && currentUser.getId() != null) {
-            data.put("createdBy", currentUser.getId());
-        }
-
-        db.collection("events").document(event.getId())
-                .set(data)
-                .addOnSuccessListener(aVoid -> {
-                    if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Event created!", Toast.LENGTH_SHORT).show();
-                    Navigation.findNavController(requireView()).popBackStack();
-                })
-                .addOnFailureListener(e -> {
-                    if (!isAdded()) return;
-                    Log.e("CreateEvent", "Failed to save", e);
-                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
-                });
+        return true;
     }
 
     /**
