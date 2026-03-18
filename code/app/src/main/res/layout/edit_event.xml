@@ -243,56 +243,65 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_event_date"
-                android:layout_width="0dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Event Date"
-                app:layout_constraintTop_toBottomOf="@id/til_location"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_event_date"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"
-                    android:clickable="true"/>
+                    android:clickable="true"
+                    android:textSize="14sp"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_registration_start"
-                android:layout_width="0dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Registration Start"
-                app:layout_constraintTop_toBottomOf="@id/til_event_date"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_registration_start"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"
-                    android:clickable="true" />
+                    android:clickable="true"
+                    android:textSize="14sp"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_registration_end"
-                android:layout_width="0dp"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:hint="Registration End"
-                app:layout_constraintTop_toBottomOf="@id/til_registration_start"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                android:hint="Registration End (Waitlist Deadline)"
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp"
+                app:startIconDrawable="@android:drawable/ic_menu_my_calendar">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_registration_end"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:focusable="false"
-                    android:clickable="true" />
+                    android:clickable="true"
+                    android:textSize="14sp"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -302,9 +311,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:hint="Waitlist Capacity"
-                app:layout_constraintTop_toBottomOf="@id/til_registration_end"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/edit_capacity"

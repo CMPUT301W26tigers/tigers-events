@@ -134,8 +134,21 @@ public class CreateEventFragment extends Fragment {
             editEventDate.performClick();
         });
 
-        // Save event and go to waitlist
+        // Save event and go to waitlist (chosen entrants)
         view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+
+        // View enrolled entrants
+        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> {
+            if (event.getId() != null) {
+                Bundle args = new Bundle();
+                args.putString("eventId", event.getId());
+                args.putString("eventName", event.getName());
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.viewEntrantsFragment, args);
+            } else {
+                Toast.makeText(requireContext(), "Save the event first", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         // Done: save and go back to Your Events
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
