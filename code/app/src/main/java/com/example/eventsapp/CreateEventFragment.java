@@ -101,24 +101,41 @@ public class CreateEventFragment extends Fragment {
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
-        // Create new event - generate unique ID and QR
-        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
+        // Create new event with a fixed unique ID so QR always links to this event
+        Event event = new Event(null, "", 1, "", "", "", "", "", 0);
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
-        // Create flow: show Create Event button, hide edit-only buttons
-        MaterialButton btnCreateEvent = view.findViewById(R.id.btn_create_event);
-        view.findViewById(R.id.btn_view_waitlist).setVisibility(View.GONE);
-        view.findViewById(R.id.btn_view_enrolled).setVisibility(View.GONE);
-        btnCreateEvent.setVisibility(View.VISIBLE);
-        btnCreateEvent.setOnClickListener(v -> saveEvent(event, view));
+        // Show the real deep link for this event
+        android.widget.TextView tvEventLink = view.findViewById(R.id.tv_event_link);
+        tvEventLink.setText(event.getEventDeepLink());
 
-        // Share QR
+        // Pencil icons focus corresponding fields
+        view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
+            editName.requestFocus();
+            editName.setSelection(editName.length());
+        });
+        view.findViewById(R.id.btn_edit_description).setOnClickListener(v -> {
+            editDescription.requestFocus();
+            editDescription.setSelection(editDescription.length());
+        });
+        view.findViewById(R.id.btn_edit_logistics).setOnClickListener(v -> {
+            editEventDate.performClick();
+        });
+
+        // Save event and go to waitlist
+        view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+
+        // Done: save and go back to Your Events
+        view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
+
+        // Share QR — regenerate with the event's real deep link
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
-            if (event.getId() != null) {
-                Toast.makeText(requireContext(), "Share QR: " + event.getEventDeepLink(), Toast.LENGTH_SHORT).show();
-                // Could integrate with ShareCompat for actual sharing
-            }
+            String deepLink = event.getEventDeepLink();
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, deepLink);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
         });
     }
 
@@ -178,23 +195,12 @@ public class CreateEventFragment extends Fragment {
     }
 
     /**
-     * Saves the event and navigates back to Your Events list.
-     */
-    private void saveEvent(Event event, View view) {
-        saveAndNavigateToWaitlist(event, /* goToWaitlist= */ false);
-    }
-
-    /**
      * Validates input fields, updates the {@link Event} object, saves the event to Firestore,
      * and navigates to the waitlist management screen upon success.
      *
      * @param event The event object being created and saved.
      */
     private void saveAndNavigateToWaitlist(Event event) {
-        saveAndNavigateToWaitlist(event, /* goToWaitlist= */ true);
-    }
-
-    private void saveAndNavigateToWaitlist(Event event, boolean goToWaitlist) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
         String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
@@ -254,10 +260,10 @@ public class CreateEventFragment extends Fragment {
         event.setDescription(description);
         event.setAmount(capacity);
         event.setSampleSize(sampleSize);
-        updateQRCode(event);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
+        updateQRCode(event);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -270,7 +276,6 @@ public class CreateEventFragment extends Fragment {
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
 
-        // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
             data.put("createdBy", currentUser.getId());
@@ -280,16 +285,12 @@ public class CreateEventFragment extends Fragment {
         docRef.set(data)
                 .addOnSuccessListener(aVoid -> {
                     Log.d("CreateEvent", "Event saved");
-                    Toast.makeText(requireContext(), "Event created!", Toast.LENGTH_SHORT).show();
-                    NavController navController = Navigation.findNavController(requireView());
-                    if (goToWaitlist) {
-                        Bundle args = new Bundle();
-                        args.putString("eventId", event.getId());
-                        args.putString("eventName", event.getName());
-                        navController.navigate(R.id.viewEntrantsFragment, args);
-                    } else {
-                        navController.navigate(R.id.eventsFragment);
-                    }
+                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    Bundle args = new Bundle();
+                    args.putString("eventId", event.getId());
+                    args.putString("eventName", event.getName());
+                    Navigation.findNavController(requireView())
+                            .navigate(R.id.viewEntrantsFragment, args);
                 })
                 .addOnFailureListener(e -> {
                     Log.e("CreateEvent", "Failed to save", e);
@@ -346,6 +347,101 @@ public class CreateEventFragment extends Fragment {
         }
 
         return true;
+    }
+
+    /**
+     * Validates input, saves the event to Firestore, and navigates back to Your Events.
+     *
+     * @param event The event object being created.
+     */
+    private void saveAndGoBack(Event event) {
+        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+                ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
+        int capacity;
+        int sampleSize;
+        try {
+            capacity = Integer.parseInt(capacityStr);
+            if (capacity <= 0) {
+                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sampleSize = sampleStr.isEmpty() ? 0 : Integer.parseInt(sampleStr);
+            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
+        event.setName(name);
+        event.setDescription(description);
+        event.setAmount(capacity);
+        event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
+        updateQRCode(event);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
+
+        db.collection("events").document(event.getId())
+                .set(data)
+                .addOnSuccessListener(aVoid -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Event created!", Toast.LENGTH_SHORT).show();
+                    Navigation.findNavController(requireView()).popBackStack();
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    Log.e("CreateEvent", "Failed to save", e);
+                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
+                });
     }
 
     /**
