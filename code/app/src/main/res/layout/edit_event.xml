@@ -88,14 +88,14 @@
                 android:layout_marginTop="24dp">
 
                 <TextView
+                    android:id="@+id/tv_section_name"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Name:"
                     android:textStyle="bold"
                     android:textSize="15sp"
-                    android:textColor="#212121"
-                    android:paintFlags="underlineText"/>
+                    android:textColor="#212121"/>
 
                 <ImageButton
                     android:id="@+id/btn_edit_name"
@@ -142,14 +142,14 @@
                 android:layout_marginTop="20dp">
 
                 <TextView
+                    android:id="@+id/tv_section_description"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Description:"
                     android:textStyle="bold"
                     android:textSize="15sp"
-                    android:textColor="#212121"
-                    android:paintFlags="underlineText"/>
+                    android:textColor="#212121"/>
 
                 <ImageButton
                     android:id="@+id/btn_edit_description"
@@ -197,14 +197,14 @@
                 android:layout_marginTop="20dp">
 
                 <TextView
+                    android:id="@+id/tv_section_logistics"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="Logistics:"
                     android:textStyle="bold"
                     android:textSize="15sp"
-                    android:textColor="#212121"
-                    android:paintFlags="underlineText"/>
+                    android:textColor="#212121"/>
 
                 <ImageButton
                     android:id="@+id/btn_edit_logistics"
@@ -374,8 +374,7 @@
                 android:text="Share Event:"
                 android:textStyle="bold"
                 android:textSize="15sp"
-                android:textColor="#212121"
-                android:paintFlags="underlineText"/>
+                android:textColor="#212121"/>
 
             <LinearLayout
                 android:layout_width="match_parent"

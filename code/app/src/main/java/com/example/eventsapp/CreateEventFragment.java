@@ -2,18 +2,19 @@ package com.example.eventsapp;
 
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -22,14 +23,9 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A fragment that allows users to create a new event.
@@ -97,6 +93,16 @@ public class CreateEventFragment extends Fragment {
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+
+        // Apply underline to section headers programmatically (paintFlags not available in XML)
+        int[] sectionHeaderIds = {
+                R.id.tv_section_name, R.id.tv_section_description,
+                R.id.tv_section_logistics, R.id.tv_share
+        };
+        for (int id : sectionHeaderIds) {
+            TextView tv = view.findViewById(id);
+            if (tv != null) tv.setPaintFlags(tv.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+        }
 
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
@@ -247,11 +253,14 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
-        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+        EventValidator.PeriodResult periodResult =
+                EventValidator.validateRegistrationPeriod(eventDate, registrationStart, registrationEnd);
+        if (periodResult != EventValidator.PeriodResult.VALID) {
+            handlePeriodError(periodResult);
             return;
         }
 
-        if (name.isEmpty()) {
+        if (!EventValidator.isValidName(name)) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -299,54 +308,27 @@ public class CreateEventFragment extends Fragment {
     }
 
     /**
-     * Validates the event registration period.
+     * Translates a {@link EventValidator.PeriodResult} into user-facing error messages
+     * and field-level error indicators.
      *
-     * Ensures that:
-     * - registration start occurs before registration end
-     * - registration end occurs before the event date
-     *
-     * Dates must be in YYYY-MM-DD format.
-     *
-     * @param eventDateStr event date string
-     * @param registrationStartStr registration start date
-     * @param registrationEndStr registration end date
-     *
-     * @return true if the registration period is valid, false otherwise
+     * @param result the validation result to handle
      */
-    private boolean isValidRegistrationPeriod(String eventDateStr,
-                                              String registrationStartStr,
-                                              String registrationEndStr) {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
-        sdf.setLenient(false);
-
-        try {
-            Date eventDate = sdf.parse(eventDateStr);
-            Date registrationStart = sdf.parse(registrationStartStr);
-            Date registrationEnd = sdf.parse(registrationEndStr);
-
-            if (eventDate == null || registrationStart == null || registrationEnd == null) {
-                Toast.makeText(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-
-            if (registrationStart.after(registrationEnd)) {
+    private void handlePeriodError(EventValidator.PeriodResult result) {
+        switch (result) {
+            case INVALID_FORMAT:
+                Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
+                break;
+            case START_AFTER_END:
                 editRegistrationStart.setError("Start must be before end");
                 editRegistrationEnd.setError("End must be after start");
-                return false;
-            }
-
-            if (registrationEnd.after(eventDate)) {
+                break;
+            case END_AFTER_EVENT:
                 editRegistrationEnd.setError("Registration must end before event date");
                 editEventDate.setError("Event date must be after registration ends");
-                return false;
-            }
-
-        } catch (ParseException e) {
-            Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
-            return false;
+                break;
+            default:
+                break;
         }
-
-        return true;
     }
 
     /**
@@ -401,7 +383,10 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
-        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+        EventValidator.PeriodResult goBackPeriodResult =
+                EventValidator.validateRegistrationPeriod(eventDate, registrationStart, registrationEnd);
+        if (goBackPeriodResult != EventValidator.PeriodResult.VALID) {
+            handlePeriodError(goBackPeriodResult);
             return;
         }
 
