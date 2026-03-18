@@ -2,18 +2,19 @@ package com.example.eventsapp;
 
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -22,6 +23,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -98,6 +100,16 @@ public class CreateEventFragment extends Fragment {
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
+        // Apply underline to section headers programmatically (paintFlags not available in XML)
+        int[] sectionHeaderIds = {
+                R.id.tv_section_name, R.id.tv_section_description,
+                R.id.tv_section_logistics, R.id.tv_share
+        };
+        for (int id : sectionHeaderIds) {
+            TextView tv = view.findViewById(id);
+            if (tv != null) tv.setPaintFlags(tv.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+        }
+
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
@@ -106,15 +118,36 @@ public class CreateEventFragment extends Fragment {
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
-        // Save event
+        // Show the real deep link for this event
+        android.widget.TextView tvEventLink = view.findViewById(R.id.tv_event_link);
+        tvEventLink.setText(event.getEventDeepLink());
+
+        // Pencil icons focus corresponding fields
+        view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
+            editName.requestFocus();
+            editName.setSelection(editName.length());
+        });
+        view.findViewById(R.id.btn_edit_description).setOnClickListener(v -> {
+            editDescription.requestFocus();
+            editDescription.setSelection(editDescription.length());
+        });
+        view.findViewById(R.id.btn_edit_logistics).setOnClickListener(v -> {
+            editEventDate.performClick();
+        });
+
+        // Save event and go to waitlist
         view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
 
-        // Share QR
+        // Done: save and go back to Your Events
+        view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
+
+        // Share QR — regenerate with the event's real deep link
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
-            if (event.getId() != null) {
-                Toast.makeText(requireContext(), "Share QR: " + event.getEventDeepLink(), Toast.LENGTH_SHORT).show();
-                // Could integrate with ShareCompat for actual sharing
-            }
+            String deepLink = event.getEventDeepLink();
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, deepLink);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
         });
     }
 
@@ -239,6 +272,9 @@ public class CreateEventFragment extends Fragment {
         event.setDescription(description);
         event.setAmount(capacity);
         event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
         updateQRCode(event);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
