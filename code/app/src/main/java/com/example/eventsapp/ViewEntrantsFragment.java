@@ -39,6 +39,7 @@ import java.util.Map;
  */
 public class ViewEntrantsFragment extends Fragment {
 
+    private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private RecyclerView rvWaitlist;
     private TextView tvStats;
@@ -136,7 +137,9 @@ public class ViewEntrantsFragment extends Fragment {
                 String email = doc.getString("email");
                 String statusStr = doc.getString("status");
                 Entrant.Status status = parseStatus(statusStr);
-                allEntrants.add(new Entrant(id, eventId, name, email, status));
+                Entrant entrant = new Entrant(id, eventId, name, email, status);
+                entrant.setUserId(doc.getString("userId"));
+                allEntrants.add(entrant);
             }
             String queryStr = (etSearch != null && etSearch.getText() != null) ? etSearch.getText().toString() : "";
             filterEntrants(queryStr);
@@ -307,26 +310,29 @@ public class ViewEntrantsFragment extends Fragment {
             return;
         }
 
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        int sentCount = 0;
+        int skippedCount = 0;
 
         for (Entrant entrant : chosenEntrants) {
+            String userId = entrant.getUserId();
+            if (userId == null || userId.trim().isEmpty()) {
+                skippedCount++;
+                continue;
+            }
 
-            NotificationItem notification = new NotificationItem(
-                    "You've been selected!",
-                    "You were chosen to sign up for this event.",
-                    eventId,
-                    "invitation",
-                    false
-            );
-
-            db.collection("users")
-                    .document(entrant.getId())
-                    .collection("notifications")
-                    .add(notification);
+            notificationHelper.sendInvitationNotification(userId, eventId);
+            sentCount++;
         }
 
-        Toast.makeText(requireContext(),
-                "Notifications sent to " + chosenEntrants.size() + " entrants",
-                Toast.LENGTH_SHORT).show();
+        String message;
+        if (sentCount == 0) {
+            message = "Chosen entrants found, but no linked users could be notified";
+        } else if (skippedCount == 0) {
+            message = "Notifications sent to " + sentCount + " entrants";
+        } else {
+            message = "Notifications sent to " + sentCount + " entrants, skipped " + skippedCount;
+        }
+
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
 }

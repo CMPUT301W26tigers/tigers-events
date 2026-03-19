@@ -186,7 +186,18 @@ public class EventsFragment extends Fragment {
                                 .get()
                                 .addOnSuccessListener(entrantSnapshot -> {
                                     if (!isAdded()) return;
-                                    if (!entrantSnapshot.isEmpty()) {
+                                    boolean isActiveEntrant = false;
+                                    for (QueryDocumentSnapshot entrantDoc : entrantSnapshot) {
+                                        String status = entrantDoc.getString("status");
+                                        if ("APPLIED".equals(status)
+                                                || "INVITED".equals(status)
+                                                || "ACCEPTED".equals(status)) {
+                                            isActiveEntrant = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (isActiveEntrant) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
                                             eventList.add(event);

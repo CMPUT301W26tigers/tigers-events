@@ -28,6 +28,7 @@ public class Entrant implements Serializable {
     private String eventId;
     private String name;
     private String email;
+    private String userId;
     private Status status;
     private int statusCode;
 
@@ -94,6 +95,18 @@ public class Entrant implements Serializable {
      * @param email The email to set.
      */
     public void setEmail(String email) { this.email = email; }
+
+    /**
+     * Gets the Firestore user ID associated with this entrant.
+     * @return The user ID.
+     */
+    public String getUserId() { return userId; }
+
+    /**
+     * Sets the Firestore user ID associated with this entrant.
+     * @param userId The user ID to set.
+     */
+    public void setUserId(String userId) { this.userId = userId; }
 
     /**
      * Gets the current status of the entrant.
