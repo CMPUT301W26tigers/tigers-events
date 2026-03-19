@@ -18,6 +18,16 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 
+/**
+ * Fragment that displays the final list of entrants enrolled in an event.
+ *
+ * Fulfills US 02.06.03 - As an organizer I want to see a final list of entrants
+ * who enrolled for the event.
+ *
+ * The fragment retrieves enrolled users from the Firestore
+ *
+ * Each entrant is displayed using the EnrolledEntrantAdapter.
+ */
 public class EnrolledFragment extends Fragment {
 
     private static final String ARG_EVENT_ID = "event_id";
@@ -35,10 +45,20 @@ public class EnrolledFragment extends Fragment {
 
     private String eventId;
 
+    /**
+     * Default constructor for EnrolledFragment.
+     * Uses the layout R.layout.view_enrolled.
+     */
     public EnrolledFragment() {
         super(R.layout.view_enrolled);
     }
 
+    /**
+     * Creates a new instance of EnrolledFragment with the specified event ID.
+     *
+     * @param eventId The unique ID of the event to display enrolled entrants for.
+     * @return A new instance of EnrolledFragment.
+     */
     public static EnrolledFragment newInstance(String eventId) {
         EnrolledFragment fragment = new EnrolledFragment();
         Bundle args = new Bundle();
@@ -47,6 +67,11 @@ public class EnrolledFragment extends Fragment {
         return fragment;
     }
 
+    /**
+     * Called when the fragment is being created. Retrieves the event ID from the arguments.
+     *
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +81,14 @@ public class EnrolledFragment extends Fragment {
         }
     }
 
+    /**
+     * Initializes UI components and loads enrolled entrants from Firestore.
+     *
+     * Sets up RecyclerView and adapter, Firestore listener to retrieve enrolled entrants
+     *
+     * @param view fragment layout view
+     * @param savedInstanceState previously saved state
+     */
     @Override
     public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -92,6 +125,13 @@ public class EnrolledFragment extends Fragment {
         loadEnrolledEntrants();
     }
 
+    /**
+     * Loads the enrolled entrants for the current event from Firestore
+     *
+     * Each Firestore document is converted into an EnrolledEntrant object
+     *
+     * Displays the total number of enrolled entrants in the statistics TextView
+     */
     private void loadEnrolledEntrants() {
         enrolledRef.addSnapshotListener((value, error) -> {
             if (error != null) {

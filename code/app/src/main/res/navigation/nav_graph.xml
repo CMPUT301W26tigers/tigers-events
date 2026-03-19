@@ -2,17 +2,33 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/accountFragment">
+    app:startDestination="@id/signInFragment">
+
+    <fragment
+        android:id="@+id/signInFragment"
+        android:name="com.example.eventsapp.SignInFragment"
+        android:label="Sign In" />
 
     <fragment
         android:id="@+id/exploreFragment"
         android:name="com.example.eventsapp.ExploreFragment"
-        android:label="Explore" />
+        android:label="Explore">
+        <action
+            android:id="@+id/action_exploreFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/eventsFragment"
         android:name="com.example.eventsapp.EventsFragment"
-        android:label="Your Events" />
+        android:label="Your Events">
+        <action
+            android:id="@+id/action_eventsFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
+        <action
+            android:id="@+id/action_eventsFragment_to_createEventFragment"
+            app:destination="@id/createEventFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/accountFragment"

@@ -4,14 +4,19 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -20,37 +25,21 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity
-        implements EventDialogFragment.EventDialogListener,
-        DeleteEventDialogFragment.OnFragmentInteractionListener {
+public class MainActivity extends AppCompatActivity implements EventDialogFragment.EventDialogListener, DeleteEventDialogFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
-    private Button addEventButton;
-    private Button deleteEventButton;
     private FirebaseFirestore db;
-
     private CollectionReference eventsRef;
+    private CollectionReference userRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        addEventButton = findViewById(R.id.buttonAddEvent);
-        deleteEventButton = findViewById(R.id.buttonDeleteEvent);
-
-        addEventButton.setOnClickListener(view -> {
-            EventDialogFragment eventDialogFragment = new EventDialogFragment();
-            eventDialogFragment.show(getSupportFragmentManager(), "Add Event");
-        });
-
-        deleteEventButton.setOnClickListener(view -> {
-            DeleteEventDialogFragment deleteEventDialogFragment = new DeleteEventDialogFragment();
-            deleteEventDialogFragment.show(getSupportFragmentManager(), "Delete Event");
-        });
-
         db = FirebaseFirestore.getInstance();
         eventsRef = db.collection("events");
+        userRef = db.collection("users");
 
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
@@ -62,7 +51,34 @@ public class MainActivity extends AppCompatActivity
 
         NavController navController = navHostFragment.getNavController();
         NavigationUI.setupWithNavController(bottomNav, navController);
+
+        // Hide bottom nav on sign-in page
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            if (destination.getId() == R.id.signInFragment) {
+                bottomNav.setVisibility(View.GONE);
+            } else {
+                bottomNav.setVisibility(View.VISIBLE);
+            }
+        });
+
         handleDeepLink(getIntent());
+    }
+
+    public void addUser(Users user) {
+        // Query to see if user already exists by email
+        userRef.whereEqualTo("email", user.getEmail()).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.isEmpty()) {
+                        // Create a new document with auto-generated ID
+                        DocumentReference newDocRef = userRef.document();
+                        user.setId(newDocRef.getId()); // Set the ID in the object before saving
+                        newDocRef.set(user)
+                                .addOnSuccessListener(aVoid -> Log.d("Firestore", "User added: " + user.getName()))
+                                .addOnFailureListener(e -> Log.e("Firestore", "Error adding user", e));
+                    } else {
+                        Log.d("Firestore", "User with email " + user.getEmail() + " already exists.");
+                    }
+                });
     }
 
     @Override

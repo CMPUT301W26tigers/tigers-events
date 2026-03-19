@@ -17,15 +17,32 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
+/**
+ * A fragment that displays the user's notification inbox.
+ * It shows a list of {@link UserNotification} objects and allows users to:
+ * - View details of each notification.
+ * - Accept or decline event invitations directly from the inbox.
+ */
 public class InboxFragment extends Fragment {
     private final InvitationResponseController invitationResponseController = new InvitationResponseController();
     private LinearLayout notificationContainer;
     private TextView emptyStateView;
 
+    /**
+     * Default constructor for InboxFragment.
+     * Uses the layout R.layout.fragment_inbox.
+     */
     public InboxFragment() {
         super(R.layout.fragment_inbox);
     }
 
+    /**
+     * Called immediately after {@link #onCreateView(android.view.LayoutInflater, android.view.ViewGroup, android.os.Bundle)}
+     * has returned. Initializes the UI components and triggers the rendering of notifications.
+     *
+     * @param view The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -38,6 +55,10 @@ public class InboxFragment extends Fragment {
         renderNotifications();
     }
 
+    /**
+     * Renders the list of notifications in the notification container.
+     * Clears existing views and inflates a new view for each notification.
+     */
     private void renderNotifications() {
         notificationContainer.removeAllViews();
 
@@ -51,6 +72,12 @@ public class InboxFragment extends Fragment {
         emptyStateView.setVisibility(notificationContainer.getChildCount() == 0 ? View.VISIBLE : View.GONE);
     }
 
+    /**
+     * Binds notification data to an inflated view and sets up click listeners for actions.
+     *
+     * @param itemView The view representing a single notification item.
+     * @param notification The notification data to bind.
+     */
     private void bindNotification(View itemView, UserNotification notification) {
         View header = itemView.findViewById(R.id.notificationHeader);
         LinearLayout details = itemView.findViewById(R.id.notificationDetails);
@@ -93,6 +120,12 @@ public class InboxFragment extends Fragment {
         });
     }
 
+    /**
+     * Returns the background color resource ID based on the notification type.
+     *
+     * @param type The type of the notification.
+     * @return The color resource ID.
+     */
     @ColorRes
     private int getBackgroundColor(UserNotification.Type type) {
         switch (type) {
@@ -106,6 +139,12 @@ public class InboxFragment extends Fragment {
         }
     }
 
+    /**
+     * Returns the icon resource ID based on the notification type.
+     *
+     * @param type The type of the notification.
+     * @return The icon resource ID.
+     */
     @DrawableRes
     private int getIcon(UserNotification.Type type) {
         switch (type) {

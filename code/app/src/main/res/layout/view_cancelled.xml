@@ -17,7 +17,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Search for a name -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_search_cancelled"
         android:layout_width="0dp"
