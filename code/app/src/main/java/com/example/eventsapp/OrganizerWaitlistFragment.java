@@ -27,6 +27,7 @@ import java.util.Random;
  */
 public class OrganizerWaitlistFragment extends Fragment {
 
+    private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private FirebaseFirestore db;
     private String eventId;
     private RecyclerView rvWaitlist;
@@ -143,7 +144,10 @@ public class OrganizerWaitlistFragment extends Fragment {
         db.collection("events").document(eventId)
                 .collection("entrants").document(entrantToRemove.getId())
                 .update("status", "CANCELLED", "statusCode", 3)
-                .addOnSuccessListener(aVoid -> Toast.makeText(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> {
+                    notificationHelper.sendNotSelectedNotification(entrantToRemove.getUserId(), eventId);
+                    Toast.makeText(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT).show();
+                });
     }
 
     /**
@@ -162,6 +166,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .collection("entrants").document(entrantToReplace.getId())
                 .update("status", "CANCELLED", "statusCode", 3)
                 .addOnSuccessListener(aVoid -> {
+                    notificationHelper.sendNotSelectedNotification(entrantToReplace.getUserId(), eventId);
                     // Step 2: Draw Replacement
                     drawReplacementApplicant();
                 });
@@ -190,7 +195,10 @@ public class OrganizerWaitlistFragment extends Fragment {
                     db.collection("events").document(eventId)
                             .collection("entrants").document(selectedApplicant.getId())
                             .update("status", "INVITED", "statusCode", 1)
-                            .addOnSuccessListener(aVoid -> Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show());
+                            .addOnSuccessListener(aVoid -> {
+                                notificationHelper.sendInvitationNotification(selectedApplicant.getString("userId"), eventId);
+                                Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
+                            });
                 });
     }
 }

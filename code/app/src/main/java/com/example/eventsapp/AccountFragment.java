@@ -33,12 +33,16 @@ public class AccountFragment extends Fragment {
 
     private ImageButton editNameButton;
     private ImageButton editEmailButton;
+    private ImageButton inboxIconButton;
     private TextView deleteAccountButton;
     private MaterialCheckBox notificationsCheckbox;
+    private MaterialButton notificationsButton;
 
     private TextView tvGreeting;
     private TextView tvNameValue;
     private TextView tvEmailValue;
+    private TextView tvLocationValue;
+    private TextView tvAccountTypeValue;
 
     private FirebaseFirestore db;
 
@@ -67,12 +71,16 @@ public class AccountFragment extends Fragment {
         // Initialize views
         editNameButton = view.findViewById(R.id.btnEditName);
         editEmailButton = view.findViewById(R.id.btnEditEmail);
+        inboxIconButton = view.findViewById(R.id.btnTopIcon);
         deleteAccountButton = view.findViewById(R.id.btnDeleteAccount);
         notificationsCheckbox = view.findViewById(R.id.cbNotifications);
+        notificationsButton = view.findViewById(R.id.btnNotifications);
 
         tvGreeting = view.findViewById(R.id.tvGreeting);
         tvNameValue = view.findViewById(R.id.tvNameValue);
         tvEmailValue = view.findViewById(R.id.tvEmailValue);
+        tvLocationValue = view.findViewById(R.id.tvLocationValue);
+        tvAccountTypeValue = view.findViewById(R.id.tvAccountTypeValue);
 
         // Populate user data
         displayUserData();
@@ -92,6 +100,14 @@ public class AccountFragment extends Fragment {
             });
         }
 
+        if (inboxIconButton != null) {
+            inboxIconButton.setOnClickListener(v -> openInbox(v));
+        }
+
+        if (notificationsButton != null) {
+            notificationsButton.setOnClickListener(v -> openInbox(v));
+        }
+
         // Remember device checkbox
         MaterialCheckBox cbRememberDevice = view.findViewById(R.id.cbRememberDevice);
         String deviceId = Settings.Secure.getString(requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
@@ -106,6 +122,14 @@ public class AccountFragment extends Fragment {
                 String newDeviceId = isChecked ? deviceId : null;
                 currentUser.setDeviceId(newDeviceId);
                 updateUserField("deviceId", newDeviceId);
+            });
+        }
+
+        if (notificationsCheckbox != null && currentUser != null) {
+            notificationsCheckbox.setChecked(currentUser.isNotificationsEnabled());
+            notificationsCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                currentUser.setNotificationsEnabled(isChecked);
+                updateUserField("notificationsEnabled", isChecked);
             });
         }
 
@@ -143,6 +167,15 @@ public class AccountFragment extends Fragment {
             }
             if (tvEmailValue != null) {
                 tvEmailValue.setText(currentUser.getEmail());
+            }
+            if (tvLocationValue != null) {
+                tvLocationValue.setText(currentUser.getLocation() != null ? currentUser.getLocation() : "Not set");
+            }
+            if (tvAccountTypeValue != null) {
+                tvAccountTypeValue.setText(currentUser.getAccountType() != null ? currentUser.getAccountType() : "Not set");
+            }
+            if (notificationsCheckbox != null) {
+                notificationsCheckbox.setChecked(currentUser.isNotificationsEnabled());
             }
         } else {
             if (tvGreeting != null) {
@@ -192,7 +225,7 @@ public class AccountFragment extends Fragment {
      * @param field The name of the field to update in Firestore.
      * @param newValue The new value for the field.
      */
-    private void updateUserField(String field, String newValue) {
+    private void updateUserField(String field, Object newValue) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
             Toast.makeText(getContext(), "Error: User ID not found", Toast.LENGTH_SHORT).show();
@@ -207,11 +240,13 @@ public class AccountFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     // Update local user object
                     if (field.equals("name")) {
-                        currentUser.setName(newValue);
+                        currentUser.setName((String) newValue);
                     } else if (field.equals("email")) {
-                        currentUser.setEmail(newValue);
+                        currentUser.setEmail((String) newValue);
                     } else if (field.equals("deviceId")) {
-                        currentUser.setDeviceId(newValue);
+                        currentUser.setDeviceId((String) newValue);
+                    } else if (field.equals("notificationsEnabled") && newValue instanceof Boolean) {
+                        currentUser.setNotificationsEnabled((Boolean) newValue);
                     }
                     displayUserData();
                     Toast.makeText(getContext(), field + " updated", Toast.LENGTH_SHORT).show();
@@ -220,5 +255,9 @@ public class AccountFragment extends Fragment {
                     Log.e("Firestore", "Error updating " + field, e);
                     Toast.makeText(getContext(), "Failed to update " + field, Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void openInbox(View view) {
+        Navigation.findNavController(view).navigate(R.id.action_accountFragment_to_inboxFragment);
     }
 }

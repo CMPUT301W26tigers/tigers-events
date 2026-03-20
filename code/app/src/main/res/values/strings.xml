@@ -5,4 +5,5 @@
     <string name="greeting_format">Hi, %1$s</string>
     <string name="accept">Accept</string>
     <string name="decline">Decline</string>
+    <string name="wait">Wait</string>
 </resources>
