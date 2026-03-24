@@ -19,6 +19,7 @@ import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -53,6 +54,7 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
+    private SwitchMaterial switchGeolocation;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -94,6 +96,7 @@ public class CreateEventFragment extends Fragment {
         editEventDate = view.findViewById(R.id.edit_event_date);
         editRegistrationStart = view.findViewById(R.id.edit_registration_start);
         editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        switchGeolocation = view.findViewById(R.id.switch_geolocation);
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -149,6 +152,23 @@ public class CreateEventFragment extends Fragment {
                 Toast.makeText(requireContext(), "Save the event first", Toast.LENGTH_SHORT).show();
             }
         });
+
+        // US 02.02.02: View map of where waitlist entrants joined from
+        view.findViewById(R.id.btn_view_entrant_map).setOnClickListener(v -> {
+            if (event.getId() != null) {
+                Bundle args = new Bundle();
+                args.putString("eventId", event.getId());
+                args.putString("eventName", event.getName());
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.action_createEventFragment_to_entrantMapFragment, args);
+            } else {
+                Toast.makeText(requireContext(), "Save the event first to view the map", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // US 02.02.03: sync geolocation toggle to event object
+        switchGeolocation.setOnCheckedChangeListener((btn, isChecked) ->
+                event.setGeolocationRequired(isChecked));
 
         // Done: save and go back to Your Events
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
@@ -287,6 +307,9 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
+        if (switchGeolocation != null) {
+            event.setGeolocationRequired(switchGeolocation.isChecked());
+        }
         updateQRCode(event);
 
         Map<String, Object> data = new HashMap<>();
@@ -299,6 +322,7 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("geolocationRequired", event.isGeolocationRequired());
 
         // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -385,6 +409,9 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
+        if (switchGeolocation != null) {
+            event.setGeolocationRequired(switchGeolocation.isChecked());
+        }
         updateQRCode(event);
 
         Map<String, Object> data = new HashMap<>();
@@ -397,6 +424,7 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("geolocationRequired", event.isGeolocationRequired());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {

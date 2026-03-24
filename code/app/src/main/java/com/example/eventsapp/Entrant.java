@@ -31,6 +31,8 @@ public class Entrant implements Serializable {
     private String userId;
     private Status status;
     private int statusCode;
+    private double latitude;   // US 02.02.02: where entrant joined from
+    private double longitude;  // US 02.02.02: where entrant joined from
 
     /**
      * Constructs a new Entrant.
@@ -134,5 +136,42 @@ public class Entrant implements Serializable {
 
     public void setStatusCode(int statusCode) {
         this.statusCode = statusCode;
+    }
+
+    /**
+     * Gets the latitude where the entrant joined the waitlist from (US 02.02.02).
+     * Returns 0.0 if location was not captured.
+     */
+    public double getLatitude() {
+        return latitude;
+    }
+
+    /**
+     * Sets the latitude where the entrant joined the waitlist from.
+     */
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    /**
+     * Gets the longitude where the entrant joined the waitlist from (US 02.02.02).
+     * Returns 0.0 if location was not captured.
+     */
+    public double getLongitude() {
+        return longitude;
+    }
+
+    /**
+     * Sets the longitude where the entrant joined the waitlist from.
+     */
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    /**
+     * Returns true if this entrant has a valid geographic location saved.
+     */
+    public boolean hasLocation() {
+        return latitude != 0.0 || longitude != 0.0;
     }
 }

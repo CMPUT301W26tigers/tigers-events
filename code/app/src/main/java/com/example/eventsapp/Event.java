@@ -17,6 +17,7 @@ public class Event implements Serializable {
     private String description;
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
+    private boolean geolocationRequired;  // US 02.02.03: organizer can require location to join waitlist
 
     /**
      * Constructs an Event with basic information.
@@ -188,6 +189,22 @@ public class Event implements Serializable {
      */
     public void setSampleSize(int sampleSize) {
         this.sampleSize = Math.max(0, sampleSize);
+    }
+
+    /**
+     * Returns whether the organizer requires entrants to share their location when joining the waitlist.
+     * @return true if geolocation is required (US 02.02.03).
+     */
+    public boolean isGeolocationRequired() {
+        return geolocationRequired;
+    }
+
+    /**
+     * Sets whether geolocation is required to join the waitlist (US 02.02.03).
+     * @param geolocationRequired true to require location, false to make it optional.
+     */
+    public void setGeolocationRequired(boolean geolocationRequired) {
+        this.geolocationRequired = geolocationRequired;
     }
 
     /**

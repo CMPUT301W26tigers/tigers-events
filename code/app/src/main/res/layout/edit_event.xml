@@ -334,6 +334,39 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- ── Geolocation Toggle (US 02.02.03) ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="20dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Require entrant location to join waitlist"
+                    android:textSize="14sp"
+                    android:textColor="#212121"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_geolocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false"
+                    android:contentDescription="Toggle geolocation requirement"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="When enabled, entrants must share their location when joining the waitlist. You can view a map of where they joined from."
+                android:textSize="12sp"
+                android:textColor="#757575"
+                android:layout_marginBottom="4dp"/>
+
             <!-- ── View Waitlist Button ── -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_view_waitlist"
@@ -356,6 +389,19 @@
                 android:textSize="14sp"
                 app:cornerRadius="24dp"
                 app:backgroundTint="@color/dark_grey"/>
+
+            <!-- US 02.02.02: View map of where waitlist entrants joined from -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_view_entrant_map"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="10dp"
+                android:text="View Entrant Locations Map"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                app:cornerRadius="24dp"
+                app:icon="@android:drawable/ic_dialog_map"
+                app:backgroundTint="@color/colorPrimaryPurple"/>
 
             <TextView
                 android:id="@+id/tv_share"

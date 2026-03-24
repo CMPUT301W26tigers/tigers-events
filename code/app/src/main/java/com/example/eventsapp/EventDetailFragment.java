@@ -1,5 +1,10 @@
 package com.example.eventsapp;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -9,10 +14,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -45,6 +56,20 @@ public class EventDetailFragment extends Fragment {
     private String currentEntrantDocId = null;
     private int waitlistCount = 0;
     private int eventCapacity = 0;
+    private boolean geolocationRequired = false;
+
+    private FusedLocationProviderClient fusedLocationClient;
+
+    private final ActivityResultLauncher<String> locationPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    joinWaitlistWithLocation();
+                } else {
+                    Toast.makeText(requireContext(),
+                            "Location permission is required to join this event's waitlist",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
 
     /**
      * Called when the fragment is being created. Initializes Firestore and
@@ -56,6 +81,7 @@ public class EventDetailFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId", "");
         } else {
@@ -139,6 +165,10 @@ public class EventDetailFragment extends Fragment {
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
 
+                        // US 02.02.03: read geolocation requirement set by organizer
+                        Boolean geoReq = doc.getBoolean("geolocationRequired");
+                        geolocationRequired = (geoReq != null) && geoReq;
+
                         updateWaitlistCounter();
                     } else {
                         tvName.setText("Event not found");
@@ -187,7 +217,9 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Adds the current user to the event's waitlist in Firestore.
+     * Entry point when the user taps "Join Waitlist".
+     * If geolocation is required (US 02.02.03), requests location permission first.
+     * Otherwise joins immediately without location.
      */
     private void joinWaitlist() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -195,6 +227,70 @@ public class EventDetailFragment extends Fragment {
             Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        if (geolocationRequired) {
+            // US 02.02.03: location is required — explain to user then request permission
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                joinWaitlistWithLocation();
+            } else {
+                new AlertDialog.Builder(requireContext())
+                        .setTitle("Location Required")
+                        .setMessage("This event requires you to share your location when joining the waitlist so the organiser can see where entrants joined from. Your location will be recorded once.")
+                        .setPositiveButton("Allow", (d, w) ->
+                                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            }
+        } else {
+            joinWaitlistWithData(0.0, 0.0);
+        }
+    }
+
+    /**
+     * Gets the current device location then joins the waitlist with that position.
+     * Used when the organiser has enabled geolocation (US 02.02.02 / US 02.02.03).
+     */
+    @SuppressLint("MissingPermission")
+    private void joinWaitlistWithLocation() {
+        btnWaitlist.setEnabled(false);
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener(location -> {
+                    if (!isAdded()) return;
+                    if (location != null) {
+                        joinWaitlistWithData(location.getLatitude(), location.getLongitude());
+                    } else {
+                        // Fallback to last known location
+                        fusedLocationClient.getLastLocation().addOnSuccessListener(last -> {
+                            if (!isAdded()) return;
+                            if (last != null) {
+                                joinWaitlistWithData(last.getLatitude(), last.getLongitude());
+                            } else {
+                                Toast.makeText(requireContext(),
+                                        "Could not get location. Please enable GPS and try again.",
+                                        Toast.LENGTH_LONG).show();
+                                btnWaitlist.setEnabled(true);
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    btnWaitlist.setEnabled(true);
+                    Toast.makeText(requireContext(), "Failed to get location", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    /**
+     * Writes the entrant document to Firestore, including lat/lng if provided.
+     * Implements US 02.02.02: stores where the entrant joined from.
+     *
+     * @param latitude  GPS latitude (0.0 if geolocation not required).
+     * @param longitude GPS longitude (0.0 if geolocation not required).
+     */
+    private void joinWaitlistWithData(double latitude, double longitude) {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null) return;
 
         btnWaitlist.setEnabled(false);
 
@@ -207,6 +303,8 @@ public class EventDetailFragment extends Fragment {
         entrantData.put("status", "APPLIED");
         entrantData.put("userId", currentUser.getId());
         entrantData.put("statusCode", 0);
+        entrantData.put("latitude", latitude);
+        entrantData.put("longitude", longitude);
 
         db.collection("events").document(eventId)
                 .collection("entrants").document(entrantId)

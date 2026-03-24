@@ -90,7 +90,7 @@
         app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/til_search_waitlist" />
+        app:layout_constraintTop_toBottomOf="@id/til_search_waitlist"/>
 
     <TextView
         android:id="@+id/tv_waitlist_stats"
@@ -100,15 +100,30 @@
         android:alpha="0.8"
         android:text="Total Invited: 0&#10;Total Accepted: 0&#10;Chosen Entrants: 0"
         android:textSize="12sp"
-        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintBottom_toTopOf="@id/btn_view_entrant_map"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"/>
+
+    <!-- US 02.02.02: View map of where waitlist entrants joined from -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_entrant_map"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:text="View Entrant Locations Map"
+        android:textAllCaps="false"
+        android:textSize="13sp"
+        app:icon="@android:drawable/ic_dialog_map"
+        app:backgroundTint="@color/colorPrimaryPurple"
+        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <LinearLayout
         android:id="@+id/waitlist_footer_row"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="4dp"
         android:gravity="center"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"

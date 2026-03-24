@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -107,6 +108,16 @@ public class ViewEntrantsFragment extends Fragment {
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
         view.findViewById(R.id.btn_see_cancelled).setOnClickListener(v ->
                 Toast.makeText(requireContext(), "See Cancelled Entrants", Toast.LENGTH_SHORT).show());
+
+        // US 02.02.02: open the entrant location map
+        view.findViewById(R.id.btn_view_entrant_map).setOnClickListener(v -> {
+            Bundle args = new Bundle();
+            args.putString("eventId", eventId);
+            args.putString("eventName", getArguments() != null
+                    ? getArguments().getString("eventName", "") : "");
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.action_viewEntrantsFragment_to_entrantMapFragment, args);
+        });
     }
 
     private void openEnrolledFragment() {

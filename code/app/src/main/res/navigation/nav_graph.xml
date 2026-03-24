@@ -47,12 +47,33 @@
     <fragment
         android:id="@+id/createEventFragment"
         android:name="com.example.eventsapp.CreateEventFragment"
-        android:label="Create Event" />
+        android:label="Create Event">
+        <action
+            android:id="@+id/action_createEventFragment_to_entrantMapFragment"
+            app:destination="@id/entrantMapFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/viewEntrantsFragment"
         android:name="com.example.eventsapp.ViewEntrantsFragment"
         android:label="Chosen Entrants">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+        <argument
+            android:name="eventName"
+            app:argType="string"
+            app:nullable="true" />
+        <action
+            android:id="@+id/action_viewEntrantsFragment_to_entrantMapFragment"
+            app:destination="@id/entrantMapFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/entrantMapFragment"
+        android:name="com.example.eventsapp.EntrantMapFragment"
+        android:label="Entrant Locations">
         <argument
             android:name="eventId"
             app:argType="string"
