@@ -34,10 +34,11 @@ public class EventDetailFragment extends Fragment {
 
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
+    private boolean fromHistory = false;
     private FirebaseFirestore db;
 
     private TextView tvName, tvDescription, tvEventDate, tvRegistrationStart,
-            tvRegistrationEnd, tvCapacity, tvWaitlistCounter;
+            tvRegistrationEnd, tvCapacity, tvWaitlistCounter, tvExpiredBanner;
     private ImageView ivPoster;
     private MaterialButton btnWaitlist;
 
@@ -58,6 +59,7 @@ public class EventDetailFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId", "");
+            fromHistory = getArguments().getBoolean("fromHistory", false);
         } else {
             eventId = "";
         }
@@ -99,6 +101,7 @@ public class EventDetailFragment extends Fragment {
         tvRegistrationEnd = view.findViewById(R.id.tv_registration_end);
         tvCapacity = view.findViewById(R.id.tv_capacity);
         tvWaitlistCounter = view.findViewById(R.id.tv_waitlist_counter);
+        tvExpiredBanner = view.findViewById(R.id.tv_expired_banner);
         ivPoster = view.findViewById(R.id.iv_poster);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
 
@@ -108,16 +111,26 @@ public class EventDetailFragment extends Fragment {
             return;
         }
 
-        loadEventDetails();
-        loadWaitlistStatus();
-
-        btnWaitlist.setOnClickListener(v -> {
-            if (isOnWaitlist) {
-                leaveWaitlist();
-            } else {
-                joinWaitlist();
+        if (fromHistory) {
+            // Load from user's personal history instead of global events
+            btnWaitlist.setVisibility(View.GONE);
+            tvWaitlistCounter.setVisibility(View.GONE);
+            if (tvExpiredBanner != null) {
+                tvExpiredBanner.setVisibility(View.VISIBLE);
             }
-        });
+            loadHistoryEventDetails();
+        } else {
+            loadEventDetails();
+            loadWaitlistStatus();
+
+            btnWaitlist.setOnClickListener(v -> {
+                if (isOnWaitlist) {
+                    leaveWaitlist();
+                } else {
+                    joinWaitlist();
+                }
+            });
+        }
     }
 
     /**
@@ -221,6 +234,8 @@ public class EventDetailFragment extends Fragment {
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT).show();
+                    // Write event history record for the user
+                    writeEventHistoryForCurrentUser(currentUser.getId());
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -250,6 +265,11 @@ public class EventDetailFragment extends Fragment {
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT).show();
+                    // Delete history record since user voluntarily left
+                    Users user = UserManager.getInstance().getCurrentUser();
+                    if (user != null && user.getId() != null) {
+                        EventCleanupHelper.deleteHistoryRecord(user.getId(), eventId);
+                    }
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -294,5 +314,65 @@ public class EventDetailFragment extends Fragment {
     private String getFieldOrDefault(DocumentSnapshot doc, String field, String defaultValue) {
         String value = doc.getString(field);
         return (value != null && !value.isEmpty()) ? value : defaultValue;
+    }
+
+    /**
+     * Fetches the event data from Firestore and writes a copy to the user's eventHistory.
+     */
+    private void writeEventHistoryForCurrentUser(String userId) {
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc == null || !doc.exists()) return;
+                    Map<String, Object> eventData = new HashMap<>();
+                    eventData.put("id", eventId);
+                    eventData.put("name", doc.getString("name"));
+                    Long amount = doc.getLong("amount");
+                    eventData.put("amount", amount != null ? amount : 0);
+                    eventData.put("description", doc.getString("description"));
+                    eventData.put("event_date", doc.getString("event_date"));
+                    eventData.put("registration_start", doc.getString("registration_start"));
+                    eventData.put("registration_end", doc.getString("registration_end"));
+                    eventData.put("posterUrl", doc.getString("posterUrl"));
+                    Long sample = doc.getLong("sampleSize");
+                    eventData.put("sampleSize", sample != null ? sample : 0);
+                    EventCleanupHelper.writeHistoryRecord(userId, eventId, eventData, "APPLIED");
+                });
+    }
+
+    /**
+     * Loads event details from the user's personal eventHistory collection
+     * (used when viewing an expired/historical event).
+     */
+    private void loadHistoryEventDetails() {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            tvName.setText("Event not found");
+            return;
+        }
+
+        db.collection("users").document(currentUser.getId())
+                .collection("eventHistory").document(eventId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    if (doc != null && doc.exists()) {
+                        tvName.setText(doc.getString("name"));
+                        tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
+                        tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
+                        tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
+                        tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+
+                        Long amountLong = doc.getLong("amount");
+                        eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
+                        tvCapacity.setText(String.valueOf(eventCapacity));
+                    } else {
+                        tvName.setText("Event not found");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    tvName.setText("Failed to load event");
+                });
     }
 }

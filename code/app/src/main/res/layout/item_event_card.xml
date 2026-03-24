@@ -102,6 +102,18 @@
             app:layout_constraintTop_toTopOf="@id/tvEventDate"
             app:layout_constraintBottom_toBottomOf="@id/tvEventDate" />
 
+        <TextView
+            android:id="@+id/tvEntrantStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toEndOf="@id/avatarCircle"
+            app:layout_constraintTop_toBottomOf="@id/tvEventDate" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardThumb"
             android:layout_width="60dp"
