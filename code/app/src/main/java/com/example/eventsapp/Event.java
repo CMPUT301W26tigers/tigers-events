@@ -17,6 +17,8 @@ public class Event implements Serializable {
     private String description;
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
+    private transient String entrantStatus; //used for UI display only
+    private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
     /**
      * Constructs an Event with basic information.
@@ -188,6 +190,38 @@ public class Event implements Serializable {
      */
     public void setSampleSize(int sampleSize) {
         this.sampleSize = Math.max(0, sampleSize);
+    }
+
+    /**
+     * Gets the entrant status for the current user (transient, not stored in Firestore).
+     * @return The entrant status string, or null if not set.
+     */
+    public String getEntrantStatus() {
+        return entrantStatus;
+    }
+
+    /**
+     * Sets the entrant status for the current user (transient, used for UI display only).
+     * @param entrantStatus The status to set (e.g., APPLIED, INVITED, ACCEPTED, DECLINED, CANCELLED).
+     */
+    public void setEntrantStatus(String entrantStatus) {
+        this.entrantStatus = entrantStatus;
+    }
+
+    /**
+     * Returns whether this event was loaded from the user's eventHistory (expired event).
+     * @return true if from history, false if from the active events collection.
+     */
+    public boolean isFromHistory() {
+        return fromHistory;
+    }
+
+    /**
+     * Sets whether this event was loaded from the user's eventHistory.
+     * @param fromHistory true if loaded from history.
+     */
+    public void setFromHistory(boolean fromHistory) {
+        this.fromHistory = fromHistory;
     }
 
     /**

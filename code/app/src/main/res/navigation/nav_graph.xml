@@ -28,6 +28,9 @@
         <action
             android:id="@+id/action_eventsFragment_to_createEventFragment"
             app:destination="@id/createEventFragment" />
+        <action
+            android:id="@+id/action_eventsFragment_to_editEventFragment"
+            app:destination="@id/editEventFragment" />
     </fragment>
 
     <fragment
@@ -64,6 +67,16 @@
     </fragment>
 
     <fragment
+        android:id="@+id/editEventFragment"
+        android:name="com.example.eventsapp.EditEventFragment"
+        android:label="Edit Event">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+    </fragment>
+
+    <fragment
         android:id="@+id/eventDetailFragment"
         android:name="com.example.eventsapp.EventDetailFragment"
         android:label="Event Details">
@@ -71,5 +84,9 @@
             android:name="eventId"
             app:argType="string"
             app:nullable="false" />
+        <argument
+            android:name="fromHistory"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 </navigation>

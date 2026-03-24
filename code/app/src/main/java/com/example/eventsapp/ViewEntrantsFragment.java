@@ -254,6 +254,9 @@ public class ViewEntrantsFragment extends Fragment {
                                 for (int i = 0; i < toInvite; i++) {
                                     DocumentReference ref = applicants.get(i).getReference();
                                     batch.update(ref, "status", "INVITED");
+                                    // Update history status for invited entrants
+                                    String invitedUserId = applicants.get(i).getString("userId");
+                                    EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
                                 }
                                 batch.commit()
                                         .addOnSuccessListener(v -> Toast.makeText(requireContext(),

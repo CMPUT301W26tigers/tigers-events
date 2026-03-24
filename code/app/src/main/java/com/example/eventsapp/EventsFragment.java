@@ -21,11 +21,17 @@ import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -42,6 +48,8 @@ public class EventsFragment extends Fragment {
     private LinearLayout emptyStateContainer;
     private MaterialButtonToggleGroup toggleEventType;
     private MaterialButton btnCreateEvent;
+    private ChipGroup chipGroupFilter;
+    private int loadGeneration = 0; // To counter stupid bug where events are shown twice
 
     /**
      * Default constructor for EventsFragment.
@@ -65,7 +73,7 @@ public class EventsFragment extends Fragment {
         emptyStateContainer = view.findViewById(R.id.emptyStateContainer);
         toggleEventType = view.findViewById(R.id.toggleEventType);
         btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
-        ChipGroup chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
+        chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
 
         btnCreateEvent.setOnClickListener(v ->
                 Navigation.findNavController(view)
@@ -74,11 +82,27 @@ public class EventsFragment extends Fragment {
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
             args.putString("eventId", event.getId());
-            Navigation.findNavController(view)
-                    .navigate(R.id.action_eventsFragment_to_eventDetailFragment, args);
+
+            boolean isCreatedTab = toggleEventType.getCheckedButtonId() == R.id.btnCreated;
+
+            if (EditEventFragment.shouldNavigateToEdit(isCreatedTab, event.isFromHistory())) {
+                // Active event the user created -> go to edit page
+                Navigation.findNavController(view)
+                        .navigate(R.id.action_eventsFragment_to_editEventFragment, args);
+            } else {
+                // Registered event or history event -> go to detail page
+                if (event.isFromHistory()) {
+                    args.putBoolean("fromHistory", true);
+                }
+                Navigation.findNavController(view)
+                        .navigate(R.id.action_eventsFragment_to_eventDetailFragment, args);
+            }
         });
         rvMyEvents.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvMyEvents.setAdapter(adapter);
+
+        // Clean up expired events on load
+        EventCleanupHelper.cleanupExpiredEvents();
 
         loadEvents();
         updateCreateButtonVisibility();
@@ -114,11 +138,13 @@ public class EventsFragment extends Fragment {
 
         String userId = currentUser.getId();
         int checkedId = toggleEventType.getCheckedButtonId();
+        loadGeneration++;
+        final int currentGeneration = loadGeneration;
 
         if (checkedId == R.id.btnCreated) {
-            loadCreatedEvents(userId);
+            loadCreatedEvents(userId, currentGeneration);
         } else {
-            loadRegisteredEvents(userId);
+            loadRegisteredEvents(userId, currentGeneration);
         }
     }
 
@@ -127,21 +153,23 @@ public class EventsFragment extends Fragment {
      *
      * @param userId The unique ID of the current user.
      */
-    private void loadCreatedEvents(String userId) {
+    private void loadCreatedEvents(String userId, int generation) {
         FirebaseFirestore.getInstance().collection("events")
                 .whereEqualTo("createdBy", userId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    if (!isAdded()) return;
+                    if (!isAdded() || generation != loadGeneration) return;
                     eventList.clear();
+                    Set<String> activeEventIds = new HashSet<>();
                     for (QueryDocumentSnapshot snapshot : querySnapshot) {
                         Event event = parseEvent(snapshot);
                         if (event != null) {
                             eventList.add(event);
+                            activeEventIds.add(event.getId());
                         }
                     }
-                    adapter.notifyDataSetChanged();
-                    updateEmptyState();
+                    // Also load expired history events for the organizer
+                    loadHistoryEvents(userId, "ORGANIZED", activeEventIds, generation);
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -155,16 +183,16 @@ public class EventsFragment extends Fragment {
      *
      * @param userId The unique ID of the current user.
      */
-    private void loadRegisteredEvents(String userId) {
+    private void loadRegisteredEvents(String userId, int generation) {
         FirebaseFirestore.getInstance().collection("events")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    if (!isAdded()) return;
+                    if (!isAdded() || generation != loadGeneration) return;
                     eventList.clear();
 
                     if (querySnapshot.isEmpty()) {
-                        adapter.notifyDataSetChanged();
-                        updateEmptyState();
+                        // No active events, but still load history
+                        loadHistoryEvents(userId, null, new HashSet<>(), generation);
                         return;
                     }
 
@@ -173,6 +201,7 @@ public class EventsFragment extends Fragment {
                         allDocs.add(doc);
                     }
 
+                    Set<String> activeEventIds = new HashSet<>();
                     AtomicInteger remaining = new AtomicInteger(allDocs.size());
 
                     for (QueryDocumentSnapshot snapshot : allDocs) {
@@ -185,35 +214,33 @@ public class EventsFragment extends Fragment {
                                 .whereEqualTo("userId", userId)
                                 .get()
                                 .addOnSuccessListener(entrantSnapshot -> {
-                                    if (!isAdded()) return;
-                                    boolean isActiveEntrant = false;
+                                    if (!isAdded() || generation != loadGeneration) return;
+                                    String entrantStatus = null;
                                     for (QueryDocumentSnapshot entrantDoc : entrantSnapshot) {
-                                        String status = entrantDoc.getString("status");
-                                        if ("APPLIED".equals(status)
-                                                || "INVITED".equals(status)
-                                                || "ACCEPTED".equals(status)) {
-                                            isActiveEntrant = true;
+                                        entrantStatus = entrantDoc.getString("status");
+                                        if (entrantStatus != null) {
                                             break;
                                         }
                                     }
 
-                                    if (isActiveEntrant) {
+                                    if (entrantStatus != null) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
+                                            event.setEntrantStatus(entrantStatus);
                                             eventList.add(event);
+                                            activeEventIds.add(event.getId());
                                         }
                                     }
                                     if (remaining.decrementAndGet() == 0) {
-                                        adapter.notifyDataSetChanged();
-                                        updateEmptyState();
+                                        // After loading active events, merge in expired history
+                                        loadHistoryEvents(userId, null, activeEventIds, generation);
                                     }
                                 })
                                 .addOnFailureListener(e -> {
                                     if (!isAdded()) return;
                                     Log.e(TAG, "Failed to check entrants", e);
                                     if (remaining.decrementAndGet() == 0) {
-                                        adapter.notifyDataSetChanged();
-                                        updateEmptyState();
+                                        loadHistoryEvents(userId, null, activeEventIds, generation);
                                     }
                                 });
                     }
@@ -273,6 +300,128 @@ public class EventsFragment extends Fragment {
     }
 
     /**
+     * Loads expired event history records from the user's personal eventHistory collection
+     * and merges them into the event list, skipping any that are already present as active events.
+     * Used in the Registered -> past tab in My Events
+     *
+     * @param userId The current users ID.
+     * @param statusFilter If non-null, only load history events with this entrantStatus (ex. organized)
+     *                     If null, load all history events except "ORGANIZED".
+     * @param activeEventIds Set of event IDs already loaded from active events (to avoid duplicates).
+     */
+    private void loadHistoryEvents(String userId, @Nullable String statusFilter, Set<String> activeEventIds, int generation) {
+        FirebaseFirestore.getInstance()
+                .collection("users").document(userId)
+                .collection("eventHistory")
+                .whereEqualTo("expired", true)
+                .get()
+                .addOnSuccessListener(historySnapshot -> {
+                    if (!isAdded() || generation != loadGeneration) return;
+                    for (DocumentSnapshot doc : historySnapshot.getDocuments()) {
+                        String eventId = doc.getString("id");
+                        if (eventId == null || activeEventIds.contains(eventId)) continue;
+
+                        String historyStatus = doc.getString("entrantStatus");
+                        // Filter: "ORGANIZED" tab only shows ORGANIZED, "Registered" tab shows everything except ORGANIZED
+                        if (statusFilter != null) {
+                            if (!statusFilter.equals(historyStatus)) continue;
+                        } else {
+                            if ("ORGANIZED".equals(historyStatus)) continue;
+                        }
+
+                        Event event = parseHistoryEvent(doc);
+                        if (event != null) {
+                            event.setEntrantStatus(historyStatus);
+                            event.setFromHistory(true);
+                            eventList.add(event);
+                        }
+                    }
+                    filterEventsByDate();
+                    adapter.notifyDataSetChanged();
+                    updateEmptyState();
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    Log.e(TAG, "Failed to load history events", e);
+                    // Still display whatever active events we have
+                    filterEventsByDate();
+                    adapter.notifyDataSetChanged();
+                    updateEmptyState();
+                });
+    }
+
+    /**
+     * Parses a history document into an Event object.
+     */
+    private Event parseHistoryEvent(DocumentSnapshot doc) {
+        String id = doc.getString("id");
+        String name = doc.getString("name");
+        Long amountLong = doc.getLong("amount");
+        int amount = (amountLong != null) ? amountLong.intValue() : 0;
+        String description = doc.getString("description");
+        String posterUrl = doc.getString("posterUrl");
+        Long sampleLong = doc.getLong("sampleSize");
+        int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
+
+        String registrationStart = doc.getString("registration_start");
+        String registrationEnd = doc.getString("registration_end");
+        String eventDate = doc.getString("event_date");
+
+        if (registrationStart == null) registrationStart = "";
+        if (registrationEnd == null) registrationEnd = "";
+        if (eventDate == null) eventDate = "";
+        if (id == null) id = doc.getId();
+        if (name == null) name = "";
+        if (description == null) description = "";
+        if (posterUrl == null) posterUrl = "";
+
+        if (amount != 0) {
+            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the currently selected chip filter value.
+     * @return "upcoming", "past", or "all".
+     */
+    private String getSelectedChipFilter() {
+        int checkedId = chipGroupFilter.getCheckedChipId();
+        if (checkedId == R.id.chipUpcoming) return "upcoming";
+        if (checkedId == R.id.chipPast) return "past";
+        return "all";
+    }
+
+    /**
+     * Filters the event list based on the selected chip filter (Upcoming/Past/All).
+     * Compares event_date strings (yyyy-MM-dd format) against today's date.
+     * Events with terminal statuses (DECLINED, CANCELLED) are treated as "past"
+     * regardless of the event date, since the user is done with them.
+     */
+    private void filterEventsByDate() {
+        String filter = getSelectedChipFilter();
+        if ("all".equals(filter)) return;
+
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
+
+        eventList.removeIf(event -> {
+            String eventDate = event.getEvent_date();
+            if (eventDate == null || eventDate.isEmpty()) return false;
+
+            String status = event.getEntrantStatus();
+            boolean isTerminalStatus = "DECLINED".equals(status) || "CANCELLED".equals(status);
+
+            if ("upcoming".equals(filter)) {
+                // Upcoming: remove past events and terminal-status events
+                return eventDate.compareTo(today) < 0 || isTerminalStatus;
+            } else {
+                // Past: keep past events and terminal-status events
+                return eventDate.compareTo(today) >= 0 && !isTerminalStatus;
+            }
+        });
+    }
+
+    /**
      * Inner adapter class for displaying events in a card-based RecyclerView.
      */
     private static class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.ViewHolder> {
@@ -316,6 +465,16 @@ public class EventsFragment extends Fragment {
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
+
+            String status = event.getEntrantStatus();
+            if (status != null && !status.isEmpty()) {
+                holder.tvEntrantStatus.setVisibility(View.VISIBLE);
+                holder.tvEntrantStatus.setText(formatStatus(status));
+                holder.tvEntrantStatus.setTextColor(getStatusColor(status));
+            } else {
+                holder.tvEntrantStatus.setVisibility(View.GONE);
+            }
+
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
@@ -328,7 +487,7 @@ public class EventsFragment extends Fragment {
          * ViewHolder for event card items.
          */
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime;
+            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime, tvEntrantStatus;
             ImageView ivThumb;
 
             /**
@@ -343,6 +502,40 @@ public class EventsFragment extends Fragment {
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
                 tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
+                tvEntrantStatus = itemView.findViewById(R.id.tvEntrantStatus);
+            }
+        }
+
+        /**
+         * Formats the entrant status for display.
+         * @param status The raw status string from Firestore.
+         * @return A user-friendly status label.
+         */
+        private static String formatStatus(String status) {
+            switch (status) {
+                case "APPLIED": return "Waitlisted";
+                case "INVITED": return "Invited";
+                case "ACCEPTED": return "Accepted";
+                case "DECLINED": return "Declined";
+                case "CANCELLED": return "Cancelled";
+                case "ORGANIZED": return "Organized";
+                default: return status;
+            }
+        }
+
+        /**
+         * Returns a color for the given entrant status because im extra
+         * @param status The raw status string.
+         * @return An ARGB color integer.
+         */
+        private static int getStatusColor(String status) {
+            switch (status) {
+                case "ACCEPTED": return 0xFF4CAF50;  // green
+                case "INVITED": return 0xFF2196F3;   // blue
+                case "ORGANIZED": return 0xFF9C27B0; // purple
+                case "DECLINED":
+                case "CANCELLED": return 0xFFFF5722; // red-orange
+                default: return 0xFF9E9E9E;          // gray
             }
         }
     }
