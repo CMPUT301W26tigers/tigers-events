@@ -17,7 +17,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +32,7 @@ public class EventDetailFragment extends Fragment {
 
     private static final String TAG = "EventDetailFragment";
 
+    private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private FirebaseFirestore db;
 
@@ -215,6 +215,7 @@ public class EventDetailFragment extends Fragment {
                     if (!isAdded()) return;
                     isOnWaitlist = true;
                     currentEntrantDocId = entrantId;
+                    notificationHelper.sendWaitlistedNotification(currentUser.getId(), eventId);
                     waitlistCount++;
                     updateButtonState();
                     updateWaitlistCounter();

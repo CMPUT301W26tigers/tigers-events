@@ -2,18 +2,19 @@ package com.example.eventsapp;
 
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -22,13 +23,13 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -98,6 +99,16 @@ public class CreateEventFragment extends Fragment {
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
+        // Apply underline to section headers programmatically (paintFlags not available in XML)
+        int[] sectionHeaderIds = {
+                R.id.tv_section_name, R.id.tv_section_description,
+                R.id.tv_section_logistics, R.id.tv_share
+        };
+        for (int id : sectionHeaderIds) {
+            TextView tv = view.findViewById(id);
+            if (tv != null) tv.setPaintFlags(tv.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+        }
+
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
         btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
 
@@ -106,15 +117,49 @@ public class CreateEventFragment extends Fragment {
         event.setId(java.util.UUID.randomUUID().toString());
         updateQRCode(event);
 
-        // Save event
+        // Show the real deep link for this event
+        android.widget.TextView tvEventLink = view.findViewById(R.id.tv_event_link);
+        tvEventLink.setText(event.getEventDeepLink());
+
+        // Pencil icons focus corresponding fields
+        view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
+            editName.requestFocus();
+            editName.setSelection(editName.length());
+        });
+        view.findViewById(R.id.btn_edit_description).setOnClickListener(v -> {
+            editDescription.requestFocus();
+            editDescription.setSelection(editDescription.length());
+        });
+        view.findViewById(R.id.btn_edit_logistics).setOnClickListener(v -> {
+            editEventDate.performClick();
+        });
+
+        // Save event and go to waitlist (chosen entrants)
         view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
 
-        // Share QR
-        view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
+        // View enrolled entrants
+        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> {
             if (event.getId() != null) {
-                Toast.makeText(requireContext(), "Share QR: " + event.getEventDeepLink(), Toast.LENGTH_SHORT).show();
-                // Could integrate with ShareCompat for actual sharing
+                Bundle args = new Bundle();
+                args.putString("eventId", event.getId());
+                args.putString("eventName", event.getName());
+                Navigation.findNavController(requireView())
+                        .navigate(R.id.viewEntrantsFragment, args);
+            } else {
+                Toast.makeText(requireContext(), "Save the event first", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        // Done: save and go back to Your Events
+        view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
+
+        // Share QR — regenerate with the event's real deep link
+        view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
+            String deepLink = event.getEventDeepLink();
+            android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, deepLink);
+            startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
         });
     }
 
@@ -239,10 +284,10 @@ public class CreateEventFragment extends Fragment {
         event.setDescription(description);
         event.setAmount(capacity);
         event.setSampleSize(sampleSize);
-        updateQRCode(event);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
+        updateQRCode(event);
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -273,6 +318,100 @@ public class CreateEventFragment extends Fragment {
                             .navigate(R.id.viewEntrantsFragment, args);
                 })
                 .addOnFailureListener(e -> {
+                    Log.e("CreateEvent", "Failed to save", e);
+                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    /**
+     * Validates inputs, saves the event to Firestore, then returns to the previous screen.
+     * This is used by the \"Done\" button for a natural completion flow.
+     */
+    private void saveAndGoBack(Event event) {
+        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+                ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
+        int capacity;
+        int sampleSize;
+        try {
+            capacity = Integer.parseInt(capacityStr);
+            if (capacity <= 0) {
+                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sampleSize = Integer.parseInt(sampleStr);
+            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
+        event.setName(name);
+        event.setDescription(description);
+        event.setAmount(capacity);
+        event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
+        updateQRCode(event);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
+
+        db.collection("events").document(event.getId())
+                .set(data)
+                .addOnSuccessListener(aVoid -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    Navigation.findNavController(requireView()).popBackStack();
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
                     Log.e("CreateEvent", "Failed to save", e);
                     Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
                 });

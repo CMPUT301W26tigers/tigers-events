@@ -28,6 +28,7 @@ public class WaitlistFragment extends Fragment {
 
     private static final String ARG_EVENT_ID = "event_id";
 
+    private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private MaterialToolbar toolbarWaitlist;
     private MaterialButton btnExportCsv;
     private MaterialButton btnSeeCancelled;
@@ -149,18 +150,7 @@ public class WaitlistFragment extends Fragment {
                             continue;
                         }
 
-                        NotificationItem notification = new NotificationItem(
-                                "You've been selected!",
-                                "You were chosen to sign up for this event.",
-                                eventId,
-                                "invitation",
-                                false
-                        );
-
-                        db.collection("users")
-                                .document(userId)
-                                .collection("notifications")
-                                .add(notification);
+                        notificationHelper.sendInvitationNotification(userId, eventId);
                         sentCount[0]++;
                     }
 

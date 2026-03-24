@@ -22,6 +22,8 @@ public class UserNotification {
     private final String title;
     private final String eventName;
     private final String message;
+    private final String eventId;
+    private final String notificationId;
 
     /**
      * Constructs a UserNotification.
@@ -31,10 +33,25 @@ public class UserNotification {
      * @param message The descriptive message.
      */
     public UserNotification(Type type, String title, String eventName, String message) {
+        this(type, title, eventName, message, null, null);
+    }
+
+    /**
+     * Constructs a UserNotification with Firestore metadata for real event-backed inbox items.
+     * @param type The type of notification.
+     * @param title The title string.
+     * @param eventName The name of the event associated with the notification.
+     * @param message The descriptive message.
+     * @param eventId The Firestore event ID associated with the notification.
+     * @param notificationId The Firestore document ID for the notification.
+     */
+    public UserNotification(Type type, String title, String eventName, String message, String eventId, String notificationId) {
         this.type = type;
         this.title = title;
         this.eventName = eventName;
         this.message = message;
+        this.eventId = eventId;
+        this.notificationId = notificationId;
     }
 
     /**
@@ -67,5 +84,21 @@ public class UserNotification {
      */
     public String getMessage() {
         return message;
+    }
+
+    /**
+     * Gets the Firestore event ID associated with this notification, if any.
+     * @return The event ID or null.
+     */
+    public String getEventId() {
+        return eventId;
+    }
+
+    /**
+     * Gets the Firestore document ID for this notification, if any.
+     * @return The notification document ID or null.
+     */
+    public String getNotificationId() {
+        return notificationId;
     }
 }

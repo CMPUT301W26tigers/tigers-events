@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.navigation.Navigation;
 
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.chip.ChipGroup;
@@ -40,6 +41,7 @@ public class EventsFragment extends Fragment {
     private RecyclerView rvMyEvents;
     private LinearLayout emptyStateContainer;
     private MaterialButtonToggleGroup toggleEventType;
+    private MaterialButton btnCreateEvent;
 
     /**
      * Default constructor for EventsFragment.
@@ -62,7 +64,12 @@ public class EventsFragment extends Fragment {
         rvMyEvents = view.findViewById(R.id.rvMyEvents);
         emptyStateContainer = view.findViewById(R.id.emptyStateContainer);
         toggleEventType = view.findViewById(R.id.toggleEventType);
+        btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
         ChipGroup chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
+
+        btnCreateEvent.setOnClickListener(v ->
+                Navigation.findNavController(view)
+                        .navigate(R.id.action_eventsFragment_to_createEventFragment));
 
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
@@ -74,9 +81,11 @@ public class EventsFragment extends Fragment {
         rvMyEvents.setAdapter(adapter);
 
         loadEvents();
+        updateCreateButtonVisibility();
 
         toggleEventType.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
+                updateCreateButtonVisibility();
                 loadEvents();
             }
         });
@@ -84,6 +93,11 @@ public class EventsFragment extends Fragment {
         chipGroupFilter.setOnCheckedStateChangeListener((group, checkedIds) -> {
             loadEvents();
         });
+    }
+
+    private void updateCreateButtonVisibility() {
+        boolean isCreatedTab = toggleEventType.getCheckedButtonId() == R.id.btnCreated;
+        btnCreateEvent.setVisibility(isCreatedTab ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -172,7 +186,18 @@ public class EventsFragment extends Fragment {
                                 .get()
                                 .addOnSuccessListener(entrantSnapshot -> {
                                     if (!isAdded()) return;
-                                    if (!entrantSnapshot.isEmpty()) {
+                                    boolean isActiveEntrant = false;
+                                    for (QueryDocumentSnapshot entrantDoc : entrantSnapshot) {
+                                        String status = entrantDoc.getString("status");
+                                        if ("APPLIED".equals(status)
+                                                || "INVITED".equals(status)
+                                                || "ACCEPTED".equals(status)) {
+                                            isActiveEntrant = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (isActiveEntrant) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
                                             eventList.add(event);
