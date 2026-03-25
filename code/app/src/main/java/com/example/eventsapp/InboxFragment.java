@@ -398,6 +398,9 @@ public class InboxFragment extends Fragment {
                         batch.update(querySnapshot.getDocuments().get(0).getReference(),
                                 "status", status,
                                 "statusCode", statusCode);
+                        // Update event history status
+                        EventCleanupHelper.updateHistoryStatus(
+                                currentUser.getId(), notification.getEventId(), status);
                     }
 
                     batch.delete(db.collection("users")

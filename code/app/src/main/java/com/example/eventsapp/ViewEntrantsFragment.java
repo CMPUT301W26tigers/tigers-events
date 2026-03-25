@@ -521,13 +521,23 @@ public class ViewEntrantsFragment extends Fragment {
                                 Collections.shuffle(applicants);
                                 int toInvite = Math.min(sampleSize, applicants.size());
                                 WriteBatch batch = db.batch();
+                                List<String> invitedUserIds = new ArrayList<>();
                                 for (int i = 0; i < toInvite; i++) {
                                     DocumentReference ref = applicants.get(i).getReference();
                                     batch.update(ref, "status", "INVITED", "statusCode", 1);
+                                    String invitedUserId = applicants.get(i).getString("userId");
+                                    if (invitedUserId != null && !invitedUserId.trim().isEmpty()) {
+                                        invitedUserIds.add(invitedUserId);
+                                    }
                                 }
                                 batch.commit()
-                                        .addOnSuccessListener(v -> Toast.makeText(requireContext(),
-                                                "Invited " + toInvite + " applicants", Toast.LENGTH_SHORT).show())
+                                        .addOnSuccessListener(v -> {
+                                            for (String invitedUserId : invitedUserIds) {
+                                                EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
+                                            }
+                                            Toast.makeText(requireContext(),
+                                                    "Invited " + toInvite + " applicants", Toast.LENGTH_SHORT).show();
+                                        })
                                         .addOnFailureListener(e -> Toast.makeText(requireContext(),
                                                 "Sampling failed", Toast.LENGTH_SHORT).show());
                             });

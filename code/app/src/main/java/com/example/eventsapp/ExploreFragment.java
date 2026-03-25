@@ -60,6 +60,9 @@ public class ExploreFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Clean up expired events on load
+        EventCleanupHelper.cleanupExpiredEvents();
+
         rvEvents = view.findViewById(R.id.rvEvents);
         rvSearchResults = view.findViewById(R.id.rvSearchResults);
         normalContainer = view.findViewById(R.id.normalContainer);
