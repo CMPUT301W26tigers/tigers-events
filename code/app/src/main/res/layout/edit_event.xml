@@ -81,6 +81,7 @@
 
             <!-- ── Name Section ── -->
             <LinearLayout
+                android:id="@+id/share_qr_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -135,6 +136,7 @@
 
             <!-- ── Description Section ── -->
             <LinearLayout
+                android:id="@+id/share_link_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -187,6 +189,23 @@
                     android:paddingBottom="8dp"/>
 
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_private_event"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Private event"
+                android:textColor="#212121" />
+
+            <TextView
+                android:id="@+id/tv_private_event_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Private events are hidden from Explore and do not generate a shareable QR code."
+                android:textColor="#757575"
+                android:textSize="12sp" />
 
             <!-- ── Logistics Section ── -->
             <LinearLayout

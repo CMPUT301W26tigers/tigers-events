@@ -19,6 +19,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -42,6 +43,8 @@ public class EventDetailFragment extends Fragment {
     private MaterialButton btnWaitlist;
 
     private boolean isOnWaitlist = false;
+    private boolean isPrivateEvent = false;
+    private boolean userIsOrganizer = false;
     private String currentEntrantDocId = null;
     private int waitlistCount = 0;
     private int eventCapacity = 0;
@@ -134,12 +137,15 @@ public class EventDetailFragment extends Fragment {
                         tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
                         tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
                         tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+                        isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
+                        userIsOrganizer = isCurrentUserOrganizer(doc);
 
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
 
                         updateWaitlistCounter();
+                        refreshWaitlistButtonState();
                     } else {
                         tvName.setText("Event not found");
                         btnWaitlist.setVisibility(View.GONE);
@@ -180,7 +186,7 @@ public class EventDetailFragment extends Fragment {
                         if (!querySnapshot.isEmpty()) {
                             isOnWaitlist = true;
                             currentEntrantDocId = querySnapshot.getDocuments().get(0).getId();
-                            updateButtonState();
+                            refreshWaitlistButtonState();
                         }
                     });
         }
@@ -190,6 +196,10 @@ public class EventDetailFragment extends Fragment {
      * Adds the current user to the event's waitlist in Firestore.
      */
     private void joinWaitlist() {
+        if (userIsOrganizer || isPrivateEvent) {
+            return;
+        }
+
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
@@ -217,7 +227,7 @@ public class EventDetailFragment extends Fragment {
                     currentEntrantDocId = entrantId;
                     notificationHelper.sendWaitlistedNotification(currentUser.getId(), eventId);
                     waitlistCount++;
-                    updateButtonState();
+                    refreshWaitlistButtonState();
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT).show();
@@ -246,7 +256,7 @@ public class EventDetailFragment extends Fragment {
                     isOnWaitlist = false;
                     currentEntrantDocId = null;
                     waitlistCount = Math.max(0, waitlistCount - 1);
-                    updateButtonState();
+                    refreshWaitlistButtonState();
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT).show();
@@ -262,7 +272,26 @@ public class EventDetailFragment extends Fragment {
     /**
      * Updates the text and color of the waitlist button based on whether the user is on the waitlist.
      */
-    private void updateButtonState() {
+    private void refreshWaitlistButtonState() {
+        if (userIsOrganizer) {
+            btnWaitlist.setText("Organizer Access");
+            btnWaitlist.setEnabled(false);
+            btnWaitlist.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getResources().getColor(R.color.dark_grey, null)));
+            return;
+        }
+
+        if (isPrivateEvent && !isOnWaitlist) {
+            btnWaitlist.setText("Private Event By Invitation");
+            btnWaitlist.setEnabled(false);
+            btnWaitlist.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getResources().getColor(R.color.dark_grey, null)));
+            return;
+        }
+
+        btnWaitlist.setEnabled(true);
         if (isOnWaitlist) {
             btnWaitlist.setText("Leave Waitlist");
             btnWaitlist.setBackgroundTintList(
@@ -272,7 +301,7 @@ public class EventDetailFragment extends Fragment {
             btnWaitlist.setText("Join Waitlist");
             btnWaitlist.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.colorPrimaryPurple, null)));
+                    getResources().getColor(R.color.colorPrimaryPurple, null)));
         }
     }
 
@@ -294,5 +323,21 @@ public class EventDetailFragment extends Fragment {
     private String getFieldOrDefault(DocumentSnapshot doc, String field, String defaultValue) {
         String value = doc.getString(field);
         return (value != null && !value.isEmpty()) ? value : defaultValue;
+    }
+
+    private boolean isCurrentUserOrganizer(@NonNull DocumentSnapshot eventDoc) {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return false;
+        }
+
+        String userId = currentUser.getId();
+        String createdBy = eventDoc.getString("createdBy");
+        if (userId.equals(createdBy)) {
+            return true;
+        }
+
+        List<String> coOrganizerIds = (List<String>) eventDoc.get("coOrganizerIds");
+        return coOrganizerIds != null && coOrganizerIds.contains(userId);
     }
 }

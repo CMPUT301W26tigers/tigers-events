@@ -26,6 +26,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -129,12 +130,19 @@ public class EventsFragment extends Fragment {
      */
     private void loadCreatedEvents(String userId) {
         FirebaseFirestore.getInstance().collection("events")
-                .whereEqualTo("createdBy", userId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!isAdded()) return;
                     eventList.clear();
                     for (QueryDocumentSnapshot snapshot : querySnapshot) {
+                        String createdBy = snapshot.getString("createdBy");
+                        List<String> coOrganizerIds = (List<String>) snapshot.get("coOrganizerIds");
+                        boolean isOrganizerEvent = Objects.equals(createdBy, userId)
+                                || (coOrganizerIds != null && coOrganizerIds.contains(userId));
+                        if (!isOrganizerEvent) {
+                            continue;
+                        }
+
                         Event event = parseEvent(snapshot);
                         if (event != null) {
                             eventList.add(event);

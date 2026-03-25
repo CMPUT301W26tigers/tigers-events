@@ -12,6 +12,8 @@ public class Entrant implements Serializable {
      * Enumeration of possible statuses for an entrant.
      */
     public enum Status {
+        /** Entrant has been privately invited to join the waiting list. */
+        PRIVATE_INVITED,
         /** Entrant has applied and is in the pool for sampling. */
         APPLIED,
         /** Entrant has been chosen by sampling and invited to register. */

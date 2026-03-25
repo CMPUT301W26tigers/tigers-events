@@ -167,6 +167,11 @@ public class ExploreFragment extends Fragment {
             if (value != null && isAdded()) {
                 allEvents.clear();
                 for (QueryDocumentSnapshot snapshot : value) {
+                    Boolean isPrivate = snapshot.getBoolean("isPrivate");
+                    if (Boolean.TRUE.equals(isPrivate)) {
+                        continue;
+                    }
+
                     String id = snapshot.getString("id");
                     String name = snapshot.getString("name");
                     Long amountLong = snapshot.getLong("amount");

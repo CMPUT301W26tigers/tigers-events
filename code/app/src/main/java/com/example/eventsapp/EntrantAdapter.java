@@ -57,8 +57,30 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Entrant e = entrants.get(position);
         holder.tvName.setText(e.getName() != null && !e.getName().isEmpty() ? e.getName() : "Unknown");
-        holder.tvAction.setText(e.getStatus() == Entrant.Status.ACCEPTED ? "Accepted" : "Invited");
+        holder.tvAction.setText(getStatusLabel(e.getStatus()));
         holder.tvActionSub.setText(e.getEmail() != null ? e.getEmail() : "");
+    }
+
+    private String getStatusLabel(Entrant.Status status) {
+        if (status == null) {
+            return "Pending";
+        }
+        switch (status) {
+            case PRIVATE_INVITED:
+                return "Waitlist Invite Sent";
+            case APPLIED:
+                return "On Waitlist";
+            case ACCEPTED:
+                return "Accepted";
+            case INVITED:
+                return "Invited";
+            case DECLINED:
+                return "Declined";
+            case CANCELLED:
+                return "Cancelled";
+            default:
+                return "Pending";
+        }
     }
 
     /**

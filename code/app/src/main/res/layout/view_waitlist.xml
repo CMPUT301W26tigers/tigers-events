@@ -100,9 +100,20 @@
         android:alpha="0.8"
         android:text="Total Invited: 0&#10;Total Accepted: 0&#10;Chosen Entrants: 0"
         android:textSize="12sp"
-        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintBottom_toTopOf="@id/btn_invite_coorganizer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_invite_coorganizer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Invite Co-Organizer"
+        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_waitlist_stats" />
 
     <LinearLayout
         android:id="@+id/waitlist_footer_row"

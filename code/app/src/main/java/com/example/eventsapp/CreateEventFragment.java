@@ -19,10 +19,12 @@ import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
@@ -53,6 +55,12 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
+    private MaterialSwitch switchPrivateEvent;
+    private View shareTitle;
+    private View shareQrRow;
+    private View shareLinkRow;
+    private View shareQrImage;
+    private View shareEventLink;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -94,6 +102,12 @@ public class CreateEventFragment extends Fragment {
         editEventDate = view.findViewById(R.id.edit_event_date);
         editRegistrationStart = view.findViewById(R.id.edit_registration_start);
         editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        switchPrivateEvent = view.findViewById(R.id.switch_private_event);
+        shareTitle = view.findViewById(R.id.tv_share);
+        shareQrRow = view.findViewById(R.id.share_qr_row);
+        shareLinkRow = view.findViewById(R.id.share_link_row);
+        shareQrImage = view.findViewById(R.id.iv_qr);
+        shareEventLink = view.findViewById(R.id.tv_event_link);
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -120,6 +134,8 @@ public class CreateEventFragment extends Fragment {
         // Show the real deep link for this event
         android.widget.TextView tvEventLink = view.findViewById(R.id.tv_event_link);
         tvEventLink.setText(event.getEventDeepLink());
+        updatePrivateEventUi(false, event);
+        switchPrivateEvent.setOnCheckedChangeListener((buttonView, isChecked) -> updatePrivateEventUi(isChecked, event));
 
         // Pencil icons focus corresponding fields
         view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
@@ -218,6 +234,24 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
+    private void updatePrivateEventUi(boolean isPrivateEvent, Event event) {
+        int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
+        shareTitle.setVisibility(visibility);
+        shareQrRow.setVisibility(visibility);
+        shareLinkRow.setVisibility(visibility);
+        shareQrImage.setVisibility(visibility);
+        shareEventLink.setVisibility(visibility);
+
+        TextView tvEventLink = requireView().findViewById(R.id.tv_event_link);
+        if (isPrivateEvent) {
+            ivQR.setImageDrawable(null);
+            tvEventLink.setText("Private events cannot be shared publicly.");
+        } else {
+            updateQRCode(event);
+            tvEventLink.setText(event.getEventDeepLink());
+        }
+    }
+
     /**
      * Validates input fields, updates the {@link Event} object, saves the event to Firestore,
      * and navigates to the waitlist management screen upon success.
@@ -287,7 +321,10 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
-        updateQRCode(event);
+        boolean isPrivateEvent = switchPrivateEvent != null && switchPrivateEvent.isChecked();
+        if (!isPrivateEvent) {
+            updateQRCode(event);
+        }
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -299,6 +336,9 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("isPrivate", isPrivateEvent);
+        data.put("coOrganizerIds", new ArrayList<String>());
+        data.put("pendingCoOrganizerIds", new ArrayList<String>());
 
         // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -385,7 +425,10 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
-        updateQRCode(event);
+        boolean isPrivateEvent = switchPrivateEvent != null && switchPrivateEvent.isChecked();
+        if (!isPrivateEvent) {
+            updateQRCode(event);
+        }
 
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
@@ -397,6 +440,9 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("isPrivate", isPrivateEvent);
+        data.put("coOrganizerIds", new ArrayList<String>());
+        data.put("pendingCoOrganizerIds", new ArrayList<String>());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
