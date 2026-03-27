@@ -60,6 +60,7 @@ public class EventDetailFragment extends Fragment {
     private String currentEntrantDocId = null;
     private int waitlistCount = 0;
     private int eventCapacity = 0;
+    private String eventCreatorId = null;
 
     /**
      * Called when the fragment is being created. Initializes Firestore and
@@ -124,6 +125,14 @@ public class EventDetailFragment extends Fragment {
 
         commentList = new ArrayList<>();
         commentAdapter = new CommentAdapter(commentList);
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            commentAdapter.setCurrentUserId(currentUser.getId());
+        }
+
+        commentAdapter.setOnCommentDeleteListener(this::deleteComment);
+
         rvComments.setLayoutManager(new LinearLayoutManager(getContext()));
         rvComments.setAdapter(commentAdapter);
 
@@ -162,6 +171,10 @@ public class EventDetailFragment extends Fragment {
                         tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
                         tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
                         tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+                        eventCreatorId = doc.getString("createdBy");
+                        if (commentAdapter != null) {
+                            commentAdapter.setEventCreatorId(eventCreatorId);
+                        }
 
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
@@ -306,6 +319,7 @@ public class EventDetailFragment extends Fragment {
                         for (DocumentSnapshot doc : value.getDocuments()) {
                             Comment comment = doc.toObject(Comment.class);
                             if (comment != null) {
+                                comment.setId(doc.getId());
                                 commentList.add(comment);
                             }
                         }
@@ -341,6 +355,25 @@ public class EventDetailFragment extends Fragment {
                     Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error posting comment", e));
+    }
+
+    /**
+     * Deletes a comment from Firestore. Only allowed for the event host.
+     * @param comment The comment to delete.
+     */
+    private void deleteComment(Comment comment) {
+        if (comment.getId() == null) return;
+
+        db.collection("events").document(eventId)
+                .collection("comments").document(comment.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "Error deleting comment", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error deleting comment", e);
+                });
     }
 
     /**

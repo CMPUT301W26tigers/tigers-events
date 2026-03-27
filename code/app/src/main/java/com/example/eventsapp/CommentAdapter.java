@@ -3,6 +3,7 @@ package com.example.eventsapp;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,11 +18,40 @@ import java.util.Locale;
  */
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
+    public interface OnCommentDeleteListener {
+        void onDeleteComment(Comment comment);
+    }
+
     private List<Comment> commentList;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
+    private String eventCreatorId;
+    private String currentUserId;
+    private OnCommentDeleteListener deleteListener;
 
     public CommentAdapter(List<Comment> commentList) {
         this.commentList = commentList;
+    }
+
+    public void setOnCommentDeleteListener(OnCommentDeleteListener listener) {
+        this.deleteListener = listener;
+    }
+
+    /**
+     * Sets the creator ID of the current event to identify host comments and permissions.
+     * @param eventCreatorId The ID of the user who created the event.
+     */
+    public void setEventCreatorId(String eventCreatorId) {
+        this.eventCreatorId = eventCreatorId;
+        notifyDataSetChanged();
+    }
+
+    /**
+     * Sets the current user ID to determine permissions.
+     * @param currentUserId The ID of the logged-in user.
+     */
+    public void setCurrentUserId(String currentUserId) {
+        this.currentUserId = currentUserId;
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -39,6 +69,25 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         if (comment.getTimestamp() != null) {
             holder.tvTimestamp.setText(dateFormat.format(comment.getTimestamp()));
         }
+
+        // Show "EventHost" tag if the comment user is the event creator
+        if (eventCreatorId != null && eventCreatorId.equals(comment.getUserId())) {
+            holder.tvHostTag.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvHostTag.setVisibility(View.GONE);
+        }
+
+        // Show delete button if current user is the event creator
+        if (currentUserId != null && currentUserId.equals(eventCreatorId)) {
+            holder.btnDelete.setVisibility(View.VISIBLE);
+            holder.btnDelete.setOnClickListener(v -> {
+                if (deleteListener != null) {
+                    deleteListener.onDeleteComment(comment);
+                }
+            });
+        } else {
+            holder.btnDelete.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -47,13 +96,16 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     }
 
     static class CommentViewHolder extends RecyclerView.ViewHolder {
-        TextView tvUserName, tvCommentText, tvTimestamp;
+        TextView tvUserName, tvCommentText, tvTimestamp, tvHostTag;
+        ImageButton btnDelete;
 
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
             tvUserName = itemView.findViewById(R.id.tv_comment_user);
             tvCommentText = itemView.findViewById(R.id.tv_comment_text);
             tvTimestamp = itemView.findViewById(R.id.tv_comment_timestamp);
+            tvHostTag = itemView.findViewById(R.id.tv_event_host_tag);
+            btnDelete = itemView.findViewById(R.id.btn_delete_comment);
         }
     }
 }
