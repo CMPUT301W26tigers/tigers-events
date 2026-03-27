@@ -30,6 +30,21 @@
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Expired Banner -->
+            <TextView
+                android:id="@+id/tv_expired_banner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This event has expired"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="10dp"
+                android:background="#FFFF5722"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp"/>
+
             <!-- Event Poster -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

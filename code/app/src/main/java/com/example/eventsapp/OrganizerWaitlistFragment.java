@@ -146,6 +146,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .update("status", "CANCELLED", "statusCode", 3)
                 .addOnSuccessListener(aVoid -> {
                     notificationHelper.sendNotSelectedNotification(entrantToRemove.getUserId(), eventId);
+                    EventCleanupHelper.updateHistoryStatus(entrantToRemove.getUserId(), eventId, "CANCELLED");
                     Toast.makeText(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT).show();
                 });
     }
@@ -167,6 +168,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .update("status", "CANCELLED", "statusCode", 3)
                 .addOnSuccessListener(aVoid -> {
                     notificationHelper.sendNotSelectedNotification(entrantToReplace.getUserId(), eventId);
+                    EventCleanupHelper.updateHistoryStatus(entrantToReplace.getUserId(), eventId, "CANCELLED");
                     // Step 2: Draw Replacement
                     drawReplacementApplicant();
                 });
@@ -196,7 +198,9 @@ public class OrganizerWaitlistFragment extends Fragment {
                             .collection("entrants").document(selectedApplicant.getId())
                             .update("status", "INVITED", "statusCode", 1)
                             .addOnSuccessListener(aVoid -> {
-                                notificationHelper.sendInvitationNotification(selectedApplicant.getString("userId"), eventId);
+                                String replacementUserId = selectedApplicant.getString("userId");
+                                notificationHelper.sendInvitationNotification(replacementUserId, eventId);
+                                EventCleanupHelper.updateHistoryStatus(replacementUserId, eventId, "INVITED");
                                 Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
                             });
                 });
