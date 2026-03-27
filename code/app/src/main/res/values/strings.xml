@@ -6,4 +6,7 @@
     <string name="accept">Accept</string>
     <string name="decline">Decline</string>
     <string name="wait">Wait</string>
+    <string name="notify_waitlisted">Notify Waitlisted Entrants</string>
+    <string name="notify_selected">Notify Selected Entrants</string>
+    <string name="notify_canceled">Notify Canceled Entrants</string>
 </resources>
