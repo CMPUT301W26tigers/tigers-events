@@ -311,6 +311,10 @@ public class CreateEventFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     Log.d("CreateEvent", "Event saved");
                     Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    // Write organizer history record
+                    if (currentUser != null && currentUser.getId() != null) {
+                        EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
+                    }
                     Bundle args = new Bundle();
                     args.putString("eventId", event.getId());
                     args.putString("eventName", event.getName());
@@ -408,6 +412,10 @@ public class CreateEventFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     if (!isAdded()) return;
                     Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    // Write organizer history record
+                    if (currentUser != null && currentUser.getId() != null) {
+                        EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
+                    }
                     Navigation.findNavController(requireView()).popBackStack();
                 })
                 .addOnFailureListener(e -> {
