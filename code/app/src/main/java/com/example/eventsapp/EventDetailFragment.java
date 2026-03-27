@@ -165,6 +165,9 @@ public class EventDetailFragment extends Fragment {
                 }
             });
         }
+
+        loadComments();
+        btnPostComment.setOnClickListener(v -> postComment());
     }
 
     /**
