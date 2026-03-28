@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_notify_waitlisted"
+        android:title="@string/notify_waitlisted"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_notify_selected"
+        android:title="@string/notify_selected"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_notify_not_selected"
+        android:title="@string/notify_canceled"
+        app:showAsAction="never" />
+
+</menu>
