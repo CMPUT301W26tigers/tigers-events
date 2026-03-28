@@ -193,13 +193,19 @@ public class ExploreFragment extends Fragment {
                     String posterUrl = snapshot.getString("posterUrl");
                     Long sampleLong = snapshot.getLong("sampleSize");
                     int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
+                    String registrationStart = snapshot.getString("registration_start");
+                    String registrationEnd = snapshot.getString("registration_end");
+                    String eventDate = snapshot.getString("event_date");
                     if (id == null) id = snapshot.getId();
                     if (name == null) name = "";
                     if (description == null) description = "";
                     if (posterUrl == null) posterUrl = "";
+                    if (registrationStart == null) registrationStart = "";
+                    if (registrationEnd == null) registrationEnd = "";
+                    if (eventDate == null) eventDate = "";
 
                     if (amount != 0) {
-                        allEvents.add(new Event(id, name, amount, "", "", "", description, posterUrl, sampleSize));
+                        allEvents.add(new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize));
                     }
                 }
                 adapter.notifyDataSetChanged();
@@ -251,6 +257,9 @@ public class ExploreFragment extends Fragment {
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
+
+            holder.tvEventDate.setText(event.getFormattedEventDate());
+
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 

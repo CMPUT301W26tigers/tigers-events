@@ -147,9 +147,9 @@ public class EventDetailFragment extends Fragment {
                     if (doc != null && doc.exists()) {
                         tvName.setText(doc.getString("name"));
                         tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
-                        tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
-                        tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
-                        tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+                        tvEventDate.setText(formatDate(doc, "event_date", "TBD"));
+                        tvRegistrationStart.setText(formatDate(doc, "registration_start", "TBD"));
+                        tvRegistrationEnd.setText(formatDate(doc, "registration_end", "TBD"));
                         isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
                         userIsOrganizer = isCurrentUserOrganizer(doc);
 
@@ -362,6 +362,25 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
+     * Formats a yyyy-MM-dd date string to "Month Day, Year" format.
+     * Falls back to the raw string if parsing fails, or defaultValue if empty.
+     */
+    private String formatDate(DocumentSnapshot doc, String field, String defaultValue) {
+        String value = doc.getString(field);
+        if (value == null || value.isEmpty()) return defaultValue;
+        try {
+            java.text.SimpleDateFormat input = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CANADA);
+            input.setLenient(false);
+            java.util.Date date = input.parse(value);
+            if (date == null) return value;
+            java.text.SimpleDateFormat output = new java.text.SimpleDateFormat("MMMM d, yyyy", java.util.Locale.CANADA);
+            return output.format(date);
+        } catch (java.text.ParseException e) {
+            return value;
+        }
+    }
+
+    /**
      * Fetches the event data from Firestore and writes a copy to the user's eventHistory.
      */
     private void writeEventHistoryForCurrentUser(String userId) {
@@ -404,9 +423,9 @@ public class EventDetailFragment extends Fragment {
                     if (doc != null && doc.exists()) {
                         tvName.setText(doc.getString("name"));
                         tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
-                        tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
-                        tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
-                        tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+                        tvEventDate.setText(formatDate(doc, "event_date", "TBD"));
+                        tvRegistrationStart.setText(formatDate(doc, "registration_start", "TBD"));
+                        tvRegistrationEnd.setText(formatDate(doc, "registration_end", "TBD"));
 
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;

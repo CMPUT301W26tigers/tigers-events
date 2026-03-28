@@ -478,6 +478,8 @@ public class EventsFragment extends Fragment {
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
 
+            holder.tvEventDate.setText(event.getFormattedEventDate());
+
             String status = event.getEntrantStatus();
             if (status != null && !status.isEmpty()) {
                 holder.tvEntrantStatus.setVisibility(View.VISIBLE);

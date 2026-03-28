@@ -1,6 +1,10 @@
 package com.example.eventsapp;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * Represents an event in the EventsApp system.
@@ -230,5 +234,24 @@ public class Event implements Serializable {
      */
     public String getEventDeepLink() {
         return "tigers-events://event/" + id;
+    }
+
+    /**
+     * Returns the event date formatted as "March 27, 2026" instead of "2026-03-27".
+     * Falls back to the raw date string if parsing fails.
+     * @return The formatted date string, or "No date" if event_date is empty.
+     */
+    public String getFormattedEventDate() {
+        if (event_date == null || event_date.isEmpty()) return "No date";
+        try {
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+            input.setLenient(false);
+            Date date = input.parse(event_date);
+            if (date == null) return event_date;
+            SimpleDateFormat output = new SimpleDateFormat("MMMM d, yyyy", Locale.CANADA);
+            return output.format(date);
+        } catch (ParseException e) {
+            return event_date;
+        }
     }
 }
