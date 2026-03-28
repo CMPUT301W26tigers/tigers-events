@@ -12,13 +12,20 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +34,7 @@ import java.util.Map;
  * - View event description, date, and registration period.
  * - See current waitlist statistics (e.g., "5/50 on waitlist").
  * - Join or leave the event's waitlist.
+ * - View and post comments on the event.
  */
 public class EventDetailFragment extends Fragment {
 
@@ -42,10 +50,18 @@ public class EventDetailFragment extends Fragment {
     private ImageView ivPoster;
     private MaterialButton btnWaitlist;
 
+    // Comment views
+    private RecyclerView rvComments;
+    private CommentAdapter commentAdapter;
+    private List<Comment> commentList;
+    private TextInputEditText etComment;
+    private MaterialButton btnPostComment;
+
     private boolean isOnWaitlist = false;
     private String currentEntrantDocId = null;
     private int waitlistCount = 0;
     private int eventCapacity = 0;
+    private String eventCreatorId = null;
 
     /**
      * Called when the fragment is being created. Initializes Firestore and
@@ -105,6 +121,24 @@ public class EventDetailFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
 
+        // Initialize comments section
+        rvComments = view.findViewById(R.id.rv_comments);
+        etComment = view.findViewById(R.id.et_comment);
+        btnPostComment = view.findViewById(R.id.btn_post_comment);
+
+        commentList = new ArrayList<>();
+        commentAdapter = new CommentAdapter(commentList);
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            commentAdapter.setCurrentUserId(currentUser.getId());
+        }
+
+        commentAdapter.setOnCommentDeleteListener(this::deleteComment);
+
+        rvComments.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvComments.setAdapter(commentAdapter);
+
         if (eventId.isEmpty()) {
             tvName.setText("Event not found");
             btnWaitlist.setVisibility(View.GONE);
@@ -131,6 +165,9 @@ public class EventDetailFragment extends Fragment {
                 }
             });
         }
+
+        loadComments();
+        btnPostComment.setOnClickListener(v -> postComment());
     }
 
     /**
@@ -144,9 +181,13 @@ public class EventDetailFragment extends Fragment {
                     if (doc != null && doc.exists()) {
                         tvName.setText(doc.getString("name"));
                         tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
-                        tvEventDate.setText(formatDate(doc, "event_date", "TBD"));
-                        tvRegistrationStart.setText(formatDate(doc, "registration_start", "TBD"));
-                        tvRegistrationEnd.setText(formatDate(doc, "registration_end", "TBD"));
+                        tvEventDate.setText(getFieldOrDefault(doc, "event_date", "TBD"));
+                        tvRegistrationStart.setText(getFieldOrDefault(doc, "registration_start", "TBD"));
+                        tvRegistrationEnd.setText(getFieldOrDefault(doc, "registration_end", "TBD"));
+                        eventCreatorId = doc.getString("createdBy");
+                        if (commentAdapter != null) {
+                            commentAdapter.setEventCreatorId(eventCreatorId);
+                        }
 
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
@@ -276,6 +317,82 @@ public class EventDetailFragment extends Fragment {
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Failed to leave waitlist", Toast.LENGTH_SHORT).show();
                     Log.e(TAG, "Error leaving waitlist", e);
+                });
+    }
+
+    /**
+     * Fetches comments for the current event from Firestore.
+     */
+    private void loadComments() {
+        db.collection("events").document(eventId)
+                .collection("comments")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (!isAdded()) return;
+                    if (error != null) {
+                        Log.e(TAG, "Error loading comments", error);
+                        return;
+                    }
+
+                    commentList.clear();
+                    if (value != null) {
+                        for (DocumentSnapshot doc : value.getDocuments()) {
+                            Comment comment = doc.toObject(Comment.class);
+                            if (comment != null) {
+                                comment.setId(doc.getId());
+                                commentList.add(comment);
+                            }
+                        }
+                    }
+                    commentAdapter.notifyDataSetChanged();
+                });
+    }
+
+    /**
+     * Posts a new comment for the current event to Firestore.
+     */
+    private void postComment() {
+        String content = etComment.getText().toString().trim();
+        if (content.isEmpty()) return;
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(requireContext(), "Please sign in to post a comment", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Comment comment = new Comment();
+        comment.setUserId(currentUser.getId());
+        comment.setUserName(currentUser.getName());
+        comment.setText(content);
+        comment.setTimestamp(new Date());
+
+        db.collection("events").document(eventId)
+                .collection("comments")
+                .add(comment)
+                .addOnSuccessListener(documentReference -> {
+                    etComment.setText("");
+                    Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error posting comment", e));
+    }
+
+    /**
+     * Deletes a comment from Firestore. Only allowed for the event host.
+     * @param comment The comment to delete.
+     */
+    private void deleteComment(Comment comment) {
+        if (comment.getId() == null) return;
+
+        db.collection("events").document(eventId)
+                .collection("comments").document(comment.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "Error deleting comment", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error deleting comment", e);
                 });
     }
 
