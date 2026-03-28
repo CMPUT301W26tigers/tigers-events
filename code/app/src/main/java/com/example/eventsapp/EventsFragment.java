@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -75,10 +76,13 @@ public class EventsFragment extends Fragment {
         toggleEventType = view.findViewById(R.id.toggleEventType);
         btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
         chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
+        ImageButton btnInboxEvents = view.findViewById(R.id.btnInboxEvents);
 
         btnCreateEvent.setOnClickListener(v ->
                 Navigation.findNavController(view)
                         .navigate(R.id.action_eventsFragment_to_createEventFragment));
+        btnInboxEvents.setOnClickListener(v ->
+                Navigation.findNavController(v).navigate(R.id.inboxFragment));
 
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
@@ -231,7 +235,7 @@ public class EventsFragment extends Fragment {
                                         }
                                     }
 
-                                    if (entrantStatus != null) {
+                                    if (entrantStatus != null && !"PRIVATE_INVITED".equals(entrantStatus)) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
                                             event.setEntrantStatus(entrantStatus);
@@ -521,6 +525,7 @@ public class EventsFragment extends Fragment {
          */
         private static String formatStatus(String status) {
             switch (status) {
+                case "PRIVATE_INVITED": return "Private Invite";
                 case "APPLIED": return "Waitlisted";
                 case "INVITED": return "Invited";
                 case "ACCEPTED": return "Accepted";

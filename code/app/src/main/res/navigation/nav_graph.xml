@@ -64,6 +64,10 @@
             android:name="eventName"
             app:argType="string"
             app:nullable="true" />
+        <argument
+            android:name="openInviteOnLoad"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment

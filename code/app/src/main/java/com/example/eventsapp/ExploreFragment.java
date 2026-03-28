@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -81,6 +82,11 @@ public class ExploreFragment extends Fragment {
         // Tap the search bar hint to switch to search mode
         view.findViewById(R.id.cardSearchNormal).setOnClickListener(v -> showSearchMode());
 
+        ImageButton btnInboxNormal = view.findViewById(R.id.btnInboxNormal);
+        ImageButton btnInboxSearch = view.findViewById(R.id.btnTopIconSearch);
+        btnInboxNormal.setOnClickListener(this::openInbox);
+        btnInboxSearch.setOnClickListener(this::openInbox);
+
         // Back button exits search mode
         view.findViewById(R.id.btnBack).setOnClickListener(v -> hideSearchMode());
 
@@ -113,6 +119,10 @@ public class ExploreFragment extends Fragment {
         args.putString("eventId", event.getId());
         Navigation.findNavController(view)
                 .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
+    }
+
+    private void openInbox(View view) {
+        Navigation.findNavController(view).navigate(R.id.inboxFragment);
     }
 
     /**

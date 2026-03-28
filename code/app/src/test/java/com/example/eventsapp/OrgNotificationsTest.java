@@ -16,6 +16,7 @@ public class OrgNotificationsTest {
                 "You've been selected!",
                 "You were chosen to sign up for this event.",
                 "goodevent",
+                "Good Event",
                 "invitation",
                 false
         );
@@ -23,6 +24,7 @@ public class OrgNotificationsTest {
         assertEquals("You've been selected!", notification.getTitle());
         assertEquals("You were chosen to sign up for this event.", notification.getMessage());
         assertEquals("goodevent", notification.getEventId());
+        assertEquals("Good Event", notification.getEventName());
         assertEquals("invitation", notification.getType());
         assertFalse(notification.isRead());
     }

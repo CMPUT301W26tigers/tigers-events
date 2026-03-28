@@ -19,7 +19,6 @@ import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -55,12 +54,14 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
-    private MaterialSwitch switchPrivateEvent;
+    private MaterialButton btnTogglePrivateEvent;
     private View shareTitle;
     private View shareQrRow;
     private View shareLinkRow;
     private View shareQrImage;
     private View shareEventLink;
+    private MaterialButton btnViewWaitlist;
+    private boolean isPrivateEvent;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -102,12 +103,15 @@ public class CreateEventFragment extends Fragment {
         editEventDate = view.findViewById(R.id.edit_event_date);
         editRegistrationStart = view.findViewById(R.id.edit_registration_start);
         editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
-        switchPrivateEvent = view.findViewById(R.id.switch_private_event);
+        btnTogglePrivateEvent = view.findViewById(R.id.btn_toggle_private_event);
         shareTitle = view.findViewById(R.id.tv_share);
-        shareQrRow = view.findViewById(R.id.share_qr_row);
-        shareLinkRow = view.findViewById(R.id.share_link_row);
+        shareQrRow = ((View) view.findViewById(R.id.btn_share_qr)).getParent() instanceof View
+                ? (View) ((View) view.findViewById(R.id.btn_share_qr)).getParent() : null;
+        shareLinkRow = ((View) view.findViewById(R.id.btn_share_link)).getParent() instanceof View
+                ? (View) ((View) view.findViewById(R.id.btn_share_link)).getParent() : null;
         shareQrImage = view.findViewById(R.id.iv_qr);
         shareEventLink = view.findViewById(R.id.tv_event_link);
+        btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -134,8 +138,11 @@ public class CreateEventFragment extends Fragment {
         // Show the real deep link for this event
         android.widget.TextView tvEventLink = view.findViewById(R.id.tv_event_link);
         tvEventLink.setText(event.getEventDeepLink());
-        updatePrivateEventUi(false, event);
-        switchPrivateEvent.setOnCheckedChangeListener((buttonView, isChecked) -> updatePrivateEventUi(isChecked, event));
+        updatePrivateEventUi(event);
+        btnTogglePrivateEvent.setOnClickListener(v -> {
+            isPrivateEvent = !isPrivateEvent;
+            updatePrivateEventUi(event);
+        });
 
         // Pencil icons focus corresponding fields
         view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
@@ -151,20 +158,7 @@ public class CreateEventFragment extends Fragment {
         });
 
         // Save event and go to waitlist (chosen entrants)
-        view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> saveAndNavigateToWaitlist(event));
-
-        // View enrolled entrants
-        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> {
-            if (event.getId() != null) {
-                Bundle args = new Bundle();
-                args.putString("eventId", event.getId());
-                args.putString("eventName", event.getName());
-                Navigation.findNavController(requireView())
-                        .navigate(R.id.viewEntrantsFragment, args);
-            } else {
-                Toast.makeText(requireContext(), "Save the event first", Toast.LENGTH_SHORT).show();
-            }
-        });
+        btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
 
         // Done: save and go back to Your Events
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
@@ -234,13 +228,23 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
-    private void updatePrivateEventUi(boolean isPrivateEvent, Event event) {
+    private void updatePrivateEventUi(Event event) {
         int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
         shareTitle.setVisibility(visibility);
-        shareQrRow.setVisibility(visibility);
-        shareLinkRow.setVisibility(visibility);
+        if (shareQrRow != null) {
+            shareQrRow.setVisibility(visibility);
+        }
+        if (shareLinkRow != null) {
+            shareLinkRow.setVisibility(visibility);
+        }
         shareQrImage.setVisibility(visibility);
         shareEventLink.setVisibility(visibility);
+        if (btnViewWaitlist != null) {
+            btnViewWaitlist.setText("Manage Waitlist");
+        }
+        if (btnTogglePrivateEvent != null) {
+            btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
+        }
 
         TextView tvEventLink = requireView().findViewById(R.id.tv_event_link);
         if (isPrivateEvent) {
@@ -321,7 +325,6 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
-        boolean isPrivateEvent = switchPrivateEvent != null && switchPrivateEvent.isChecked();
         if (!isPrivateEvent) {
             updateQRCode(event);
         }
@@ -346,25 +349,17 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        DocumentReference docRef = db.collection("events").document(event.getId());
-        docRef.set(data)
-                .addOnSuccessListener(aVoid -> {
-                    Log.d("CreateEvent", "Event saved");
-                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
-                    // Write organizer history record
-                    if (currentUser != null && currentUser.getId() != null) {
-                        EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
-                    }
-                    Bundle args = new Bundle();
-                    args.putString("eventId", event.getId());
-                    args.putString("eventName", event.getName());
-                    Navigation.findNavController(requireView())
-                            .navigate(R.id.viewEntrantsFragment, args);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("CreateEvent", "Failed to save", e);
-                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
-                });
+        saveEventToFirestore(event, data, currentUser, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Bundle args = new Bundle();
+            args.putString("eventId", event.getId());
+            args.putString("eventName", event.getName());
+            args.putBoolean("openInviteOnLoad", isPrivateEvent);
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.viewEntrantsFragment, args);
+        });
     }
 
     /**
@@ -429,7 +424,6 @@ public class CreateEventFragment extends Fragment {
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
         event.setRegistration_end(registrationEnd);
-        boolean isPrivateEvent = switchPrivateEvent != null && switchPrivateEvent.isChecked();
         if (!isPrivateEvent) {
             updateQRCode(event);
         }
@@ -453,19 +447,33 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        db.collection("events").document(event.getId())
-                .set(data)
+        saveEventToFirestore(event, data, currentUser, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Navigation.findNavController(requireView()).popBackStack();
+        });
+    }
+
+    private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
+                                      @NonNull Runnable onSuccess) {
+        DocumentReference docRef = db.collection("events").document(event.getId());
+        docRef.set(data)
                 .addOnSuccessListener(aVoid -> {
-                    if (!isAdded()) return;
+                    if (!isAdded()) {
+                        return;
+                    }
+                    Log.d("CreateEvent", "Event saved");
                     Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
-                    // Write organizer history record
                     if (currentUser != null && currentUser.getId() != null) {
                         EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
                     }
-                    Navigation.findNavController(requireView()).popBackStack();
+                    onSuccess.run();
                 })
                 .addOnFailureListener(e -> {
-                    if (!isAdded()) return;
+                    if (!isAdded()) {
+                        return;
+                    }
                     Log.e("CreateEvent", "Failed to save", e);
                     Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
                 });

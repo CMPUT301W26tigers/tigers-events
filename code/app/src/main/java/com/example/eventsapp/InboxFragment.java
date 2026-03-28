@@ -23,7 +23,9 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A fragment that displays the user's notification inbox.
@@ -444,6 +446,7 @@ public class InboxFragment extends Fragment {
                     batch.commit().addOnSuccessListener(unused -> {
                         if (accept) {
                             currentUser.addWaitlistedEvent(notification.getEventName());
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "APPLIED");
                         } else {
                             currentUser.declineInvitation(notification.getEventName());
                         }
@@ -480,7 +483,11 @@ public class InboxFragment extends Fragment {
                             .collection("notifications")
                             .document(notification.getNotificationId()));
 
-                    batch.commit();
+                    batch.commit().addOnSuccessListener(unused -> {
+                        if (accept) {
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED");
+                        }
+                    });
                 });
     }
 
@@ -535,6 +542,58 @@ public class InboxFragment extends Fragment {
     private Users getActiveUser() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         return currentUser != null ? currentUser : UserSession.getCurrentUser();
+    }
+
+    private void writeHistoryRecordForUser(@Nullable String userId, @Nullable String eventId, @NonNull String status) {
+        if (userId == null || userId.trim().isEmpty() || eventId == null || eventId.trim().isEmpty()) {
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(eventDoc -> {
+                    if (!eventDoc.exists()) {
+                        return;
+                    }
+                    EventCleanupHelper.writeHistoryRecord(userId, eventId, buildHistoryData(eventDoc), status);
+                });
+    }
+
+    @NonNull
+    private Map<String, Object> buildHistoryData(@NonNull DocumentSnapshot eventDoc) {
+        Map<String, Object> historyData = new HashMap<>();
+        historyData.put("id", valueOrDefault(eventDoc.getString("id"), eventDoc.getId()));
+        historyData.put("name", valueOrDefault(eventDoc.getString("name"), ""));
+        historyData.put("amount", eventDoc.getLong("amount") != null ? eventDoc.getLong("amount") : 0L);
+        historyData.put("description", valueOrDefault(eventDoc.getString("description"), ""));
+        historyData.put("event_date", valueOrDefault(eventDoc.getString("event_date"), ""));
+        historyData.put("registration_start", valueOrDefault(eventDoc.getString("registration_start"), ""));
+        historyData.put("registration_end", valueOrDefault(eventDoc.getString("registration_end"), ""));
+        historyData.put("posterUrl", valueOrDefault(eventDoc.getString("posterUrl"), ""));
+        historyData.put("sampleSize", eventDoc.getLong("sampleSize") != null ? eventDoc.getLong("sampleSize") : 0L);
+        historyData.put("isPrivate", Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate")));
+
+        List<String> coOrganizerIds = (List<String>) eventDoc.get("coOrganizerIds");
+        historyData.put("coOrganizerIds", coOrganizerIds != null ? new ArrayList<>(coOrganizerIds) : new ArrayList<String>());
+
+        List<String> pendingCoOrganizerIds = (List<String>) eventDoc.get("pendingCoOrganizerIds");
+        historyData.put("pendingCoOrganizerIds",
+                pendingCoOrganizerIds != null ? new ArrayList<>(pendingCoOrganizerIds) : new ArrayList<String>());
+
+        String createdBy = eventDoc.getString("createdBy");
+        if (createdBy != null && !createdBy.trim().isEmpty()) {
+            historyData.put("createdBy", createdBy);
+        }
+
+        return historyData;
+    }
+
+    @NonNull
+    private String valueOrDefault(@Nullable String value, @NonNull String fallback) {
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
+        }
+        return value;
     }
 
     /**

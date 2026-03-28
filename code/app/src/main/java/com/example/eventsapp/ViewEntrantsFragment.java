@@ -55,13 +55,13 @@ public class ViewEntrantsFragment extends Fragment {
     private FirebaseFirestore db;
     private MaterialToolbar toolbar;
     private MaterialButton btnAddApplicant;
-    private MaterialButton btnRunSampling;
-    private MaterialButton btnNotifyChosen;
+    private MaterialButton btnRunLottery;
     private MaterialButton btnExportCsv;
-    private MaterialButton btnViewEnrolled;
     private MaterialButton btnSeeCancelled;
     private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
+    private boolean openInviteOnLoad;
+    private boolean inviteDialogOpenedFromArgs;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
     private final List<String> pendingCoOrganizerIds = new ArrayList<>();
@@ -72,6 +72,7 @@ public class ViewEntrantsFragment extends Fragment {
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId");
             if (eventId == null) eventId = "";
+            openInviteOnLoad = getArguments().getBoolean("openInviteOnLoad", false);
         } else {
             eventId = "";
         }
@@ -97,10 +98,8 @@ public class ViewEntrantsFragment extends Fragment {
         etSearch = view.findViewById(R.id.et_search_waitlist);
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
-        btnRunSampling = view.findViewById(R.id.btn_run_sampling);
-        btnNotifyChosen = view.findViewById(R.id.btn_notify_chosen);
+        btnRunLottery = view.findViewById(R.id.btn_run_lottery);
         btnExportCsv = view.findViewById(R.id.btn_export_csv);
-        btnViewEnrolled = view.findViewById(R.id.btn_view_enrolled);
         btnSeeCancelled = view.findViewById(R.id.btn_see_cancelled);
         btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
 
@@ -128,14 +127,11 @@ public class ViewEntrantsFragment extends Fragment {
                 showAddApplicantDialog();
             }
         });
-        btnRunSampling.setOnClickListener(v -> runSampling());
-        btnViewEnrolled.setOnClickListener(v -> openEnrolledFragment());
-        btnNotifyChosen.setOnClickListener(v -> notifyChosenEntrants());
+        btnRunLottery.setOnClickListener(v -> runLottery());
         btnInviteCoOrganizer.setOnClickListener(v -> showUserSearchDialog(true));
         btnExportCsv.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-        btnSeeCancelled.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "See Cancelled Entrants", Toast.LENGTH_SHORT).show());
+        btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
 
         loadEventConfiguration();
     }
@@ -162,6 +158,7 @@ public class ViewEntrantsFragment extends Fragment {
 
                     updateActionLabels();
                     loadChosenEntrants();
+                    maybeOpenPrivateInviteDialog();
                 })
                 .addOnFailureListener(unused -> {
                     updateActionLabels();
@@ -174,16 +171,24 @@ public class ViewEntrantsFragment extends Fragment {
             return;
         }
 
-        toolbar.setTitle(isPrivateEvent ? "Private Event Access" : "Chosen Entrants");
+        toolbar.setTitle(isPrivateEvent ? "Private Event Access" : "Waitlist");
         btnAddApplicant.setText(isPrivateEvent ? "Invite Entrant" : "Add Applicant");
         btnInviteCoOrganizer.setVisibility(View.VISIBLE);
     }
 
-    private void openEnrolledFragment() {
+    private void maybeOpenPrivateInviteDialog() {
+        if (!openInviteOnLoad || inviteDialogOpenedFromArgs || !isPrivateEvent || !isAdded()) {
+            return;
+        }
+        inviteDialogOpenedFromArgs = true;
+        showUserSearchDialog(false);
+    }
+
+    private void openCancelledFragment() {
         requireActivity()
                 .getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.nav_host_fragment, EnrolledFragment.newInstance(eventId))
+                .replace(R.id.nav_host_fragment, new CancelledFragment())
                 .addToBackStack(null)
                 .commit();
     }
@@ -497,7 +502,7 @@ public class ViewEntrantsFragment extends Fragment {
         return createdByUserId.equals(userId) || coOrganizerIds.contains(userId);
     }
 
-    private void runSampling() {
+    private void runLottery() {
         db.collection("events").document(eventId)
                 .get()
                 .addOnSuccessListener(eventDoc -> {
@@ -533,13 +538,14 @@ public class ViewEntrantsFragment extends Fragment {
                                 batch.commit()
                                         .addOnSuccessListener(v -> {
                                             for (String invitedUserId : invitedUserIds) {
+                                                notificationHelper.sendInvitationNotification(invitedUserId, eventId);
                                                 EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
                                             }
                                             Toast.makeText(requireContext(),
-                                                    "Invited " + toInvite + " applicants", Toast.LENGTH_SHORT).show();
+                                                    "Lottery run for " + toInvite + " applicants", Toast.LENGTH_SHORT).show();
                                         })
                                         .addOnFailureListener(e -> Toast.makeText(requireContext(),
-                                                "Sampling failed", Toast.LENGTH_SHORT).show());
+                                                "Lottery failed", Toast.LENGTH_SHORT).show());
                             });
                 })
                 .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show());
@@ -551,53 +557,6 @@ public class ViewEntrantsFragment extends Fragment {
         if (listenerRegistration != null) {
             listenerRegistration.remove();
         }
-    }
-
-    /**
-     * Sends notifications to all entrants who were selected in the lottery.
-     */
-    private void notifyChosenEntrants() {
-        if (allEntrants.isEmpty()) {
-            Toast.makeText(requireContext(), "No entrants available", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        List<Entrant> chosenEntrants = new ArrayList<>();
-        for (Entrant entrant : allEntrants) {
-            if (entrant != null && entrant.getStatus() == Entrant.Status.INVITED) {
-                chosenEntrants.add(entrant);
-            }
-        }
-
-        if (chosenEntrants.isEmpty()) {
-            Toast.makeText(requireContext(), "No chosen entrants to notify", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int sentCount = 0;
-        int skippedCount = 0;
-
-        for (Entrant entrant : chosenEntrants) {
-            String userId = entrant.getUserId();
-            if (userId == null || userId.trim().isEmpty()) {
-                skippedCount++;
-                continue;
-            }
-
-            notificationHelper.sendInvitationNotification(userId, eventId);
-            sentCount++;
-        }
-
-        String message;
-        if (sentCount == 0) {
-            message = "Chosen entrants found, but no linked users could be notified";
-        } else if (skippedCount == 0) {
-            message = "Notifications sent to " + sentCount + " entrants";
-        } else {
-            message = "Notifications sent to " + sentCount + " entrants, skipped " + skippedCount;
-        }
-
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
 
     private boolean containsIgnoreCase(String value, String query) {

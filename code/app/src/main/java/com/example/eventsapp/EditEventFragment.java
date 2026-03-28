@@ -18,6 +18,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -54,6 +55,11 @@ public class EditEventFragment extends Fragment {
     private ImageView ivPoster;
     private ImageView ivQR;
     private TextView tvEventLink;
+    private View shareTitle;
+    private View shareQrButtonRow;
+    private View shareLinkButtonRow;
+    private MaterialButton btnTogglePrivateEvent;
+    private boolean isPrivateEvent;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -95,6 +101,12 @@ public class EditEventFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
         tvEventLink = view.findViewById(R.id.tv_event_link);
+        shareTitle = view.findViewById(R.id.tv_share);
+        shareQrButtonRow = ((View) view.findViewById(R.id.btn_share_qr)).getParent() instanceof View
+                ? (View) ((View) view.findViewById(R.id.btn_share_qr)).getParent() : null;
+        shareLinkButtonRow = ((View) view.findViewById(R.id.btn_share_link)).getParent() instanceof View
+                ? (View) ((View) view.findViewById(R.id.btn_share_link)).getParent() : null;
+        btnTogglePrivateEvent = view.findViewById(R.id.btn_toggle_private_event);
 
         setupDatePickers();
 
@@ -135,12 +147,19 @@ public class EditEventFragment extends Fragment {
         });
 
         // View Enrolled Entrants — navigate to ViewEntrantsFragment
-        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> {
-            Bundle args = new Bundle();
-            args.putString("eventId", eventId);
-            args.putString("eventName", getText(editName));
-            Navigation.findNavController(requireView())
-                    .navigate(R.id.viewEntrantsFragment, args);
+        view.findViewById(R.id.btn_manage_enrolled_list).setOnClickListener(v ->
+                requireActivity()
+                        .getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.nav_host_fragment, EnrolledFragment.newInstance(eventId))
+                        .addToBackStack(null)
+                        .commit());
+
+        btnTogglePrivateEvent.setOnClickListener(v -> {
+            isPrivateEvent = !isPrivateEvent;
+            Event tempEvent = new Event(eventId, getText(editName), 1, "", "", "", "", "", 0);
+            tempEvent.setId(eventId);
+            updatePrivateEventUi(tempEvent);
         });
 
         // Save button
@@ -202,15 +221,12 @@ public class EditEventFragment extends Fragment {
                     if (regEnd != null) editRegistrationEnd.setText(regEnd);
                     if (amountLong != null) editCapacity.setText(String.valueOf(amountLong.intValue()));
                     if (sampleLong != null) editSampleSize.setText(String.valueOf(sampleLong.intValue()));
+                    isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
 
-                    // Generate QR code from existing event deep link
                     Event tempEvent = new Event(eventId, name != null ? name : "", 1,
                             "", "", "", "", "", 0);
                     tempEvent.setId(eventId);
-                    updateQRCode(tempEvent);
-
-                    // Show deep link
-                    tvEventLink.setText(tempEvent.getEventDeepLink());
+                    updatePrivateEventUi(tempEvent);
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -266,6 +282,31 @@ public class EditEventFragment extends Fragment {
         Bitmap qrBitmap = QRCodeUtil.generateQRCode(link, QR_SIZE, QR_SIZE);
         if (qrBitmap != null && ivQR != null) {
             ivQR.setImageBitmap(qrBitmap);
+        }
+    }
+
+    private void updatePrivateEventUi(@NonNull Event event) {
+        int shareVisibility = isPrivateEvent ? View.GONE : View.VISIBLE;
+        shareTitle.setVisibility(shareVisibility);
+        if (shareQrButtonRow != null) {
+            shareQrButtonRow.setVisibility(shareVisibility);
+        }
+        if (shareLinkButtonRow != null) {
+            shareLinkButtonRow.setVisibility(shareVisibility);
+        }
+        ivQR.setVisibility(shareVisibility);
+        if (btnTogglePrivateEvent != null) {
+            btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
+        }
+
+        if (isPrivateEvent) {
+            ivQR.setImageDrawable(null);
+            tvEventLink.setVisibility(View.VISIBLE);
+            tvEventLink.setText("Private events cannot be shared publicly.");
+        } else {
+            updateQRCode(event);
+            tvEventLink.setVisibility(View.VISIBLE);
+            tvEventLink.setText(event.getEventDeepLink());
         }
     }
 
@@ -332,9 +373,9 @@ public class EditEventFragment extends Fragment {
         data.put("event_date", eventDate);
         data.put("registration_start", registrationStart);
         data.put("registration_end", registrationEnd);
+        data.put("isPrivate", isPrivateEvent);
 
         // Preserve createdBy and posterUrl by using update instead of set
-        final int finalSampleSize = sampleSize;
         db.collection("events").document(eventId)
                 .update(data)
                 .addOnSuccessListener(aVoid -> {
