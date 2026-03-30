@@ -471,21 +471,31 @@ public class EventDetailFragment extends Fragment {
         timeoutHandler.postDelayed(() -> {
             if (!isAdded()) return;
             fusedLocationClient.removeLocationUpdates(callbackHolder[0]);
-            fusedLocationClient.getLastLocation()
-                    .addOnSuccessListener(loc -> {
-                        if (!isAdded()) return;
-                        if (loc != null) {
-                            Float accuracy = loc.hasAccuracy() ? loc.getAccuracy() : null;
-                            writeEntrantToFirestore(currentUser,
-                                    loc.getLatitude(), loc.getLongitude(), accuracy);
-                        } else {
+            if (!hasLocationPermission()) {
+                onNoLocation(required, currentUser);
+                return;
+            }
+            try {
+                fusedLocationClient.getLastLocation()
+                        .addOnSuccessListener(loc -> {
+                            if (!isAdded()) return;
+                            if (loc != null) {
+                                Float accuracy = loc.hasAccuracy() ? loc.getAccuracy() : null;
+                                writeEntrantToFirestore(currentUser,
+                                        loc.getLatitude(), loc.getLongitude(), accuracy);
+                            } else {
+                                onNoLocation(required, currentUser);
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            if (!isAdded()) return;
                             onNoLocation(required, currentUser);
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        if (!isAdded()) return;
-                        onNoLocation(required, currentUser);
-                    });
+                        });
+            } catch (SecurityException e) {
+                if (!isAdded()) return;
+                Log.e(TAG, "location permission missing during last-location fallback", e);
+                onNoLocation(required, currentUser);
+            }
         }, 10_000L);
 
         try {
