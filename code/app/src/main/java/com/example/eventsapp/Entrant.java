@@ -31,6 +31,8 @@ public class Entrant implements Serializable {
     private String userId;
     private Status status;
     private int statusCode;
+    private double latitude = Double.NaN;
+    private double longitude = Double.NaN;
 
     /**
      * Constructs a new Entrant.
@@ -134,5 +136,30 @@ public class Entrant implements Serializable {
 
     public void setStatusCode(int statusCode) {
         this.statusCode = statusCode;
+    }
+
+    public double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(double latitude) {
+        this.latitude = latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(double longitude) {
+        this.longitude = longitude;
+    }
+
+    /**
+     * True when Firestore (or local) coordinates look like a real point on Earth.
+     */
+    public boolean hasLocation() {
+        if (Double.isNaN(latitude) || Double.isNaN(longitude)) return false;
+        if (Math.abs(latitude) > 90.0 || Math.abs(longitude) > 180.0) return false;
+        return !(latitude == 0.0 && longitude == 0.0);
     }
 }

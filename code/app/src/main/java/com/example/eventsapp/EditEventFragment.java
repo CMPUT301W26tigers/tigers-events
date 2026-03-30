@@ -18,6 +18,7 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -54,6 +55,7 @@ public class EditEventFragment extends Fragment {
     private ImageView ivPoster;
     private ImageView ivQR;
     private TextView tvEventLink;
+    private MaterialSwitch switchGeolocationRequired;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -95,6 +97,7 @@ public class EditEventFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
         tvEventLink = view.findViewById(R.id.tv_event_link);
+        switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
 
         setupDatePickers();
 
@@ -202,6 +205,11 @@ public class EditEventFragment extends Fragment {
                     if (regEnd != null) editRegistrationEnd.setText(regEnd);
                     if (amountLong != null) editCapacity.setText(String.valueOf(amountLong.intValue()));
                     if (sampleLong != null) editSampleSize.setText(String.valueOf(sampleLong.intValue()));
+
+                    Boolean geoReq = doc.getBoolean("geolocationRequired");
+                    if (switchGeolocationRequired != null) {
+                        switchGeolocationRequired.setChecked(geoReq != null && geoReq);
+                    }
 
                     // Generate QR code from existing event deep link
                     Event tempEvent = new Event(eventId, name != null ? name : "", 1,
@@ -332,6 +340,7 @@ public class EditEventFragment extends Fragment {
         data.put("event_date", eventDate);
         data.put("registration_start", registrationStart);
         data.put("registration_end", registrationEnd);
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         // Preserve createdBy and posterUrl by using update instead of set
         final int finalSampleSize = sampleSize;

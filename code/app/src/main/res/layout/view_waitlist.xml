@@ -15,7 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="Chosen Entrants" />
+        app:title="Event entrants" />
 
     <LinearLayout
         android:id="@+id/waitlist_actions_row"
@@ -79,6 +79,18 @@
             android:inputType="text" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_map"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Map view"
+        android:textAllCaps="false"
+        app:backgroundTint="@color/colorPrimaryPurple"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/til_search_waitlist" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_waitlist"
         android:layout_width="0dp"
@@ -90,7 +102,7 @@
         app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/til_search_waitlist" />
+        app:layout_constraintTop_toBottomOf="@id/btn_view_map" />
 
     <TextView
         android:id="@+id/tv_waitlist_stats"
@@ -98,7 +110,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:alpha="0.8"
-        android:text="Total Invited: 0&#10;Total Accepted: 0&#10;Chosen Entrants: 0"
+        android:text="On waitlist: 0&#10;Invited: 0&#10;Accepted: 0&#10;Total: 0"
         android:textSize="12sp"
         app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
         app:layout_constraintEnd_toEndOf="parent"

@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -35,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * US 02.06.01: View list of all chosen entrants who are invited to apply.
+ * Organizer view: waitlisted entrants (APPLIED) plus invited and accepted.
  */
 public class ViewEntrantsFragment extends Fragment {
 
@@ -72,12 +73,14 @@ public class ViewEntrantsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar_waitlist);
+        toolbar.setTitle("Event entrants");
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
         rvWaitlist = view.findViewById(R.id.rv_waitlist);
         tvStats = view.findViewById(R.id.tv_waitlist_stats);
 
         adapter = new EntrantAdapter(filteredEntrants);
+        adapter.setOnViewLocationListener(this::openMapFocusedOn);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvWaitlist.setAdapter(adapter);
 
@@ -95,7 +98,7 @@ public class ViewEntrantsFragment extends Fragment {
             public void afterTextChanged(Editable s) {}
         });
 
-        loadChosenEntrants();
+        loadEntrantsForOrganizer();
 
         view.findViewById(R.id.btn_add_applicant).setOnClickListener(v -> showAddApplicantDialog());
         view.findViewById(R.id.btn_run_sampling).setOnClickListener(v -> runSampling());
@@ -107,6 +110,31 @@ public class ViewEntrantsFragment extends Fragment {
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
         view.findViewById(R.id.btn_see_cancelled).setOnClickListener(v ->
                 Toast.makeText(requireContext(), "See Cancelled Entrants", Toast.LENGTH_SHORT).show());
+
+        view.findViewById(R.id.btn_view_map).setOnClickListener(v -> openMapOverview());
+    }
+
+    private void openMapOverview() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", false);
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+    }
+
+    private void openMapFocusedOn(Entrant entrant) {
+        if (entrant == null || !entrant.hasLocation()) return;
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", true);
+        args.putString("focusEntrantDocId", entrant.getId());
+        args.putString("focusName", entrant.getName());
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
     }
 
     private void openEnrolledFragment() {
@@ -118,12 +146,12 @@ public class ViewEntrantsFragment extends Fragment {
                 .commit();
     }
 
-    private void loadChosenEntrants() {
+    private void loadEntrantsForOrganizer() {
         CollectionReference entrantsRef = FirebaseFirestore.getInstance()
                 .collection("events").document(eventId).collection("entrants");
 
-        Query query = entrantsRef.whereIn("status", 
-                java.util.Arrays.asList("INVITED", "ACCEPTED"));
+        Query query = entrantsRef.whereIn("status",
+                java.util.Arrays.asList("APPLIED", "INVITED", "ACCEPTED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null) return;
@@ -133,12 +161,19 @@ public class ViewEntrantsFragment extends Fragment {
             allEntrants.clear();
             for (QueryDocumentSnapshot doc : value) {
                 String id = doc.getString("id");
+                if (id == null || id.isEmpty()) {
+                    id = doc.getId();
+                }
                 String name = doc.getString("name");
                 String email = doc.getString("email");
                 String statusStr = doc.getString("status");
                 Entrant.Status status = parseStatus(statusStr);
                 Entrant entrant = new Entrant(id, eventId, name, email, status);
                 entrant.setUserId(doc.getString("userId"));
+                double lat = readNumeric(doc, "latitude");
+                double lng = readNumeric(doc, "longitude");
+                if (!Double.isNaN(lat)) entrant.setLatitude(lat);
+                if (!Double.isNaN(lng)) entrant.setLongitude(lng);
                 allEntrants.add(entrant);
             }
             String queryStr = (etSearch != null && etSearch.getText() != null) ? etSearch.getText().toString() : "";
@@ -147,12 +182,18 @@ public class ViewEntrantsFragment extends Fragment {
         });
     }
 
+    private static double readNumeric(QueryDocumentSnapshot doc, String key) {
+        Object o = doc.get(key);
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        return Double.NaN;
+    }
+
     private Entrant.Status parseStatus(String s) {
-        if (s == null) return Entrant.Status.INVITED;
+        if (s == null || s.isEmpty()) return Entrant.Status.APPLIED;
         try {
             return Entrant.Status.valueOf(s);
         } catch (Exception e) {
-            return Entrant.Status.INVITED;
+            return Entrant.Status.APPLIED;
         }
     }
 
@@ -169,13 +210,15 @@ public class ViewEntrantsFragment extends Fragment {
     }
 
     private void updateStats() {
-        int invited = 0, accepted = 0;
+        int waitlisted = 0, invited = 0, accepted = 0;
         for (Entrant e : allEntrants) {
-            if (e.getStatus() == Entrant.Status.INVITED) invited++;
+            if (e.getStatus() == Entrant.Status.APPLIED) waitlisted++;
+            else if (e.getStatus() == Entrant.Status.INVITED) invited++;
             else if (e.getStatus() == Entrant.Status.ACCEPTED) accepted++;
         }
-        tvStats.setText(String.format("Total Invited: %d\nTotal Accepted: %d\nChosen Entrants: %d",
-                invited, accepted, allEntrants.size()));
+        tvStats.setText(String.format(
+                "On waitlist: %d\nInvited: %d\nAccepted: %d\nTotal: %d",
+                waitlisted, invited, accepted, allEntrants.size()));
     }
 
     private void showAddApplicantDialog() {

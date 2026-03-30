@@ -3,6 +3,7 @@ package com.example.eventsapp;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -16,7 +17,28 @@ import java.util.List;
  */
 public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHolder> {
 
+    /**
+     * Opens the map focused on this entrant (when they have coordinates).
+     */
+    public interface OnViewLocationListener {
+        void onViewLocation(Entrant entrant);
+    }
+
     private final List<Entrant> entrants;
+    private OnViewLocationListener onViewLocationListener;
+
+    public void setOnViewLocationListener(OnViewLocationListener listener) {
+        this.onViewLocationListener = listener;
+    }
+
+    private static String statusLabel(Entrant.Status status) {
+        if (status == Entrant.Status.ACCEPTED) return "Accepted";
+        if (status == Entrant.Status.INVITED) return "Invited";
+        if (status == Entrant.Status.APPLIED) return "Waitlist";
+        if (status == Entrant.Status.DECLINED) return "Declined";
+        if (status == Entrant.Status.CANCELLED) return "Cancelled";
+        return "Unknown";
+    }
 
     /**
      * Constructs an EntrantAdapter.
@@ -57,8 +79,20 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Entrant e = entrants.get(position);
         holder.tvName.setText(e.getName() != null && !e.getName().isEmpty() ? e.getName() : "Unknown");
-        holder.tvAction.setText(e.getStatus() == Entrant.Status.ACCEPTED ? "Accepted" : "Invited");
+        holder.tvAction.setText(statusLabel(e.getStatus()));
         holder.tvActionSub.setText(e.getEmail() != null ? e.getEmail() : "");
+
+        if (e.hasLocation()) {
+            holder.ivPin.setVisibility(View.VISIBLE);
+            holder.ivPin.setOnClickListener(v -> {
+                if (onViewLocationListener != null) {
+                    onViewLocationListener.onViewLocation(e);
+                }
+            });
+        } else {
+            holder.ivPin.setVisibility(View.INVISIBLE);
+            holder.ivPin.setOnClickListener(null);
+        }
     }
 
     /**
@@ -79,6 +113,7 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         TextView tvName;
         TextView tvAction;
         TextView tvActionSub;
+        ImageView ivPin;
 
         /**
          * Constructs a ViewHolder.
@@ -90,6 +125,7 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
             tvName = itemView.findViewById(R.id.tv_name);
             tvAction = itemView.findViewById(R.id.tv_action);
             tvActionSub = itemView.findViewById(R.id.tv_action_sub);
+            ivPin = itemView.findViewById(R.id.iv_pin);
         }
     }
 }
