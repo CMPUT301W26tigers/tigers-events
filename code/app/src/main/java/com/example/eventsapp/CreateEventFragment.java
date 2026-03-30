@@ -19,6 +19,7 @@ import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -53,6 +54,7 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
+    private MaterialSwitch switchGeolocationRequired;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -94,6 +96,7 @@ public class CreateEventFragment extends Fragment {
         editEventDate = view.findViewById(R.id.edit_event_date);
         editRegistrationStart = view.findViewById(R.id.edit_registration_start);
         editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -299,6 +302,7 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -401,6 +405,7 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {

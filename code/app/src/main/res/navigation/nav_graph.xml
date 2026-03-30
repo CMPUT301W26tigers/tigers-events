@@ -55,7 +55,7 @@
     <fragment
         android:id="@+id/viewEntrantsFragment"
         android:name="com.example.eventsapp.ViewEntrantsFragment"
-        android:label="Chosen Entrants">
+        android:label="Event entrants">
         <argument
             android:name="eventId"
             app:argType="string"
@@ -64,6 +64,19 @@
             android:name="eventName"
             app:argType="string"
             app:nullable="true" />
+        <action
+            android:id="@+id/action_viewEntrantsFragment_to_entrantMapFragment"
+            app:destination="@id/entrantMapFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/entrantMapFragment"
+        android:name="com.example.eventsapp.EntrantMapFragment"
+        android:label="Map">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
     </fragment>
 
     <fragment

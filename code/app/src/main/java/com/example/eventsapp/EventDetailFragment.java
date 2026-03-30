@@ -1,5 +1,7 @@
 package com.example.eventsapp;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -9,8 +11,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,8 +24,19 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
+
+import android.location.Location;
+import android.os.Looper;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -62,6 +78,11 @@ public class EventDetailFragment extends Fragment {
     private int waitlistCount = 0;
     private int eventCapacity = 0;
     private String eventCreatorId = null;
+    private boolean geolocationRequired = false;
+    /** False until {@link #loadEventDetails()} finishes; avoids joining before we know if location is required. */
+    private boolean eventDetailsLoaded = false;
+    private FusedLocationProviderClient fusedLocationClient;
+    private ActivityResultLauncher<String> requestLocationPermission;
 
     /**
      * Called when the fragment is being created. Initializes Firestore and
@@ -73,6 +94,33 @@ public class EventDetailFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
+        requestLocationPermission = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                granted -> {
+                    if (!isAdded()) return;
+                    Users u = UserManager.getInstance().getCurrentUser();
+                    if (u == null || u.getId() == null) {
+                        btnWaitlist.setEnabled(true);
+                        return;
+                    }
+                    if (geolocationRequired) {
+                        if (granted) {
+                            fetchLocationAndCompleteJoin(true);
+                        } else {
+                            btnWaitlist.setEnabled(true);
+                            Toast.makeText(requireContext(),
+                                    "Location permission is required to join this event",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        if (granted) {
+                            fetchLocationAndCompleteJoin(false);
+                        } else {
+                            writeEntrantToFirestore(u, 0.0, 0.0, null);
+                        }
+                    }
+                });
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId", "");
             fromHistory = getArguments().getBoolean("fromHistory", false);
@@ -170,6 +218,36 @@ public class EventDetailFragment extends Fragment {
         btnPostComment.setOnClickListener(v -> postComment());
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (!fromHistory && !eventId.isEmpty()) {
+            startWaitlistLocationSharingIfNeeded();
+        }
+    }
+
+    /**
+     * Near–real-time location for the organizer map: runs in a foreground service so updates
+     * continue when the user leaves this screen (not only while it is visible).
+     */
+    private void startWaitlistLocationSharingIfNeeded() {
+        if (fromHistory || !isOnWaitlist || currentEntrantDocId == null || eventId.isEmpty()) {
+            return;
+        }
+        if (!hasLocationPermission()) {
+            return;
+        }
+        String displayName = "";
+        if (tvName != null && tvName.getText() != null) {
+            displayName = tvName.getText().toString().trim();
+        }
+        WaitlistLocationForegroundService.start(requireContext(), eventId, currentEntrantDocId, displayName);
+    }
+
+    private void stopWaitlistLocationSharing() {
+        WaitlistLocationForegroundService.stop(requireContext());
+    }
+
     /**
      * Fetches the event details from Firestore and updates the UI.
      */
@@ -192,6 +270,9 @@ public class EventDetailFragment extends Fragment {
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
+
+                        applyGeolocationRequiredFromEvent(doc);
+                        eventDetailsLoaded = true;
 
                         updateWaitlistCounter();
                     } else {
@@ -235,6 +316,7 @@ public class EventDetailFragment extends Fragment {
                             isOnWaitlist = true;
                             currentEntrantDocId = querySnapshot.getDocuments().get(0).getId();
                             updateButtonState();
+                            startWaitlistLocationSharingIfNeeded();
                         }
                     });
         }
@@ -249,34 +331,208 @@ public class EventDetailFragment extends Fragment {
             Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (currentUser.getId() == null || currentUser.getId().isEmpty()) {
+            Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         btnWaitlist.setEnabled(false);
 
-        String entrantId = java.util.UUID.randomUUID().toString();
+        if (!eventDetailsLoaded) {
+            fetchEventSettingsThenContinueJoin(currentUser);
+            return;
+        }
+        continueJoinWithResolvedGeoSetting(currentUser);
+    }
+
+    /**
+     * Re-reads the event document so "require location" is known even if the user taps Join
+     * before {@link #loadEventDetails()} completes (slow network).
+     */
+    private void fetchEventSettingsThenContinueJoin(@NonNull Users currentUser) {
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded()) return;
+                    if (doc == null || !doc.exists()) {
+                        btnWaitlist.setEnabled(true);
+                        Toast.makeText(requireContext(), "Could not load event", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    applyGeolocationRequiredFromEvent(doc);
+                    eventDetailsLoaded = true;
+                    continueJoinWithResolvedGeoSetting(currentUser);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    btnWaitlist.setEnabled(true);
+                    Toast.makeText(requireContext(), "Could not load event", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "join: failed to load event settings", e);
+                });
+    }
+
+    /**
+     * Reads organizer "require location" flag from Firestore (boolean, or legacy numeric / string).
+     */
+    private void applyGeolocationRequiredFromEvent(@NonNull DocumentSnapshot doc) {
+        Boolean geo = doc.getBoolean("geolocationRequired");
+        if (geo != null) {
+            geolocationRequired = geo;
+            return;
+        }
+        Long asLong = doc.getLong("geolocationRequired");
+        if (asLong != null) {
+            geolocationRequired = asLong != 0L;
+            return;
+        }
+        String s = doc.getString("geolocationRequired");
+        if (s != null) {
+            geolocationRequired = "true".equalsIgnoreCase(s.trim()) || "1".equals(s.trim());
+            return;
+        }
+        geolocationRequired = false;
+    }
+
+    private void continueJoinWithResolvedGeoSetting(@NonNull Users currentUser) {
+        if (geolocationRequired) {
+            if (!hasLocationPermission()) {
+                requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+                return;
+            }
+            fetchLocationAndCompleteJoin(true);
+        } else {
+            if (hasLocationPermission()) {
+                fetchLocationAndCompleteJoin(false);
+            } else {
+                requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+            }
+        }
+    }
+
+    private boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Requests a FRESH GPS fix (not a stale cached location) before writing the entrant to Firestore.
+     *
+     * Strategy:
+     *  1. Start a high-accuracy location update.
+     *  2. Use the first result that arrives (real GPS fix).
+     *  3. If the fix takes longer than 10 s, fall back to getLastLocation.
+     *  4. If there is no last location and the join is required, block the join.
+     */
+    private void fetchLocationAndCompleteJoin(boolean required) {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            btnWaitlist.setEnabled(true);
+            return;
+        }
+
+        if (!isAdded()) return;
+        Toast.makeText(requireContext(), "Getting your location…", Toast.LENGTH_SHORT).show();
+
+        LocationRequest freshRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY, 2_000L)
+                .setMinUpdateIntervalMillis(1_000L)
+                .setMaxUpdates(1)
+                .build();
+
+        LocationCallback[] callbackHolder = new LocationCallback[1];
+        android.os.Handler timeoutHandler = new android.os.Handler(Looper.getMainLooper());
+
+        callbackHolder[0] = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult result) {
+                timeoutHandler.removeCallbacksAndMessages(null);
+                fusedLocationClient.removeLocationUpdates(callbackHolder[0]);
+                if (!isAdded()) return;
+                Location loc = result.getLastLocation();
+                if (loc == null) {
+                    onNoLocation(required, currentUser);
+                    return;
+                }
+                Float accuracy = loc.hasAccuracy() ? loc.getAccuracy() : null;
+                writeEntrantToFirestore(currentUser, loc.getLatitude(), loc.getLongitude(), accuracy);
+            }
+        };
+
+        // Timeout: fall back to getLastLocation after 10 s
+        timeoutHandler.postDelayed(() -> {
+            if (!isAdded()) return;
+            fusedLocationClient.removeLocationUpdates(callbackHolder[0]);
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(loc -> {
+                        if (!isAdded()) return;
+                        if (loc != null) {
+                            Float accuracy = loc.hasAccuracy() ? loc.getAccuracy() : null;
+                            writeEntrantToFirestore(currentUser,
+                                    loc.getLatitude(), loc.getLongitude(), accuracy);
+                        } else {
+                            onNoLocation(required, currentUser);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (!isAdded()) return;
+                        onNoLocation(required, currentUser);
+                    });
+        }, 10_000L);
+
+        try {
+            fusedLocationClient.requestLocationUpdates(
+                    freshRequest, callbackHolder[0], Looper.getMainLooper());
+        } catch (SecurityException e) {
+            timeoutHandler.removeCallbacksAndMessages(null);
+            Log.e(TAG, "location permission missing", e);
+            onNoLocation(required, currentUser);
+        }
+    }
+
+    private void onNoLocation(boolean required, @NonNull Users currentUser) {
+        if (required) {
+            btnWaitlist.setEnabled(true);
+            Toast.makeText(requireContext(),
+                    "Could not read your location. Try again.",
+                    Toast.LENGTH_LONG).show();
+        } else {
+            writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
+        }
+    }
+
+    private void writeEntrantToFirestore(@NonNull Users currentUser, double latitude, double longitude,
+                                       @Nullable Float accuracyMeters) {
+        String docId = currentUser.getId();
         Map<String, Object> entrantData = new HashMap<>();
-        entrantData.put("id", entrantId);
+        entrantData.put("id", docId);
         entrantData.put("eventId", eventId);
         entrantData.put("name", currentUser.getName());
         entrantData.put("email", currentUser.getEmail());
         entrantData.put("status", "APPLIED");
         entrantData.put("userId", currentUser.getId());
         entrantData.put("statusCode", 0);
+        entrantData.put("latitude", latitude);
+        entrantData.put("longitude", longitude);
+        entrantData.put("locationUpdatedAt", FieldValue.serverTimestamp());
+        if (accuracyMeters != null && accuracyMeters > 0f && !(latitude == 0.0 && longitude == 0.0)) {
+            entrantData.put("locationAccuracy", accuracyMeters);
+        }
 
         db.collection("events").document(eventId)
-                .collection("entrants").document(entrantId)
+                .collection("entrants").document(docId)
                 .set(entrantData)
                 .addOnSuccessListener(unused -> {
                     if (!isAdded()) return;
                     isOnWaitlist = true;
-                    currentEntrantDocId = entrantId;
+                    currentEntrantDocId = docId;
                     notificationHelper.sendWaitlistedNotification(currentUser.getId(), eventId);
                     waitlistCount++;
                     updateButtonState();
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
                     Toast.makeText(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT).show();
-                    // Write event history record for the user
                     writeEventHistoryForCurrentUser(currentUser.getId());
+                    startWaitlistLocationSharingIfNeeded();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
@@ -293,6 +549,7 @@ public class EventDetailFragment extends Fragment {
         if (currentEntrantDocId == null) return;
 
         btnWaitlist.setEnabled(false);
+        stopWaitlistLocationSharing();
 
         db.collection("events").document(eventId)
                 .collection("entrants").document(currentEntrantDocId)
@@ -472,6 +729,8 @@ public class EventDetailFragment extends Fragment {
                     eventData.put("posterUrl", doc.getString("posterUrl"));
                     Long sample = doc.getLong("sampleSize");
                     eventData.put("sampleSize", sample != null ? sample : 0);
+                    Boolean geo = doc.getBoolean("geolocationRequired");
+                    eventData.put("geolocationRequired", geo != null && geo);
                     EventCleanupHelper.writeHistoryRecord(userId, eventId, eventData, "APPLIED");
                 });
     }
