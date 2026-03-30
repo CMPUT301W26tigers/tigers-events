@@ -30,6 +30,9 @@
                     android:pathPrefix="/" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

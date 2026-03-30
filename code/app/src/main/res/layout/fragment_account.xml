@@ -283,18 +283,19 @@
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnNotifications"
+        android:id="@+id/btnManagementTools"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="24dp"
-        android:text="See All Notifications"
+        android:text="Management Tools"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
+        android:visibility="gone"
         app:backgroundTint="@color/dark_grey"
         app:cornerRadius="16dp"
-        app:icon="@android:drawable/ic_dialog_email"
+        app:icon="@android:drawable/ic_menu_manage"
         app:iconGravity="textStart"
         app:iconPadding="10dp"
         app:iconTint="@android:color/white"
@@ -316,6 +317,6 @@
         app:cornerRadius="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnNotifications" />
+        app:layout_constraintTop_toBottomOf="@id/btnManagementTools" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

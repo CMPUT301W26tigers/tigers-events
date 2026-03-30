@@ -1,6 +1,7 @@
 package com.example.eventsapp;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
@@ -36,7 +37,7 @@ public class AccountFragment extends Fragment {
     private ImageButton inboxIconButton;
     private TextView deleteAccountButton;
     private MaterialCheckBox notificationsCheckbox;
-    private MaterialButton notificationsButton;
+    private MaterialButton managementToolsButton;
 
     private TextView tvGreeting;
     private TextView tvNameValue;
@@ -74,7 +75,7 @@ public class AccountFragment extends Fragment {
         inboxIconButton = view.findViewById(R.id.btnTopIcon);
         deleteAccountButton = view.findViewById(R.id.btnDeleteAccount);
         notificationsCheckbox = view.findViewById(R.id.cbNotifications);
-        notificationsButton = view.findViewById(R.id.btnNotifications);
+        managementToolsButton = view.findViewById(R.id.btnManagementTools);
 
         tvGreeting = view.findViewById(R.id.tvGreeting);
         tvNameValue = view.findViewById(R.id.tvNameValue);
@@ -104,8 +105,15 @@ public class AccountFragment extends Fragment {
             inboxIconButton.setOnClickListener(v -> openInbox(v));
         }
 
-        if (notificationsButton != null) {
-            notificationsButton.setOnClickListener(v -> openInbox(v));
+        if (managementToolsButton != null) {
+            Users user = UserManager.getInstance().getCurrentUser();
+            if (user != null && "Admin".equalsIgnoreCase(user.getAccountType())) {
+                managementToolsButton.setVisibility(View.VISIBLE);
+            }
+            managementToolsButton.setOnClickListener(v -> {
+                Intent intent = new Intent(requireContext(), AdminActivity.class);
+                startActivity(intent);
+            });
         }
 
         // Remember device checkbox
