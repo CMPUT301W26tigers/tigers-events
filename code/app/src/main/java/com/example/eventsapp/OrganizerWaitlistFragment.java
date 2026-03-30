@@ -69,6 +69,29 @@ public class OrganizerWaitlistFragment extends Fragment {
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar_organizer_waitlist);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
+        toolbar.inflateMenu(R.menu.menu_waitlist);
+
+        toolbar.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+
+            if (id == R.id.action_notify_waitlisted) {
+                notifyWaitlistedEntrants();
+                return true;
+            }
+
+            if (id == R.id.action_notify_selected) {
+                notifySelectedEntrants();
+                return true;
+            }
+
+            if (id == R.id.action_notify_not_selected) {
+                notifyNotSelectedEntrants();
+                return true;
+            }
+
+            return false;
+        });
+
         rvWaitlist = view.findViewById(R.id.rv_organizer_waitlist);
         etSearchWaitlist = view.findViewById(R.id.et_search_organizer_waitlist);
         tvWaitlistStats = view.findViewById(R.id.tv_organizer_waitlist_stats);
@@ -201,5 +224,87 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
                             });
                 });
+    }
+
+    private interface NotificationAction {
+        void send(String userId);
+    }
+
+    private void notifyEntrantsByStatusCode(
+            int statusCode,
+            String emptyMessage,
+            String failureMessage,
+            NotificationAction action
+    ) {
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .whereEqualTo("statusCode", statusCode)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    int sentCount = 0;
+                    int skippedCount = 0;
+
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        String userId = doc.getString("userId");
+                        if (userId == null || userId.trim().isEmpty()) {
+                            skippedCount++;
+                            continue;
+                        }
+
+                        action.send(userId);
+                        sentCount++;
+                    }
+
+                    String message;
+                    if (sentCount == 0) {
+                        message = "Entrants found, but no linked users could be notified";
+                    } else if (skippedCount == 0) {
+                        message = "Notifications sent to " + sentCount + " entrants";
+                    } else {
+                        message = "Notifications sent to " + sentCount
+                                + " entrants, skipped " + skippedCount;
+                    }
+
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), failureMessage, Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    private void notifyWaitlistedEntrants() {
+        notifyEntrantsByStatusCode(
+                0,
+                "No waitlisted entrants to notify",
+                "Failed to notify waitlisted entrants",
+                userId -> notificationHelper.sendWaitlistedNotification(userId, eventId)
+        );
+    }
+    private void notifySelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                1,
+                "No selected entrants to notify",
+                "Failed to notify selected entrants",
+                userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+        );
+    }
+    private void notifyNotSelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                3,
+                "No cancelled entrants to notify",
+                "Failed to notify cancelled entrants",
+                userId -> notificationHelper.sendNotSelectedNotification(userId, eventId)
+        );
     }
 }

@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Waitlist"
+        app:title="Organizer Waitlist"
         app:titleCentered="false"
         app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineMedium"
         app:layout_constraintTop_toTopOf="parent"

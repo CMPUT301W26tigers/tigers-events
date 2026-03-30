@@ -46,7 +46,6 @@ public class ViewEntrantsFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private RecyclerView rvWaitlist;
-    private TextView tvStats;
     private EntrantAdapter adapter;
     private final List<Entrant> allEntrants = new ArrayList<>();
     private final List<Entrant> filteredEntrants = new ArrayList<>();
@@ -94,7 +93,6 @@ public class ViewEntrantsFragment extends Fragment {
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
         rvWaitlist = view.findViewById(R.id.rv_waitlist);
-        tvStats = view.findViewById(R.id.tv_waitlist_stats);
         etSearch = view.findViewById(R.id.et_search_waitlist);
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
@@ -122,7 +120,7 @@ public class ViewEntrantsFragment extends Fragment {
 
         btnAddApplicant.setOnClickListener(v -> {
             if (isPrivateEvent) {
-                showUserSearchDialog(false);
+                showEntrantPickerDialog();
             } else {
                 showAddApplicantDialog();
             }
@@ -171,7 +169,7 @@ public class ViewEntrantsFragment extends Fragment {
             return;
         }
 
-        toolbar.setTitle(isPrivateEvent ? "Private Event Access" : "Waitlist");
+        toolbar.setTitle("Waitlist");
         btnAddApplicant.setText(isPrivateEvent ? "Invite Entrant" : "Add Applicant");
         btnInviteCoOrganizer.setVisibility(View.VISIBLE);
     }
@@ -181,7 +179,7 @@ public class ViewEntrantsFragment extends Fragment {
             return;
         }
         inviteDialogOpenedFromArgs = true;
-        showUserSearchDialog(false);
+        showEntrantPickerDialog();
     }
 
     private void openCancelledFragment() {
@@ -219,7 +217,6 @@ public class ViewEntrantsFragment extends Fragment {
             }
             String queryStr = (etSearch != null && etSearch.getText() != null) ? etSearch.getText().toString() : "";
             filterEntrants(queryStr);
-            updateStats();
         });
     }
 
@@ -243,35 +240,6 @@ public class ViewEntrantsFragment extends Fragment {
             }
         }
         adapter.notifyDataSetChanged();
-    }
-
-    private void updateStats() {
-        int privateInvites = 0;
-        int waitlisted = 0;
-        int invited = 0;
-        int accepted = 0;
-
-        for (Entrant entrant : allEntrants) {
-            if (entrant.getStatus() == Entrant.Status.PRIVATE_INVITED) {
-                privateInvites++;
-            } else if (entrant.getStatus() == Entrant.Status.APPLIED) {
-                waitlisted++;
-            } else if (entrant.getStatus() == Entrant.Status.INVITED) {
-                invited++;
-            } else if (entrant.getStatus() == Entrant.Status.ACCEPTED) {
-                accepted++;
-            }
-        }
-
-        if (isPrivateEvent) {
-            tvStats.setText(String.format(Locale.CANADA,
-                    "Pending Waitlist Invites: %d\nOn Waitlist: %d\nChosen Entrants: %d\nAccepted: %d\nCo-Organizers: %d",
-                    privateInvites, waitlisted, invited, accepted, coOrganizerIds.size()));
-        } else {
-            tvStats.setText(String.format(Locale.CANADA,
-                    "Total Invited: %d\nTotal Accepted: %d\nChosen Entrants: %d",
-                    invited, accepted, allEntrants.size()));
-        }
     }
 
     private void showAddApplicantDialog() {
@@ -301,6 +269,77 @@ public class ViewEntrantsFragment extends Fragment {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showEntrantPickerDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_user_picker, null);
+        TextInputEditText etUserSearch = dialogView.findViewById(R.id.et_user_picker_search);
+        RecyclerView rvUserResults = dialogView.findViewById(R.id.rv_user_picker_results);
+        TextView tvEmpty = dialogView.findViewById(R.id.tv_user_picker_empty);
+
+        List<Users> eligibleUsers = new ArrayList<>();
+        List<Users> filteredUsers = new ArrayList<>();
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Invite Entrant")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        UserPickerAdapter pickerAdapter = new UserPickerAdapter(filteredUsers, selectedUser -> {
+            dialog.dismiss();
+            invitePrivateEntrant(selectedUser);
+        });
+
+        rvUserResults.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvUserResults.setAdapter(pickerAdapter);
+
+        tvEmpty.setText("Loading users...");
+        tvEmpty.setVisibility(View.VISIBLE);
+        rvUserResults.setVisibility(View.GONE);
+
+        etUserSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty,
+                        s != null ? s.toString() : "");
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        db.collection("users")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    eligibleUsers.clear();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Users user = doc.toObject(Users.class);
+                        if (user == null) {
+                            continue;
+                        }
+                        user.setId(doc.getId());
+                        if (isEligiblePrivateInviteCandidate(user)) {
+                            eligibleUsers.add(user);
+                        }
+                    }
+
+                    eligibleUsers.sort((first, second) ->
+                            buildUserDisplayName(first).compareToIgnoreCase(buildUserDisplayName(second)));
+
+                    String query = etUserSearch.getText() != null ? etUserSearch.getText().toString() : "";
+                    filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty, query);
+                })
+                .addOnFailureListener(unused -> {
+                    tvEmpty.setText("Failed to load users");
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rvUserResults.setVisibility(View.GONE);
+                });
+
+        dialog.show();
     }
 
     private void addApplicant(String name, String email) {
@@ -360,6 +399,42 @@ public class ViewEntrantsFragment extends Fragment {
         dialog.show();
     }
 
+    private void filterEligibleUsers(List<Users> eligibleUsers,
+                                     List<Users> filteredUsers,
+                                     UserPickerAdapter pickerAdapter,
+                                     RecyclerView rvUserResults,
+                                     TextView tvEmpty,
+                                     String query) {
+        filteredUsers.clear();
+        String normalizedQuery = valueOrEmpty(query).toLowerCase(Locale.CANADA);
+        String normalizedPhoneQuery = normalizePhone(query);
+
+        for (Users user : eligibleUsers) {
+            String userName = buildUserDisplayName(user).toLowerCase(Locale.CANADA);
+            String userEmail = valueOrEmpty(user.getEmail()).toLowerCase(Locale.CANADA);
+            String userPhone = normalizePhone(user.getPhoneNumber());
+
+            if (normalizedQuery.isEmpty()
+                    || userName.contains(normalizedQuery)
+                    || userEmail.contains(normalizedQuery)
+                    || (!normalizedPhoneQuery.isEmpty() && userPhone.contains(normalizedPhoneQuery))) {
+                filteredUsers.add(user);
+            }
+        }
+
+        pickerAdapter.notifyDataSetChanged();
+
+        if (filteredUsers.isEmpty()) {
+            tvEmpty.setText(eligibleUsers.isEmpty() ? "No eligible users found" : "No matching users");
+            tvEmpty.setVisibility(View.VISIBLE);
+            rvUserResults.setVisibility(View.GONE);
+            return;
+        }
+
+        tvEmpty.setVisibility(View.GONE);
+        rvUserResults.setVisibility(View.VISIBLE);
+    }
+
     private void searchUsers(String nameFilter, String emailFilter, String phoneFilter,
                              boolean coOrganizerInvite, AlertDialog sourceDialog) {
         db.collection("users")
@@ -416,6 +491,26 @@ public class ViewEntrantsFragment extends Fragment {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private boolean isEligiblePrivateInviteCandidate(Users user) {
+        String userId = valueOrEmpty(user.getId());
+        if (userId.isEmpty() || isEventOrganizer(userId)) {
+            return false;
+        }
+
+        for (Entrant entrant : allEntrants) {
+            if (userId.equals(valueOrEmpty(entrant.getUserId()))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private String buildUserDisplayName(Users user) {
+        String name = valueOrEmpty(user.getName());
+        return name.isEmpty() ? "Unnamed User" : name;
     }
 
     private void invitePrivateEntrant(Users user) {
@@ -575,5 +670,62 @@ public class ViewEntrantsFragment extends Fragment {
 
     private String valueOrEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static class UserPickerAdapter extends RecyclerView.Adapter<UserPickerAdapter.UserPickerViewHolder> {
+        interface OnUserSelectedListener {
+            void onUserSelected(Users user);
+        }
+
+        private final List<Users> users;
+        private final OnUserSelectedListener onUserSelectedListener;
+        UserPickerAdapter(List<Users> users, OnUserSelectedListener onUserSelectedListener) {
+            this.users = users;
+            this.onUserSelectedListener = onUserSelectedListener;
+        }
+
+        @NonNull
+        @Override
+        public UserPickerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_user_picker, parent, false);
+            return new UserPickerViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull UserPickerViewHolder holder, int position) {
+            Users user = users.get(position);
+            holder.tvName.setText(user.getName() == null || user.getName().trim().isEmpty()
+                    ? "Unnamed User" : user.getName().trim());
+
+            String email = user.getEmail() == null ? "" : user.getEmail().trim();
+            String phone = user.getPhoneNumber() == null ? "" : user.getPhoneNumber().trim();
+            if (!email.isEmpty() && !phone.isEmpty()) {
+                holder.tvDetails.setText(email + " | " + phone);
+            } else if (!email.isEmpty()) {
+                holder.tvDetails.setText(email);
+            } else if (!phone.isEmpty()) {
+                holder.tvDetails.setText(phone);
+            } else {
+                holder.tvDetails.setText("No contact info");
+            }
+
+            holder.itemView.setOnClickListener(v -> onUserSelectedListener.onUserSelected(user));
+        }
+
+        @Override
+        public int getItemCount() {
+            return users.size();
+        }
+
+        static class UserPickerViewHolder extends RecyclerView.ViewHolder {
+            private final TextView tvName;
+            private final TextView tvDetails;
+
+            UserPickerViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvName = itemView.findViewById(R.id.tv_user_picker_name);
+                tvDetails = itemView.findViewById(R.id.tv_user_picker_details);
+            }
+        }
     }
 }

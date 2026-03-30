@@ -367,7 +367,7 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:maxLines="2"
-                    android:text="Manage Enrolled List"
+                    android:text="Manage Enrolled"
                     android:textAllCaps="false"
                     android:textSize="12sp"
                     app:backgroundTint="@color/dark_grey"

@@ -41,6 +41,9 @@
         android:layout_marginStart="20dp"
         android:layout_marginEnd="20dp"
         android:layout_marginTop="16dp"
+        android:background="@drawable/bg_event_toggle_outline"
+        android:clipToOutline="true"
+        android:padding="1dp"
         app:singleSelection="true"
         app:selectionRequired="true"
         app:checkedButton="@id/btnRegistered"
@@ -58,7 +61,7 @@
             android:textSize="14sp"
             android:textAllCaps="false"
             app:cornerRadius="22dp"
-            app:strokeColor="@color/colorPrimaryPurple" />
+            app:strokeWidth="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCreated"
@@ -70,7 +73,7 @@
             android:textSize="14sp"
             android:textAllCaps="false"
             app:cornerRadius="22dp"
-            app:strokeColor="@color/colorPrimaryPurple" />
+            app:strokeWidth="0dp" />
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
