@@ -67,7 +67,7 @@
             android:layout_height="48dp"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:text="Add Applicant"
+            android:text="Invite Entrant"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
             android:textSize="12sp"

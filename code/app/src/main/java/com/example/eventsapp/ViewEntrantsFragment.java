@@ -112,11 +112,7 @@ public class ViewEntrantsFragment extends Fragment {
         });
 
         btnAddApplicant.setOnClickListener(v -> {
-            if (isPrivateEvent) {
-                showEntrantPickerDialog();
-            } else {
-                showAddApplicantDialog();
-            }
+            showEntrantPickerDialog();
         });
         btnRunLottery.setOnClickListener(v -> runLottery());
         btnExportCsv.setOnClickListener(v ->
@@ -160,16 +156,14 @@ public class ViewEntrantsFragment extends Fragment {
         }
 
         toolbar.setTitle("Waitlist");
-        btnAddApplicant.setVisibility(isPrivateEvent ? View.GONE : View.VISIBLE);
-        btnAddApplicant.setText("Add Applicant");
+        btnAddApplicant.setVisibility(View.VISIBLE);
+        btnAddApplicant.setText("Invite Entrant");
     }
 
     private void loadChosenEntrants() {
         CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
-        Query query = isPrivateEvent
-                ? entrantsRef.whereIn("status", Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"))
-                : entrantsRef.whereIn("status", Arrays.asList("INVITED", "ACCEPTED"));
+        Query query = entrantsRef.whereIn("status", Arrays.asList("INVITED", "ACCEPTED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null || value == null || !isAdded()) {
@@ -215,35 +209,6 @@ public class ViewEntrantsFragment extends Fragment {
         adapter.notifyDataSetChanged();
     }
 
-    private void showAddApplicantDialog() {
-        EditText editName = new EditText(requireContext());
-        editName.setHint("Name");
-        EditText editEmail = new EditText(requireContext());
-        editEmail.setHint("Email");
-        editEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
-
-        android.widget.LinearLayout layout = new android.widget.LinearLayout(requireContext());
-        layout.setOrientation(android.widget.LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 10);
-        layout.addView(editName);
-        layout.addView(editEmail);
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Add Applicant")
-                .setView(layout)
-                .setPositiveButton("Add", (d, w) -> {
-                    String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-                    String email = editEmail.getText() != null ? editEmail.getText().toString().trim() : "";
-                    if (name.isEmpty()) {
-                        Toast.makeText(requireContext(), "Name required", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    addApplicant(name, email);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
     private void showEntrantPickerDialog() {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_user_picker, null);
         TextInputEditText etUserSearch = dialogView.findViewById(R.id.et_user_picker_search);
@@ -261,7 +226,7 @@ public class ViewEntrantsFragment extends Fragment {
 
         UserPickerAdapter pickerAdapter = new UserPickerAdapter(filteredUsers, selectedUser -> {
             dialog.dismiss();
-            invitePrivateEntrant(selectedUser);
+            inviteEntrant(selectedUser);
         });
 
         rvUserResults.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -313,21 +278,6 @@ public class ViewEntrantsFragment extends Fragment {
                 });
 
         dialog.show();
-    }
-
-    private void addApplicant(String name, String email) {
-        String id = java.util.UUID.randomUUID().toString();
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", id);
-        data.put("eventId", eventId);
-        data.put("name", name);
-        data.put("email", email);
-        data.put("status", "APPLIED");
-
-        db.collection("events").document(eventId).collection("entrants").document(id)
-                .set(data)
-                .addOnSuccessListener(v -> Toast.makeText(requireContext(), "Applicant added", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to add", Toast.LENGTH_SHORT).show());
     }
 
     private void showUserSearchDialog(boolean coOrganizerInvite) {
@@ -459,7 +409,7 @@ public class ViewEntrantsFragment extends Fragment {
                     if (coOrganizerInvite) {
                         inviteCoOrganizer(selectedUser);
                     } else {
-                        invitePrivateEntrant(selectedUser);
+                        inviteEntrant(selectedUser);
                     }
                 })
                 .setNegativeButton("Cancel", null)
@@ -486,7 +436,7 @@ public class ViewEntrantsFragment extends Fragment {
         return name.isEmpty() ? "Unnamed User" : name;
     }
 
-    private void invitePrivateEntrant(Users user) {
+    private void inviteEntrant(Users user) {
         String userId = user.getId();
         if (userId == null || userId.trim().isEmpty()) {
             Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
@@ -527,16 +477,44 @@ public class ViewEntrantsFragment extends Fragment {
                     data.put("email", valueOrEmpty(user.getEmail()));
                     data.put("phoneNumber", valueOrEmpty(user.getPhoneNumber()));
                     data.put("userId", userId);
-                    data.put("status", "PRIVATE_INVITED");
-                    data.put("statusCode", 4);
+                    data.put("status", "INVITED");
+                    data.put("statusCode", 1);
 
                     entrantRef.set(data, SetOptions.merge())
                             .addOnSuccessListener(unused -> {
-                                notificationHelper.sendPrivateWaitlistInvitationNotification(userId, eventId);
-                                Toast.makeText(requireContext(), "Private waitlist invitation sent", Toast.LENGTH_SHORT).show();
+                                notificationHelper.sendInvitationNotification(userId, eventId);
+                                writeInvitedHistoryRecord(userId);
+                                Toast.makeText(requireContext(), "Entrant invitation sent", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(unused ->
                                     Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
+                });
+    }
+
+    private void writeInvitedHistoryRecord(String userId) {
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(eventDoc -> {
+                    if (eventDoc == null || !eventDoc.exists()) {
+                        return;
+                    }
+
+                    Map<String, Object> eventData = new HashMap<>();
+                    eventData.put("id", eventId);
+                    eventData.put("name", eventDoc.getString("name"));
+                    eventData.put("description", eventDoc.getString("description"));
+                    eventData.put("posterUrl", eventDoc.getString("posterUrl"));
+                    eventData.put("event_date", eventDoc.getString("event_date"));
+                    eventData.put("registration_start", eventDoc.getString("registration_start"));
+                    eventData.put("registration_end", eventDoc.getString("registration_end"));
+
+                    Long amountLong = eventDoc.getLong("amount");
+                    eventData.put("amount", amountLong != null ? amountLong : 0L);
+
+                    Long sampleLong = eventDoc.getLong("sampleSize");
+                    eventData.put("sampleSize", sampleLong != null ? sampleLong : 0L);
+
+                    EventCleanupHelper.writeHistoryRecord(userId, eventId, eventData, "INVITED");
                 });
     }
 

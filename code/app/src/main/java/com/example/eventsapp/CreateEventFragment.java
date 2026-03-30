@@ -353,16 +353,6 @@ public class CreateEventFragment extends Fragment {
             if (!isAdded()) {
                 return;
             }
-            if (isPrivateEvent) {
-                requireActivity()
-                        .getSupportFragmentManager()
-                        .beginTransaction()
-                        .replace(R.id.nav_host_fragment, EnrolledFragment.newInstance(event.getId(), true))
-                        .addToBackStack(null)
-                        .commit();
-                return;
-            }
-
             Bundle args = new Bundle();
             args.putString("eventId", event.getId());
             args.putString("eventName", event.getName());
