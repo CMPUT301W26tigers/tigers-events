@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -74,6 +75,7 @@ public class EditEventFragment extends Fragment {
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
     private final List<String> pendingCoOrganizerIds = new ArrayList<>();
+    private MaterialSwitch switchGeolocationRequired;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -122,6 +124,7 @@ public class EditEventFragment extends Fragment {
                 ? (View) ((View) view.findViewById(R.id.btn_share_link)).getParent() : null;
         btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         btnTogglePrivateEvent = view.findViewById(R.id.btn_toggle_private_event);
+        switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
 
         setupDatePickers();
 
@@ -249,6 +252,12 @@ public class EditEventFragment extends Fragment {
                         pendingCoOrganizerIds.addAll(loadedPendingCoOrganizers);
                     }
 
+                    Boolean geoReq = doc.getBoolean("geolocationRequired");
+                    if (switchGeolocationRequired != null) {
+                        switchGeolocationRequired.setChecked(geoReq != null && geoReq);
+                    }
+
+                    // Generate QR code from existing event deep link
                     Event tempEvent = new Event(eventId, name != null ? name : "", 1,
                             "", "", "", "", "", 0);
                     tempEvent.setId(eventId);
@@ -541,6 +550,7 @@ public class EditEventFragment extends Fragment {
         data.put("registration_start", registrationStart);
         data.put("registration_end", registrationEnd);
         data.put("isPrivate", isPrivateEvent);
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         // Preserve createdBy and posterUrl by using update instead of set
         db.collection("events").document(eventId)

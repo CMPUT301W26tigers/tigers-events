@@ -19,6 +19,7 @@ import androidx.navigation.Navigation;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -62,6 +63,7 @@ public class CreateEventFragment extends Fragment {
     private View shareEventLink;
     private MaterialButton btnViewWaitlist;
     private boolean isPrivateEvent;
+    private MaterialSwitch switchGeolocationRequired;
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -112,6 +114,7 @@ public class CreateEventFragment extends Fragment {
         shareQrImage = view.findViewById(R.id.iv_qr);
         shareEventLink = view.findViewById(R.id.tv_event_link);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
+        switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -342,6 +345,7 @@ public class CreateEventFragment extends Fragment {
         data.put("isPrivate", isPrivateEvent);
         data.put("coOrganizerIds", new ArrayList<String>());
         data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         // Store who created this event for filtering on the Events page
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -440,6 +444,7 @@ public class CreateEventFragment extends Fragment {
         data.put("isPrivate", isPrivateEvent);
         data.put("coOrganizerIds", new ArrayList<String>());
         data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {

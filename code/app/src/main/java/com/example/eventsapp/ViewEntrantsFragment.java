@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -39,7 +40,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * US 02.06.01: View list of all chosen entrants who are invited to apply.
+ * Organizer view: waitlisted entrants (APPLIED) plus invited and accepted.
  */
 public class ViewEntrantsFragment extends Fragment {
 
@@ -95,6 +96,7 @@ public class ViewEntrantsFragment extends Fragment {
         btnExportCsv = view.findViewById(R.id.btn_export_csv);
 
         adapter = new EntrantAdapter(filteredEntrants);
+        adapter.setOnViewLocationListener(this::openMapFocusedOn);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvWaitlist.setAdapter(adapter);
 
@@ -117,6 +119,12 @@ public class ViewEntrantsFragment extends Fragment {
         btnRunLottery.setOnClickListener(v -> runLottery());
         btnExportCsv.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
+
+        loadEventConfiguration();
+        View btnViewMap = view.findViewById(R.id.btn_view_map);
+        if (btnViewMap != null) {
+            btnViewMap.setOnClickListener(v -> openMapOverview());
+        }
 
         loadEventConfiguration();
     }
@@ -174,6 +182,9 @@ public class ViewEntrantsFragment extends Fragment {
             allEntrants.clear();
             for (QueryDocumentSnapshot doc : value) {
                 String id = doc.getString("id");
+                if (id == null || id.isEmpty()) {
+                    id = doc.getId();
+                }
                 String name = doc.getString("name");
                 String email = doc.getString("email");
                 String statusStr = doc.getString("status");
@@ -181,6 +192,10 @@ public class ViewEntrantsFragment extends Fragment {
                 Entrant entrant = new Entrant(id, eventId, name, email, status);
                 entrant.setUserId(doc.getString("userId"));
                 entrant.setStatusCode(doc.getLong("statusCode") != null ? doc.getLong("statusCode").intValue() : 0);
+                double lat = readNumeric(doc, "latitude");
+                double lng = readNumeric(doc, "longitude");
+                if (!Double.isNaN(lat)) entrant.setLatitude(lat);
+                if (!Double.isNaN(lng)) entrant.setLongitude(lng);
                 allEntrants.add(entrant);
             }
             String queryStr = (etSearch != null && etSearch.getText() != null) ? etSearch.getText().toString() : "";
@@ -188,12 +203,18 @@ public class ViewEntrantsFragment extends Fragment {
         });
     }
 
+    private static double readNumeric(QueryDocumentSnapshot doc, String key) {
+        Object o = doc.get(key);
+        if (o instanceof Number) return ((Number) o).doubleValue();
+        return Double.NaN;
+    }
+
     private Entrant.Status parseStatus(String s) {
-        if (s == null) return Entrant.Status.INVITED;
+        if (s == null || s.isEmpty()) return Entrant.Status.APPLIED;
         try {
             return Entrant.Status.valueOf(s);
         } catch (Exception e) {
-            return Entrant.Status.INVITED;
+            return Entrant.Status.APPLIED;
         }
     }
 
@@ -279,6 +300,31 @@ public class ViewEntrantsFragment extends Fragment {
                 });
 
         dialog.show();
+    }
+
+    private void openMapOverview() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", false);
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+    }
+
+    private void openMapFocusedOn(Entrant entrant) {
+        if (entrant == null || !entrant.hasLocation()) {
+            return;
+        }
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", true);
+        args.putString("focusEntrantDocId", entrant.getId());
+        args.putString("focusName", entrant.getName());
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
     }
 
     private void showUserSearchDialog(boolean coOrganizerInvite) {

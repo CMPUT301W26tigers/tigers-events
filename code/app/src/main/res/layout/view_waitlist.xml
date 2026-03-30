@@ -94,6 +94,24 @@
             app:iconTint="@android:color/white" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_map"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:text="Map View"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        app:backgroundTint="@color/dark_grey"
+        app:cornerRadius="24dp"
+        app:icon="@android:drawable/ic_dialog_map"
+        app:iconPadding="6dp"
+        app:iconTint="@android:color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/waitlist_actions_row" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_waitlist_entries"
         android:layout_width="0dp"
@@ -102,10 +120,10 @@
         app:cardBackgroundColor="@android:color/white"
         app:cardCornerRadius="24dp"
         app:cardElevation="0dp"
-        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/waitlist_actions_row">
+        app:layout_constraintTop_toBottomOf="@id/btn_view_map">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_waitlist"
@@ -116,6 +134,20 @@
             android:paddingBottom="16dp"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tv_waitlist_stats"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:alpha="0.8"
+        android:gravity="center"
+        android:text="Private invites and waitlisted entrants appear here."
+        android:textColor="@color/colorTextSecondary"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <LinearLayout
         android:id="@+id/waitlist_footer_row"

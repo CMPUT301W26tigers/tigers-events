@@ -1,0 +1,222 @@
+package com.example.eventsapp;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.location.Location;
+import android.os.Build;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Keeps publishing the entrant's device location to Firestore while they are on a waitlist,
+ * so organizers see near–real-time positions on the map even when this app is in the background.
+ */
+public class WaitlistLocationForegroundService extends Service {
+
+    private static final String TAG = "WaitlistLocService";
+
+    static final String ACTION_STOP = "com.example.eventsapp.STOP_WAITLIST_LOCATION";
+
+    static final String EXTRA_EVENT_ID = "extra_event_id";
+    static final String EXTRA_ENTRANT_DOC_ID = "extra_entrant_doc_id";
+    static final String EXTRA_EVENT_NAME = "extra_event_name";
+
+    private static final String CHANNEL_ID = "waitlist_location_channel";
+    private static final int NOTIFICATION_ID = 0x5741544c; // "WATL"
+
+    private static final long UPDATE_INTERVAL_MS = 12_000L;
+    private static final long MIN_WRITE_INTERVAL_MS = 10_000L;
+
+    private final LocationRequest locationRequest =
+            new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, UPDATE_INTERVAL_MS)
+                    .setMinUpdateIntervalMillis(8_000L)
+                    .setMinUpdateDistanceMeters(10f)
+                    .build();
+
+    private FusedLocationProviderClient fused;
+    private HandlerThread workerThread;
+    private Looper workerLooper;
+    private FirebaseFirestore db;
+
+    private volatile String eventId;
+    private volatile String entrantDocId;
+    private volatile long lastFirestoreWriteMs;
+
+    private final LocationCallback locationCallback = new LocationCallback() {
+        @Override
+        public void onLocationResult(@NonNull LocationResult result) {
+            if (eventId == null || entrantDocId == null || eventId.isEmpty() || entrantDocId.isEmpty()) {
+                return;
+            }
+            Location loc = result.getLastLocation();
+            if (loc == null) return;
+
+            long now = System.currentTimeMillis();
+            if (now - lastFirestoreWriteMs < MIN_WRITE_INTERVAL_MS) {
+                return;
+            }
+            lastFirestoreWriteMs = now;
+
+            Map<String, Object> patch = new HashMap<>();
+            patch.put("latitude", loc.getLatitude());
+            patch.put("longitude", loc.getLongitude());
+            patch.put("locationUpdatedAt", FieldValue.serverTimestamp());
+            if (loc.hasAccuracy()) {
+                patch.put("locationAccuracy", loc.getAccuracy());
+            }
+
+            db.collection("events").document(eventId)
+                    .collection("entrants").document(entrantDocId)
+                    .update(patch)
+                    .addOnFailureListener(e -> Log.w(TAG, "Firestore location update failed", e));
+        }
+    };
+
+    public static void start(Context context, String eventId, String entrantDocId, String eventDisplayName) {
+        if (context == null || eventId == null || entrantDocId == null
+                || eventId.isEmpty() || entrantDocId.isEmpty()) {
+            return;
+        }
+        Intent i = new Intent(context, WaitlistLocationForegroundService.class);
+        i.putExtra(EXTRA_EVENT_ID, eventId);
+        i.putExtra(EXTRA_ENTRANT_DOC_ID, entrantDocId);
+        i.putExtra(EXTRA_EVENT_NAME, eventDisplayName != null ? eventDisplayName : "");
+        ContextCompat.startForegroundService(context, i);
+    }
+
+    public static void stop(Context context) {
+        if (context == null) return;
+        context.stopService(new Intent(context, WaitlistLocationForegroundService.class));
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        fused = LocationServices.getFusedLocationProviderClient(this);
+        db = FirebaseFirestore.getInstance();
+        workerThread = new HandlerThread("waitlist-loc-worker");
+        workerThread.start();
+        workerLooper = workerThread.getLooper();
+        createNotificationChannel();
+    }
+
+    @Override
+    public int onStartCommand(@Nullable Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            stopLocationUpdatesInternal();
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        if (intent == null) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        String newEventId = intent.getStringExtra(EXTRA_EVENT_ID);
+        String newDocId = intent.getStringExtra(EXTRA_ENTRANT_DOC_ID);
+        String eventName = intent.getStringExtra(EXTRA_EVENT_NAME);
+        if (newEventId == null || newDocId == null || newEventId.isEmpty() || newDocId.isEmpty()) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        stopLocationUpdatesInternal();
+        this.eventId = newEventId;
+        this.entrantDocId = newDocId;
+        this.lastFirestoreWriteMs = 0L;
+
+        Notification notification = buildNotification(eventName != null ? eventName : "");
+        startForeground(NOTIFICATION_ID, notification);
+
+        try {
+            fused.requestLocationUpdates(locationRequest, locationCallback, workerLooper);
+        } catch (SecurityException e) {
+            Log.e(TAG, "Missing location permission", e);
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
+        return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        stopLocationUpdatesInternal();
+        if (workerThread != null) {
+            workerThread.quitSafely();
+        }
+        super.onDestroy();
+    }
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    private void stopLocationUpdatesInternal() {
+        if (fused != null) {
+            fused.removeLocationUpdates(locationCallback);
+        }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationChannel ch = new NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.notif_channel_waitlist_location),
+                NotificationManager.IMPORTANCE_LOW);
+        ch.setDescription(getString(R.string.notif_channel_waitlist_location_desc));
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm != null) {
+            nm.createNotificationChannel(ch);
+        }
+    }
+
+    private Notification buildNotification(String eventDisplayName) {
+        Intent stopIntent = new Intent(this, WaitlistLocationForegroundService.class);
+        stopIntent.setAction(ACTION_STOP);
+        PendingIntent stopPi = PendingIntent.getService(
+                this, 1, stopIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+
+        String subtitle = eventDisplayName.isEmpty()
+                ? getString(R.string.notif_waitlist_location_generic)
+                : eventDisplayName;
+
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(getString(R.string.notif_waitlist_location_title))
+                .setContentText(subtitle)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .addAction(0, getString(R.string.notif_waitlist_location_stop), stopPi)
+                .build();
+    }
+}
