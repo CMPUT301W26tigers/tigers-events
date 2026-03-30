@@ -59,8 +59,6 @@ public class ViewEntrantsFragment extends Fragment {
     private MaterialButton btnSeeCancelled;
     private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
-    private boolean openInviteOnLoad;
-    private boolean inviteDialogOpenedFromArgs;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
     private final List<String> pendingCoOrganizerIds = new ArrayList<>();
@@ -71,7 +69,6 @@ public class ViewEntrantsFragment extends Fragment {
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId");
             if (eventId == null) eventId = "";
-            openInviteOnLoad = getArguments().getBoolean("openInviteOnLoad", false);
         } else {
             eventId = "";
         }
@@ -129,7 +126,6 @@ public class ViewEntrantsFragment extends Fragment {
         btnInviteCoOrganizer.setOnClickListener(v -> showUserSearchDialog(true));
         btnExportCsv.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-        btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
 
         loadEventConfiguration();
     }
@@ -156,7 +152,6 @@ public class ViewEntrantsFragment extends Fragment {
 
                     updateActionLabels();
                     loadChosenEntrants();
-                    maybeOpenPrivateInviteDialog();
                 })
                 .addOnFailureListener(unused -> {
                     updateActionLabels();
@@ -170,25 +165,9 @@ public class ViewEntrantsFragment extends Fragment {
         }
 
         toolbar.setTitle("Waitlist");
-        btnAddApplicant.setText(isPrivateEvent ? "Invite Entrant" : "Add Applicant");
+        btnAddApplicant.setVisibility(isPrivateEvent ? View.GONE : View.VISIBLE);
+        btnAddApplicant.setText("Add Applicant");
         btnInviteCoOrganizer.setVisibility(View.VISIBLE);
-    }
-
-    private void maybeOpenPrivateInviteDialog() {
-        if (!openInviteOnLoad || inviteDialogOpenedFromArgs || !isPrivateEvent || !isAdded()) {
-            return;
-        }
-        inviteDialogOpenedFromArgs = true;
-        showEntrantPickerDialog();
-    }
-
-    private void openCancelledFragment() {
-        requireActivity()
-                .getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, new CancelledFragment())
-                .addToBackStack(null)
-                .commit();
     }
 
     private void loadChosenEntrants() {
