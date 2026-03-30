@@ -67,9 +67,9 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         }
         switch (status) {
             case PRIVATE_INVITED:
-                return "Waitlist Invite Sent";
+                return "Invited";
             case APPLIED:
-                return "On Waitlist";
+                return "Waitlisted";
             case ACCEPTED:
                 return "Accepted";
             case INVITED:

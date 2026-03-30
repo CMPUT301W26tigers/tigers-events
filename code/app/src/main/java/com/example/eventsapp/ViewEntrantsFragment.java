@@ -163,7 +163,8 @@ public class ViewEntrantsFragment extends Fragment {
     private void loadChosenEntrants() {
         CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
-        Query query = entrantsRef.whereIn("status", Arrays.asList("INVITED", "ACCEPTED"));
+        Query query = entrantsRef.whereIn("status",
+                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null || value == null || !isAdded()) {
@@ -477,44 +478,16 @@ public class ViewEntrantsFragment extends Fragment {
                     data.put("email", valueOrEmpty(user.getEmail()));
                     data.put("phoneNumber", valueOrEmpty(user.getPhoneNumber()));
                     data.put("userId", userId);
-                    data.put("status", "INVITED");
-                    data.put("statusCode", 1);
+                    data.put("status", "PRIVATE_INVITED");
+                    data.put("statusCode", -1);
 
                     entrantRef.set(data, SetOptions.merge())
                             .addOnSuccessListener(unused -> {
-                                notificationHelper.sendInvitationNotification(userId, eventId);
-                                writeInvitedHistoryRecord(userId);
-                                Toast.makeText(requireContext(), "Entrant invitation sent", Toast.LENGTH_SHORT).show();
+                                notificationHelper.sendPrivateWaitlistInvitationNotification(userId, eventId);
+                                Toast.makeText(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT).show();
                             })
                             .addOnFailureListener(unused ->
                                     Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
-                });
-    }
-
-    private void writeInvitedHistoryRecord(String userId) {
-        db.collection("events").document(eventId)
-                .get()
-                .addOnSuccessListener(eventDoc -> {
-                    if (eventDoc == null || !eventDoc.exists()) {
-                        return;
-                    }
-
-                    Map<String, Object> eventData = new HashMap<>();
-                    eventData.put("id", eventId);
-                    eventData.put("name", eventDoc.getString("name"));
-                    eventData.put("description", eventDoc.getString("description"));
-                    eventData.put("posterUrl", eventDoc.getString("posterUrl"));
-                    eventData.put("event_date", eventDoc.getString("event_date"));
-                    eventData.put("registration_start", eventDoc.getString("registration_start"));
-                    eventData.put("registration_end", eventDoc.getString("registration_end"));
-
-                    Long amountLong = eventDoc.getLong("amount");
-                    eventData.put("amount", amountLong != null ? amountLong : 0L);
-
-                    Long sampleLong = eventDoc.getLong("sampleSize");
-                    eventData.put("sampleSize", sampleLong != null ? sampleLong : 0L);
-
-                    EventCleanupHelper.writeHistoryRecord(userId, eventId, eventData, "INVITED");
                 });
     }
 
