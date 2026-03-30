@@ -1,9 +1,12 @@
 package com.example.eventsapp;
 
+import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,18 +19,24 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -42,6 +51,7 @@ public class EditEventFragment extends Fragment {
     private static final String TAG = "EditEventFragment";
     private static final int QR_SIZE = 400;
 
+    private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private FirebaseFirestore db;
 
@@ -58,8 +68,12 @@ public class EditEventFragment extends Fragment {
     private View shareTitle;
     private View shareQrButtonRow;
     private View shareLinkButtonRow;
+    private MaterialButton btnInviteCoOrganizer;
     private MaterialButton btnTogglePrivateEvent;
     private boolean isPrivateEvent;
+    private String createdByUserId = "";
+    private final List<String> coOrganizerIds = new ArrayList<>();
+    private final List<String> pendingCoOrganizerIds = new ArrayList<>();
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -106,6 +120,7 @@ public class EditEventFragment extends Fragment {
                 ? (View) ((View) view.findViewById(R.id.btn_share_qr)).getParent() : null;
         shareLinkButtonRow = ((View) view.findViewById(R.id.btn_share_link)).getParent() instanceof View
                 ? (View) ((View) view.findViewById(R.id.btn_share_link)).getParent() : null;
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         btnTogglePrivateEvent = view.findViewById(R.id.btn_toggle_private_event);
 
         setupDatePickers();
@@ -155,6 +170,8 @@ public class EditEventFragment extends Fragment {
                         .addToBackStack(null)
                         .commit());
 
+        btnInviteCoOrganizer.setOnClickListener(v -> showCoOrganizerPickerDialog());
+
         btnTogglePrivateEvent.setOnClickListener(v -> {
             isPrivateEvent = !isPrivateEvent;
             Event tempEvent = new Event(eventId, getText(editName), 1, "", "", "", "", "", 0);
@@ -164,10 +181,6 @@ public class EditEventFragment extends Fragment {
 
         // Save button
         view.findViewById(R.id.btn_save).setOnClickListener(v -> saveEvent());
-
-        // Back button
-        view.findViewById(R.id.btn_back).setOnClickListener(v ->
-                Navigation.findNavController(requireView()).popBackStack());
 
         // Share QR
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> {
@@ -222,6 +235,19 @@ public class EditEventFragment extends Fragment {
                     if (amountLong != null) editCapacity.setText(String.valueOf(amountLong.intValue()));
                     if (sampleLong != null) editSampleSize.setText(String.valueOf(sampleLong.intValue()));
                     isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
+                    createdByUserId = valueOrEmpty(doc.getString("createdBy"));
+
+                    coOrganizerIds.clear();
+                    List<String> loadedCoOrganizers = (List<String>) doc.get("coOrganizerIds");
+                    if (loadedCoOrganizers != null) {
+                        coOrganizerIds.addAll(loadedCoOrganizers);
+                    }
+
+                    pendingCoOrganizerIds.clear();
+                    List<String> loadedPendingCoOrganizers = (List<String>) doc.get("pendingCoOrganizerIds");
+                    if (loadedPendingCoOrganizers != null) {
+                        pendingCoOrganizerIds.addAll(loadedPendingCoOrganizers);
+                    }
 
                     Event tempEvent = new Event(eventId, name != null ? name : "", 1,
                             "", "", "", "", "", 0);
@@ -308,6 +334,147 @@ public class EditEventFragment extends Fragment {
             tvEventLink.setVisibility(View.VISIBLE);
             tvEventLink.setText(event.getEventDeepLink());
         }
+    }
+
+    private void showCoOrganizerPickerDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_user_picker, null);
+        TextInputEditText etUserSearch = dialogView.findViewById(R.id.et_user_picker_search);
+        RecyclerView rvUserResults = dialogView.findViewById(R.id.rv_user_picker_results);
+        TextView tvEmpty = dialogView.findViewById(R.id.tv_user_picker_empty);
+
+        List<Users> eligibleUsers = new ArrayList<>();
+        List<Users> filteredUsers = new ArrayList<>();
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Invite Co-Organizer")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        UserPickerAdapter pickerAdapter = new UserPickerAdapter(filteredUsers, selectedUser -> {
+            dialog.dismiss();
+            inviteCoOrganizer(selectedUser);
+        });
+
+        rvUserResults.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvUserResults.setAdapter(pickerAdapter);
+
+        tvEmpty.setText("Loading users...");
+        tvEmpty.setVisibility(View.VISIBLE);
+        rvUserResults.setVisibility(View.GONE);
+
+        etUserSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty,
+                        s != null ? s.toString() : "");
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        db.collection("users")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    eligibleUsers.clear();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Users user = doc.toObject(Users.class);
+                        if (user == null) {
+                            continue;
+                        }
+                        user.setId(doc.getId());
+                        if (isEligibleCoOrganizerCandidate(user)) {
+                            eligibleUsers.add(user);
+                        }
+                    }
+
+                    eligibleUsers.sort((first, second) ->
+                            buildUserDisplayName(first).compareToIgnoreCase(buildUserDisplayName(second)));
+
+                    String query = etUserSearch.getText() != null ? etUserSearch.getText().toString() : "";
+                    filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty, query);
+                })
+                .addOnFailureListener(unused -> {
+                    tvEmpty.setText("Failed to load users");
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rvUserResults.setVisibility(View.GONE);
+                });
+
+        dialog.show();
+    }
+
+    private void filterEligibleUsers(List<Users> eligibleUsers,
+                                     List<Users> filteredUsers,
+                                     UserPickerAdapter pickerAdapter,
+                                     RecyclerView rvUserResults,
+                                     TextView tvEmpty,
+                                     String query) {
+        filteredUsers.clear();
+        String normalizedQuery = valueOrEmpty(query).toLowerCase(Locale.CANADA);
+        String normalizedPhoneQuery = normalizePhone(query);
+
+        for (Users user : eligibleUsers) {
+            String userName = buildUserDisplayName(user).toLowerCase(Locale.CANADA);
+            String userEmail = valueOrEmpty(user.getEmail()).toLowerCase(Locale.CANADA);
+            String userPhone = normalizePhone(user.getPhoneNumber());
+
+            if (normalizedQuery.isEmpty()
+                    || userName.contains(normalizedQuery)
+                    || userEmail.contains(normalizedQuery)
+                    || (!normalizedPhoneQuery.isEmpty() && userPhone.contains(normalizedPhoneQuery))) {
+                filteredUsers.add(user);
+            }
+        }
+
+        pickerAdapter.notifyDataSetChanged();
+
+        if (filteredUsers.isEmpty()) {
+            tvEmpty.setText(eligibleUsers.isEmpty() ? "No eligible users found" : "No matching users");
+            tvEmpty.setVisibility(View.VISIBLE);
+            rvUserResults.setVisibility(View.GONE);
+            return;
+        }
+
+        tvEmpty.setVisibility(View.GONE);
+        rvUserResults.setVisibility(View.VISIBLE);
+    }
+
+    private boolean isEligibleCoOrganizerCandidate(Users user) {
+        String userId = valueOrEmpty(user.getId());
+        return !userId.isEmpty()
+                && !createdByUserId.equals(userId)
+                && !coOrganizerIds.contains(userId)
+                && !pendingCoOrganizerIds.contains(userId);
+    }
+
+    private void inviteCoOrganizer(Users user) {
+        String userId = valueOrEmpty(user.getId());
+        if (userId.isEmpty()) {
+            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User is already an organizer for this event", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (pendingCoOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User already has a pending co-organizer invite", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .update("pendingCoOrganizerIds", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                .addOnSuccessListener(unused -> {
+                    pendingCoOrganizerIds.add(userId);
+                    notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
+                    Toast.makeText(requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(unused ->
+                        Toast.makeText(requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show());
     }
 
     /**
@@ -452,6 +619,22 @@ public class EditEventFragment extends Fragment {
         return true;
     }
 
+    private String buildUserDisplayName(Users user) {
+        String name = valueOrEmpty(user.getName());
+        return name.isEmpty() ? "Unnamed User" : name;
+    }
+
+    private String normalizePhone(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("[^0-9]", "");
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
     /**
      * Helper to safely extract trimmed text from an EditText.
      */
@@ -471,5 +654,64 @@ public class EditEventFragment extends Fragment {
      */
     public static boolean shouldNavigateToEdit(boolean isCreatedTab, boolean isFromHistory) {
         return isCreatedTab && !isFromHistory;
+    }
+
+    private static class UserPickerAdapter extends RecyclerView.Adapter<UserPickerAdapter.UserPickerViewHolder> {
+        interface OnUserSelectedListener {
+            void onUserSelected(Users user);
+        }
+
+        private final List<Users> users;
+        private final OnUserSelectedListener onUserSelectedListener;
+
+        UserPickerAdapter(List<Users> users, OnUserSelectedListener onUserSelectedListener) {
+            this.users = users;
+            this.onUserSelectedListener = onUserSelectedListener;
+        }
+
+        @NonNull
+        @Override
+        public UserPickerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_user_picker, parent, false);
+            return new UserPickerViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull UserPickerViewHolder holder, int position) {
+            Users user = users.get(position);
+            String name = user.getName() == null || user.getName().trim().isEmpty()
+                    ? "Unnamed User" : user.getName().trim();
+            holder.tvName.setText(name);
+
+            String email = user.getEmail() == null ? "" : user.getEmail().trim();
+            String phone = user.getPhoneNumber() == null ? "" : user.getPhoneNumber().trim();
+            if (!email.isEmpty() && !phone.isEmpty()) {
+                holder.tvDetails.setText(email + " | " + phone);
+            } else if (!email.isEmpty()) {
+                holder.tvDetails.setText(email);
+            } else if (!phone.isEmpty()) {
+                holder.tvDetails.setText(phone);
+            } else {
+                holder.tvDetails.setText("No contact info");
+            }
+
+            holder.itemView.setOnClickListener(v -> onUserSelectedListener.onUserSelected(user));
+        }
+
+        @Override
+        public int getItemCount() {
+            return users.size();
+        }
+
+        static class UserPickerViewHolder extends RecyclerView.ViewHolder {
+            private final TextView tvName;
+            private final TextView tvDetails;
+
+            UserPickerViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvName = itemView.findViewById(R.id.tv_user_picker_name);
+                tvDetails = itemView.findViewById(R.id.tv_user_picker_details);
+            }
+        }
     }
 }

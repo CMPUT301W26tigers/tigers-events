@@ -56,8 +56,6 @@ public class ViewEntrantsFragment extends Fragment {
     private MaterialButton btnAddApplicant;
     private MaterialButton btnRunLottery;
     private MaterialButton btnExportCsv;
-    private MaterialButton btnSeeCancelled;
-    private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
@@ -95,8 +93,6 @@ public class ViewEntrantsFragment extends Fragment {
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
         btnRunLottery = view.findViewById(R.id.btn_run_lottery);
         btnExportCsv = view.findViewById(R.id.btn_export_csv);
-        btnSeeCancelled = view.findViewById(R.id.btn_see_cancelled);
-        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
 
         adapter = new EntrantAdapter(filteredEntrants);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -123,7 +119,6 @@ public class ViewEntrantsFragment extends Fragment {
             }
         });
         btnRunLottery.setOnClickListener(v -> runLottery());
-        btnInviteCoOrganizer.setOnClickListener(v -> showUserSearchDialog(true));
         btnExportCsv.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
 
@@ -167,7 +162,6 @@ public class ViewEntrantsFragment extends Fragment {
         toolbar.setTitle("Waitlist");
         btnAddApplicant.setVisibility(isPrivateEvent ? View.GONE : View.VISIBLE);
         btnAddApplicant.setText("Add Applicant");
-        btnInviteCoOrganizer.setVisibility(View.VISIBLE);
     }
 
     private void loadChosenEntrants() {
