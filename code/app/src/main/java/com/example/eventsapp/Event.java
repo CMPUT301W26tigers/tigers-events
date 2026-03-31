@@ -1,6 +1,10 @@
 package com.example.eventsapp;
 
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * Represents an event in the EventsApp system.
@@ -17,6 +21,8 @@ public class Event implements Serializable {
     private String description;
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
+    private String hostId;   // ID of the user who created this event
+    private boolean geolocationRequired;
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
@@ -193,6 +199,33 @@ public class Event implements Serializable {
     }
 
     /**
+     * Gets the ID of the user who created this event.
+     * @return The host user ID.
+     */
+    public String getHostId() {
+        return hostId;
+    }
+
+    /**
+     * Sets the ID of the user who created this event.
+     * @param hostId The host user ID.
+     */
+    public void setHostId(String hostId) {
+        this.hostId = hostId;
+    }
+
+    /**
+     * Whether entrants must grant location to join the waitlist.
+     */
+    public boolean isGeolocationRequired() {
+        return geolocationRequired;
+    }
+
+    public void setGeolocationRequired(boolean geolocationRequired) {
+        this.geolocationRequired = geolocationRequired;
+    }
+
+    /**
      * Gets the entrant status for the current user (transient, not stored in Firestore).
      * @return The entrant status string, or null if not set.
      */
@@ -230,5 +263,24 @@ public class Event implements Serializable {
      */
     public String getEventDeepLink() {
         return "tigers-events://event/" + id;
+    }
+
+    /**
+     * Returns the event date formatted as "March 27, 2026" instead of "2026-03-27".
+     * Falls back to the raw date string if parsing fails.
+     * @return The formatted date string, or "No date" if event_date is empty.
+     */
+    public String getFormattedEventDate() {
+        if (event_date == null || event_date.isEmpty()) return "No date";
+        try {
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+            input.setLenient(false);
+            Date date = input.parse(event_date);
+            if (date == null) return event_date;
+            SimpleDateFormat output = new SimpleDateFormat("MMMM d, yyyy", Locale.CANADA);
+            return output.format(date);
+        } catch (ParseException e) {
+            return event_date;
+        }
     }
 }

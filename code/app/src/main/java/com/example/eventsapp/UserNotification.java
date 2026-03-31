@@ -1,10 +1,12 @@
 package com.example.eventsapp;
 
+import java.io.Serializable;
+
 /**
  * Represents a notification intended for a user within the application's UI.
  * This class is used for runtime notification handling and display in the user's inbox.
  */
-public class UserNotification {
+public class UserNotification implements Serializable {
 
     /**
      * Enumeration of notification types.
@@ -12,6 +14,10 @@ public class UserNotification {
     public enum Type {
         /** Invitation to register for an event. */
         INVITATION,
+        /** Invitation to join a private event waitlist. */
+        PRIVATE_WAITLIST_INVITATION,
+        /** Invitation to become a co-organizer for an event. */
+        CO_ORGANIZER_INVITATION,
         /** Status update indicating the user is still waitlisted. */
         WAITLISTED,
         /** Notification that the user was not selected in the lottery. */

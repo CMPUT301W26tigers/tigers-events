@@ -5,51 +5,125 @@
     android:id="@+id/enrolled_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:background="@color/colorSurface"
+    android:paddingStart="20dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="20dp"
+    android:paddingBottom="16dp">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar_enrolled"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:title="Enrolled Entrants"
-        app:navigationIcon="@android:drawable/ic_media_previous"
+        android:background="@android:color/transparent"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Enrolled"
+        app:titleCentered="false"
+        app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineMedium"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_enrolled"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_search_enrolled"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:hint="Search Entrants"
+        app:boxBackgroundColor="@color/colorSearchBar"
+        app:boxBackgroundMode="filled"
+        app:boxCornerRadiusBottomEnd="28dp"
+        app:boxCornerRadiusBottomStart="28dp"
+        app:boxCornerRadiusTopEnd="28dp"
+        app:boxCornerRadiusTopStart="28dp"
+        app:endIconDrawable="@android:drawable/ic_menu_search"
+        app:endIconMode="custom"
+        app:layout_constraintTop_toBottomOf="@id/toolbar_enrolled"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_search_enrolled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_enrolled_entries"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintTop_toBottomOf="@id/toolbar_enrolled"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/til_search_enrolled"
         app:layout_constraintBottom_toTopOf="@id/tv_enrolled_stats"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_enrolled"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="10dp"
+            android:paddingBottom="16dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+    </com.google.android.material.card.MaterialCardView>
 
     <TextView
         android:id="@+id/tv_enrolled_stats"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:text="Total Enrolled: 0"
+        android:textColor="@color/colorTextSecondary"
         android:textSize="12sp"
         android:alpha="0.8"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/rv_enrolled"
+        app:layout_constraintTop_toBottomOf="@id/card_enrolled_entries"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_back_to_event"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:id="@+id/enrolled_footer_row"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Back To Event"
-        android:textColor="@android:color/white"
-        android:backgroundTint="@color/dark_grey"
         android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:orientation="vertical"
         app:layout_constraintTop_toBottomOf="@id/tv_enrolled_stats"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_export_csv"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
+            android:text="Export as CSV"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_menu_sort_by_size"
+            app:iconPadding="8dp"
+            app:iconTint="@android:color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_see_cancelled"
+            android:layout_width="220dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:text="See Cancelled Entrants"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_delete"
+            app:iconPadding="8dp"
+            app:iconTint="@android:color/white" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

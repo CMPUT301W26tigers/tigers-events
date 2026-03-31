@@ -6,6 +6,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -81,6 +82,11 @@ public class ExploreFragment extends Fragment {
         // Tap the search bar hint to switch to search mode
         view.findViewById(R.id.cardSearchNormal).setOnClickListener(v -> showSearchMode());
 
+        ImageButton btnInboxNormal = view.findViewById(R.id.btnInboxNormal);
+        ImageButton btnInboxSearch = view.findViewById(R.id.btnTopIconSearch);
+        btnInboxNormal.setOnClickListener(this::openInbox);
+        btnInboxSearch.setOnClickListener(this::openInbox);
+
         // Back button exits search mode
         view.findViewById(R.id.btnBack).setOnClickListener(v -> hideSearchMode());
 
@@ -113,6 +119,10 @@ public class ExploreFragment extends Fragment {
         args.putString("eventId", event.getId());
         Navigation.findNavController(view)
                 .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
+    }
+
+    private void openInbox(View view) {
+        Navigation.findNavController(view).navigate(R.id.inboxFragment);
     }
 
     /**
@@ -170,6 +180,11 @@ public class ExploreFragment extends Fragment {
             if (value != null && isAdded()) {
                 allEvents.clear();
                 for (QueryDocumentSnapshot snapshot : value) {
+                    Boolean isPrivate = snapshot.getBoolean("isPrivate");
+                    if (Boolean.TRUE.equals(isPrivate)) {
+                        continue;
+                    }
+
                     String id = snapshot.getString("id");
                     String name = snapshot.getString("name");
                     Long amountLong = snapshot.getLong("amount");
@@ -178,13 +193,21 @@ public class ExploreFragment extends Fragment {
                     String posterUrl = snapshot.getString("posterUrl");
                     Long sampleLong = snapshot.getLong("sampleSize");
                     int sampleSize = (sampleLong != null) ? sampleLong.intValue() : 0;
+                    String registrationStart = snapshot.getString("registration_start");
+                    String registrationEnd = snapshot.getString("registration_end");
+                    String eventDate = snapshot.getString("event_date");
                     if (id == null) id = snapshot.getId();
                     if (name == null) name = "";
                     if (description == null) description = "";
                     if (posterUrl == null) posterUrl = "";
+                    if (registrationStart == null) registrationStart = "";
+                    if (registrationEnd == null) registrationEnd = "";
+                    if (eventDate == null) eventDate = "";
 
                     if (amount != 0) {
-                        allEvents.add(new Event(id, name, amount, "", "", "", description, posterUrl, sampleSize));
+                        Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+                        e.setHostId(snapshot.getString("createdBy"));
+                        allEvents.add(e);
                     }
                 }
                 adapter.notifyDataSetChanged();
@@ -236,6 +259,9 @@ public class ExploreFragment extends Fragment {
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
+
+            holder.tvEventDate.setText(event.getFormattedEventDate());
+
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 

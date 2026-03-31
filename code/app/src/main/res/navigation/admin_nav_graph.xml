@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/admin_nav_graph"
+    app:startDestination="@id/adminManageEventsFragment">
+
+    <fragment
+        android:id="@+id/adminManageEventsFragment"
+        android:name="com.example.eventsapp.AdminManageEventsFragment"
+        android:label="Manage Events" />
+
+    <fragment
+        android:id="@+id/adminManageProfilesFragment"
+        android:name="com.example.eventsapp.AdminManageProfilesFragment"
+        android:label="Manage Profiles" />
+
+    <fragment
+        android:id="@+id/adminManageNotificationsFragment"
+        android:name="com.example.eventsapp.AdminManageNotificationsFragment"
+        android:label="Manage Notifications" />
+
+    <fragment
+        android:id="@+id/adminEventDetailFragment"
+        android:name="com.example.eventsapp.AdminEventDetailFragment"
+        android:label="Event Detail" />
+
+</navigation>

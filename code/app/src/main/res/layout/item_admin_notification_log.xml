@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Divider line at top of each item -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorDivider" />
+
+    <!-- Collapsed row (always visible) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutCollapsed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <!-- Organizer name -->
+        <TextView
+            android:id="@+id/tvOrganizerName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Organizer Name"
+            android:textColor="@color/colorTextPrimary"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/ivExpandArrow"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Notification content preview (2 lines max when collapsed) -->
+        <TextView
+            android:id="@+id/tvNotificationPreview"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Content of notification logs."
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="13sp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:layout_marginTop="2dp"
+            android:layout_marginEnd="12dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/ivExpandArrow"
+            app:layout_constraintTop_toBottomOf="@id/tvOrganizerName" />
+
+        <!-- Expand/collapse arrow -->
+        <ImageView
+            android:id="@+id/ivExpandArrow"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="Expand notification"
+            app:srcCompat="@android:drawable/arrow_down_float"
+            app:tint="@color/colorTextSecondary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Expanded section (hidden by default) -->
+    <LinearLayout
+        android:id="@+id/layoutExpanded"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:paddingBottom="14dp">
+
+        <!-- Full notification message -->
+        <TextView
+            android:id="@+id/tvNotificationFull"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Full content of the notification message."
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="13sp" />
+
+        <!-- Recipients header -->
+        <TextView
+            android:id="@+id/tvRecipientsHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Recipients"
+            android:textColor="@color/colorTextPrimary"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:layout_marginTop="10dp" />
+
+        <!-- Recipients list -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvRecipients"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:nestedScrollingEnabled="false" />
+
+    </LinearLayout>
+
+</LinearLayout>

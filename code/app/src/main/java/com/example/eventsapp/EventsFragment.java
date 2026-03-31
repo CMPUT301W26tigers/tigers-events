@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -16,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
@@ -30,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,10 +77,13 @@ public class EventsFragment extends Fragment {
         toggleEventType = view.findViewById(R.id.toggleEventType);
         btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
         chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
+        ImageButton btnInboxEvents = view.findViewById(R.id.btnInboxEvents);
 
         btnCreateEvent.setOnClickListener(v ->
                 Navigation.findNavController(view)
                         .navigate(R.id.action_eventsFragment_to_createEventFragment));
+        btnInboxEvents.setOnClickListener(v ->
+                Navigation.findNavController(v).navigate(R.id.inboxFragment));
 
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
@@ -155,13 +161,20 @@ public class EventsFragment extends Fragment {
      */
     private void loadCreatedEvents(String userId, int generation) {
         FirebaseFirestore.getInstance().collection("events")
-                .whereEqualTo("createdBy", userId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!isAdded() || generation != loadGeneration) return;
                     eventList.clear();
                     Set<String> activeEventIds = new HashSet<>();
                     for (QueryDocumentSnapshot snapshot : querySnapshot) {
+                        String createdBy = snapshot.getString("createdBy");
+                        List<String> coOrganizerIds = (List<String>) snapshot.get("coOrganizerIds");
+                        boolean isOrganizerEvent = Objects.equals(createdBy, userId)
+                                || (coOrganizerIds != null && coOrganizerIds.contains(userId));
+                        if (!isOrganizerEvent) {
+                            continue;
+                        }
+
                         Event event = parseEvent(snapshot);
                         if (event != null) {
                             eventList.add(event);
@@ -223,7 +236,7 @@ public class EventsFragment extends Fragment {
                                         }
                                     }
 
-                                    if (entrantStatus != null) {
+                                    if (entrantStatus != null && !"PRIVATE_INVITED".equals(entrantStatus)) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
                                             event.setEntrantStatus(entrantStatus);
@@ -281,7 +294,9 @@ public class EventsFragment extends Fragment {
         if (posterUrl == null) posterUrl = "";
 
         if (amount != 0) {
-            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            e.setHostId(snapshot.getString("createdBy"));
+            return e;
         }
         return null;
     }
@@ -376,7 +391,9 @@ public class EventsFragment extends Fragment {
         if (posterUrl == null) posterUrl = "";
 
         if (amount != 0) {
-            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            e.setHostId(doc.getString("createdBy"));
+            return e;
         }
         return null;
     }
@@ -466,6 +483,8 @@ public class EventsFragment extends Fragment {
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
 
+            holder.tvEventDate.setText(event.getFormattedEventDate());
+
             String status = event.getEntrantStatus();
             if (status != null && !status.isEmpty()) {
                 holder.tvEntrantStatus.setVisibility(View.VISIBLE);
@@ -473,6 +492,15 @@ public class EventsFragment extends Fragment {
                 holder.tvEntrantStatus.setTextColor(getStatusColor(status));
             } else {
                 holder.tvEntrantStatus.setVisibility(View.GONE);
+            }
+
+            if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
+                holder.avatarCircle.setVisibility(View.GONE);
+                holder.cardThumb.setVisibility(View.VISIBLE);
+            } else {
+                holder.avatarCircle.setVisibility(View.VISIBLE);
+                holder.cardThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
@@ -489,6 +517,7 @@ public class EventsFragment extends Fragment {
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime, tvEntrantStatus;
             ImageView ivThumb;
+            View avatarCircle, cardThumb;
 
             /**
              * Constructs a ViewHolder and binds UI components.
@@ -503,6 +532,8 @@ public class EventsFragment extends Fragment {
                 tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
                 tvEntrantStatus = itemView.findViewById(R.id.tvEntrantStatus);
+                avatarCircle = itemView.findViewById(R.id.avatarCircle);
+                cardThumb = itemView.findViewById(R.id.cardThumb);
             }
         }
 
@@ -513,6 +544,7 @@ public class EventsFragment extends Fragment {
          */
         private static String formatStatus(String status) {
             switch (status) {
+                case "PRIVATE_INVITED": return "Private Invite";
                 case "APPLIED": return "Waitlisted";
                 case "INVITED": return "Invited";
                 case "ACCEPTED": return "Accepted";

@@ -36,12 +36,12 @@ public class EventHistoryTest {
     }
 
     /**
-     * Tests that all five entrant statuses can be set and retrieved correctly.
+     * Tests that all entrant statuses can be set and retrieved correctly.
      */
     @Test
     public void testEventEntrantStatusField_allStatuses() {
         Event event = new Event("Test Event", 10);
-        String[] statuses = {"APPLIED", "INVITED", "ACCEPTED", "DECLINED", "CANCELLED"};
+        String[] statuses = {"PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED", "DECLINED", "CANCELLED"};
         for (String status : statuses) {
             event.setEntrantStatus(status);
             assertEquals(status, event.getEntrantStatus());
@@ -73,12 +73,13 @@ public class EventHistoryTest {
     }
 
     /**
-     * Tests that the Entrant.Status enum contains exactly the expected five values.
+     * Tests that the Entrant.Status enum contains exactly the expected values.
      */
     @Test
     public void testEntrantStatusEnumValues() {
         Entrant.Status[] statuses = Entrant.Status.values();
-        assertEquals(5, statuses.length);
+        assertEquals(6, statuses.length);
+        assertNotNull(Entrant.Status.valueOf("PRIVATE_INVITED"));
         assertNotNull(Entrant.Status.valueOf("APPLIED"));
         assertNotNull(Entrant.Status.valueOf("INVITED"));
         assertNotNull(Entrant.Status.valueOf("ACCEPTED"));
