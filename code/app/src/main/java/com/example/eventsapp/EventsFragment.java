@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.card.MaterialCardView;
@@ -493,6 +494,15 @@ public class EventsFragment extends Fragment {
                 holder.tvEntrantStatus.setVisibility(View.GONE);
             }
 
+            if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
+                holder.avatarCircle.setVisibility(View.GONE);
+                holder.cardThumb.setVisibility(View.VISIBLE);
+            } else {
+                holder.avatarCircle.setVisibility(View.VISIBLE);
+                holder.cardThumb.setVisibility(View.GONE);
+            }
+
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
@@ -507,6 +517,7 @@ public class EventsFragment extends Fragment {
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime, tvEntrantStatus;
             ImageView ivThumb;
+            View avatarCircle, cardThumb;
 
             /**
              * Constructs a ViewHolder and binds UI components.
@@ -521,6 +532,8 @@ public class EventsFragment extends Fragment {
                 tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
                 tvEntrantStatus = itemView.findViewById(R.id.tvEntrantStatus);
+                avatarCircle = itemView.findViewById(R.id.avatarCircle);
+                cardThumb = itemView.findViewById(R.id.cardThumb);
             }
         }
 
