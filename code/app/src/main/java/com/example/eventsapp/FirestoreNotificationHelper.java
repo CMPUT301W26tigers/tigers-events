@@ -23,21 +23,27 @@ public class FirestoreNotificationHelper {
         sendOptionalNotification(userId, eventId, new NotificationItem(
                 "Event waitlisted",
                 "You are currently on the waitlist for this event.",
-                "waitlisted");
+                "waitlisted",
+                false
+        ));
     }
 
     public void sendInvitationNotification(String userId, String eventId) {
         sendCriticalNotification(userId, eventId, new NotificationItem(
                 "Event Invitation",
                 "You were selected from the waitlist for this event.",
-                "invitation");
+                "invitation",
+                false
+            ));
     }
 
     public void sendPrivateWaitlistInvitationNotification(String userId, String eventId) {
         upsertNotification(userId, eventId,
                 "Private Event Invitation",
                 "You have been invited to join the waiting list for a private event.",
-                "private_waitlist_invitation");
+                "private_waitlist_invitation",
+                false
+                ));
     }
 
     public void sendCoOrganizerInvitationNotification(String userId, String eventId) {
