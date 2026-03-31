@@ -39,7 +39,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Open inbox"
             android:padding="8dp"
-            app:srcCompat="@android:drawable/ic_dialog_email"
+            app:srcCompat="@drawable/ic_inbox"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
@@ -151,7 +151,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Open inbox"
             android:padding="8dp"
-            app:srcCompat="@android:drawable/ic_dialog_email"
+            app:srcCompat="@drawable/ic_inbox"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
 
