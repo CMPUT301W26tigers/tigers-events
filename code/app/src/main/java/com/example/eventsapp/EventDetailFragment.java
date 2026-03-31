@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -33,7 +34,6 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
-import com.google.android.gms.tasks.CancellationTokenSource;
 
 import android.location.Location;
 import android.os.Looper;
@@ -274,6 +274,13 @@ public class EventDetailFragment extends Fragment {
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
+
+                        String posterUrl = doc.getString("posterUrl");
+                        if (posterUrl != null && !posterUrl.isEmpty()) {
+                            Glide.with(this).load(posterUrl).into(ivPoster);
+                        } else {
+                            ivPoster.setImageResource(android.R.color.darker_gray);
+                        }
 
                         applyGeolocationRequiredFromEvent(doc);
                         eventDetailsLoaded = true;
@@ -815,6 +822,13 @@ public class EventDetailFragment extends Fragment {
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
+
+                        String posterUrl = doc.getString("posterUrl");
+                        if (posterUrl != null && !posterUrl.isEmpty()) {
+                            Glide.with(this).load(posterUrl).into(ivPoster);
+                        } else {
+                            ivPoster.setImageResource(android.R.color.darker_gray);
+                        }
                     } else {
                         tvName.setText("Event not found");
                     }
