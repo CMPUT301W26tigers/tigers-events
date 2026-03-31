@@ -6,4 +6,13 @@
     <string name="accept">Accept</string>
     <string name="decline">Decline</string>
     <string name="wait">Wait</string>
+    <string name="notify_waitlisted">Notify Waitlisted Entrants</string>
+    <string name="notify_selected">Notify Selected Entrants</string>
+    <string name="notify_canceled">Notify Canceled Entrants</string>
+    <string name="viewable_locations_count">Viewable locations: %1$d</string>
+    <string name="notif_channel_waitlist_location">Waitlist live location</string>
+    <string name="notif_channel_waitlist_location_desc">Updates your position for organizers while you are on a waitlist.</string>
+    <string name="notif_waitlist_location_title">Live location for waitlist</string>
+    <string name="notif_waitlist_location_generic">An event you joined</string>
+    <string name="notif_waitlist_location_stop">Stop</string>
 </resources>

@@ -1,23 +1,27 @@
 package com.example.eventsapp;
 
 import android.os.Bundle;
-import android.view.LayoutInflater;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
-import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 
 /**
@@ -31,22 +35,16 @@ public class OrganizerWaitlistFragment extends Fragment {
     private FirebaseFirestore db;
     private String eventId;
     private RecyclerView rvWaitlist;
+    private TextInputEditText etSearchWaitlist;
+    private TextView tvWaitlistStats;
     private OrganizerEntrantAdapter adapter;
-    private List<Entrant> entrantList = new ArrayList<>();
+    private final List<Entrant> allEntrants = new ArrayList<>();
+    private final List<Entrant> filteredEntrants = new ArrayList<>();
 
-    /**
-     * Default constructor for the OrganizerWaitlistFragment.
-     */
     public OrganizerWaitlistFragment() {
         super(R.layout.fragment_organizer_waitlist);
     }
 
-    /**
-     * Factory method to create a new instance of this fragment using the provided event ID.
-     *
-     * @param eventId The ID of the event whose waitlist is being viewed.
-     * @return A new instance of OrganizerWaitlistFragment.
-     */
     public static OrganizerWaitlistFragment newInstance(String eventId) {
         OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
         Bundle args = new Bundle();
@@ -55,11 +53,6 @@ public class OrganizerWaitlistFragment extends Fragment {
         return fragment;
     }
 
-    /**
-     * Initializes the fragment, setting up the Firestore instance and retrieving arguments.
-     *
-     * @param savedInstanceState If the fragment is being re-created from a previous saved state, this is the state.
-     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -69,13 +62,6 @@ public class OrganizerWaitlistFragment extends Fragment {
         }
     }
 
-    /**
-     * Called immediately after {@link #onCreateView} has returned, but before any saved state has been restored in to the view.
-     * Initializes the UI components and standard adapters.
-     *
-     * @param view               The View returned by {@link #onCreateView}.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
-     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -83,8 +69,34 @@ public class OrganizerWaitlistFragment extends Fragment {
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar_organizer_waitlist);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
+        toolbar.inflateMenu(R.menu.menu_waitlist);
+
+        toolbar.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+
+            if (id == R.id.action_notify_waitlisted) {
+                notifyWaitlistedEntrants();
+                return true;
+            }
+
+            if (id == R.id.action_notify_selected) {
+                notifySelectedEntrants();
+                return true;
+            }
+
+            if (id == R.id.action_notify_not_selected) {
+                notifyNotSelectedEntrants();
+                return true;
+            }
+
+            return false;
+        });
+
         rvWaitlist = view.findViewById(R.id.rv_organizer_waitlist);
-        adapter = new OrganizerEntrantAdapter(entrantList, new OrganizerEntrantAdapter.OnEntrantActionListener() {
+        etSearchWaitlist = view.findViewById(R.id.et_search_organizer_waitlist);
+        tvWaitlistStats = view.findViewById(R.id.tv_organizer_waitlist_stats);
+
+        adapter = new OrganizerEntrantAdapter(filteredEntrants, new OrganizerEntrantAdapter.OnEntrantActionListener() {
             @Override
             public void onRemove(Entrant entrant) {
                 removeEntrant(entrant);
@@ -95,17 +107,26 @@ public class OrganizerWaitlistFragment extends Fragment {
                 replaceEntrant(entrant);
             }
         });
+
+        rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvWaitlist.setAdapter(adapter);
+
+        etSearchWaitlist.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterEntrants(s != null ? s.toString() : "");
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
 
         loadWaitlistData();
     }
 
-    /**
-     * Fetches entrants currently active in this event and listens for real-time updates.
-     * Status codes tracked: 0 (In Pool), 1 (Invited), 2 (Accepted).
-     * Excludes status code 3 (Cancelled), which are tracked in a separate list.
-     * Implements US 02.02.01.
-     */
     private void loadWaitlistData() {
         if (eventId == null || eventId.isEmpty()) return;
 
@@ -117,27 +138,42 @@ public class OrganizerWaitlistFragment extends Fragment {
                         Toast.makeText(requireContext(), "Error loading waitlist", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    entrantList.clear();
+
+                    allEntrants.clear();
                     if (value != null) {
                         for (DocumentSnapshot doc : value.getDocuments()) {
                             Entrant entrant = doc.toObject(Entrant.class);
                             if (entrant != null) {
                                 entrant.setId(doc.getId());
-                                entrantList.add(entrant);
+                                allEntrants.add(entrant);
                             }
                         }
                     }
-                    adapter.notifyDataSetChanged();
+
+                    String query = etSearchWaitlist.getText() != null
+                            ? etSearchWaitlist.getText().toString()
+                            : "";
+                    filterEntrants(query);
                 });
     }
 
-    /**
-     * Removes an entrant from the active waitlist by moving them to the cancelled list.
-     * Updates the entrant's statusCode to 3 (Cancelled) in Firestore.
-     * Implements US 02.05.03 - Backend.
-     *
-     * @param entrantToRemove The entrant to be removed.
-     */
+    private void filterEntrants(@NonNull String query) {
+        filteredEntrants.clear();
+        String normalizedQuery = query.trim().toLowerCase(Locale.CANADA);
+
+        for (Entrant entrant : allEntrants) {
+            String name = entrant.getName() == null ? "" : entrant.getName();
+            if (normalizedQuery.isEmpty() || name.toLowerCase(Locale.CANADA).contains(normalizedQuery)) {
+                filteredEntrants.add(entrant);
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+        tvWaitlistStats.setText(normalizedQuery.isEmpty()
+                ? "Total Entrants: " + allEntrants.size()
+                : "Showing " + filteredEntrants.size() + " of " + allEntrants.size());
+    }
+
     private void removeEntrant(Entrant entrantToRemove) {
         if (eventId == null || eventId.isEmpty() || entrantToRemove.getId() == null) return;
 
@@ -151,38 +187,23 @@ public class OrganizerWaitlistFragment extends Fragment {
                 });
     }
 
-    /**
-     * Replaces an entrant by moving the current entrant to the cancelled list
-     * and randomly drawing a new one from the uninvited pool.
-     * Implements US 02.05.03 - Backend.
-     * TODO: In the future, add a confirmation dialog here before executing.
-     *
-     * @param entrantToReplace The entrant to be replaced.
-     */
     private void replaceEntrant(Entrant entrantToReplace) {
         if (eventId == null || eventId.isEmpty() || entrantToReplace.getId() == null) return;
 
-        // Step 1: Move current entrant to cancelled
         db.collection("events").document(eventId)
                 .collection("entrants").document(entrantToReplace.getId())
                 .update("status", "CANCELLED", "statusCode", 3)
                 .addOnSuccessListener(aVoid -> {
                     notificationHelper.sendNotSelectedNotification(entrantToReplace.getUserId(), eventId);
                     EventCleanupHelper.updateHistoryStatus(entrantToReplace.getUserId(), eventId, "CANCELLED");
-                    // Step 2: Draw Replacement
                     drawReplacementApplicant();
                 });
     }
 
-    /**
-     * Randomly selects a new entrant from the pool of uninvited users (statusCode = 0)
-     * and updates their status to Invited (statusCode = 1).
-     * Called as part of the entrant replacement workflow.
-     */
     private void drawReplacementApplicant() {
         db.collection("events").document(eventId)
                 .collection("entrants")
-                .whereEqualTo("statusCode", 0) // Only pick from uninvited users
+                .whereEqualTo("statusCode", 0)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (queryDocumentSnapshots.isEmpty()) {
@@ -193,7 +214,6 @@ public class OrganizerWaitlistFragment extends Fragment {
                     List<DocumentSnapshot> applicants = queryDocumentSnapshots.getDocuments();
                     DocumentSnapshot selectedApplicant = applicants.get(new Random().nextInt(applicants.size()));
 
-                    // Update selected applicant to Invited (1)
                     db.collection("events").document(eventId)
                             .collection("entrants").document(selectedApplicant.getId())
                             .update("status", "INVITED", "statusCode", 1)
@@ -204,5 +224,87 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
                             });
                 });
+    }
+
+    private interface NotificationAction {
+        void send(String userId);
+    }
+
+    private void notifyEntrantsByStatusCode(
+            int statusCode,
+            String emptyMessage,
+            String failureMessage,
+            NotificationAction action
+    ) {
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .whereEqualTo("statusCode", statusCode)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    int sentCount = 0;
+                    int skippedCount = 0;
+
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        String userId = doc.getString("userId");
+                        if (userId == null || userId.trim().isEmpty()) {
+                            skippedCount++;
+                            continue;
+                        }
+
+                        action.send(userId);
+                        sentCount++;
+                    }
+
+                    String message;
+                    if (sentCount == 0) {
+                        message = "Entrants found, but no linked users could be notified";
+                    } else if (skippedCount == 0) {
+                        message = "Notifications sent to " + sentCount + " entrants";
+                    } else {
+                        message = "Notifications sent to " + sentCount
+                                + " entrants, skipped " + skippedCount;
+                    }
+
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), failureMessage, Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    private void notifyWaitlistedEntrants() {
+        notifyEntrantsByStatusCode(
+                0,
+                "No waitlisted entrants to notify",
+                "Failed to notify waitlisted entrants",
+                userId -> notificationHelper.sendWaitlistedNotification(userId, eventId)
+        );
+    }
+    private void notifySelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                1,
+                "No selected entrants to notify",
+                "Failed to notify selected entrants",
+                userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+        );
+    }
+    private void notifyNotSelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                3,
+                "No cancelled entrants to notify",
+                "Failed to notify cancelled entrants",
+                userId -> notificationHelper.sendNotSelectedNotification(userId, eventId)
+        );
     }
 }

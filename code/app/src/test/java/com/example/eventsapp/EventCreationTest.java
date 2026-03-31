@@ -205,6 +205,9 @@ public class EventCreationTest {
     @Test
     public void entrant_statusCode_matchesStatus() {
         Entrant entrant = new Entrant("e1", "event1", "Alice", "alice@test.com", Entrant.Status.APPLIED);
+        entrant.setStatusCode(4);
+        assertEquals(4, entrant.getStatusCode());
+
         entrant.setStatusCode(0);
         assertEquals(0, entrant.getStatusCode());
 
@@ -216,6 +219,16 @@ public class EventCreationTest {
 
         entrant.setStatusCode(3);
         assertEquals(3, entrant.getStatusCode());
+    }
+
+    @Test
+    public void entrant_privateInvitationStatus_isPendingUntilAccepted() {
+        Entrant entrant = new Entrant("e1", "event1", "Alice", "alice@test.com", Entrant.Status.PRIVATE_INVITED);
+        entrant.setStatusCode(4);
+
+        assertEquals(Entrant.Status.PRIVATE_INVITED, entrant.getStatus());
+        assertEquals(4, entrant.getStatusCode());
+        assertFalse(entrant.isChosenInvited());
     }
 
     //  Event History Fields

@@ -51,7 +51,7 @@
             android:layout_marginEnd="12dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
             app:layout_constraintTop_toTopOf="@id/avatarCircle"
-            app:layout_constraintEnd_toStartOf="@id/ivThumb" />
+            app:layout_constraintEnd_toStartOf="@id/cardThumb" />
 
         <TextView
             android:id="@+id/tvEventHost"
@@ -66,7 +66,7 @@
             android:layout_marginEnd="12dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
             app:layout_constraintTop_toBottomOf="@id/tvEventName"
-            app:layout_constraintEnd_toStartOf="@id/ivThumb" />
+            app:layout_constraintEnd_toStartOf="@id/cardThumb" />
 
         <TextView
             android:id="@+id/tvEventDate"
