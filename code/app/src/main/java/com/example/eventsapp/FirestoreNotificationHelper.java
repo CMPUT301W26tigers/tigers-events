@@ -3,6 +3,7 @@ package com.example.eventsapp;
 import androidx.annotation.NonNull;
 
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 /**
  * Helper for writing inbox notifications to Firestore for real event activity.
@@ -19,40 +20,68 @@ public class FirestoreNotificationHelper {
     }
 
     public void sendWaitlistedNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId,
                 "Event waitlisted",
                 "You are currently on the waitlist for this event.",
-                eventId,
-                "waitlisted",
-                false
-        ));
+                "waitlisted");
     }
 
     public void sendInvitationNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId,
                 "Event Invitation",
                 "You were selected from the waitlist for this event.",
-                eventId,
-                "invitation",
-                false
-        ));
+                "invitation");
+    }
+
+    public void sendPrivateWaitlistInvitationNotification(String userId, String eventId) {
+        upsertNotification(userId, eventId,
+                "Private Event Invitation",
+                "You have been invited to join the waiting list for a private event.",
+                "private_waitlist_invitation");
+    }
+
+    public void sendCoOrganizerInvitationNotification(String userId, String eventId) {
+        upsertNotification(userId, eventId,
+                "Co-organizer Invitation",
+                "You have been invited to help organize this event.",
+                "co_organizer_invitation");
     }
 
     public void sendNotSelectedNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId,
                 "Removed from Event",
                 "You were not selected from the waitlist for this event.",
-                eventId,
-                "not_selected",
-                false
-        ));
+                "not_selected");
     }
 
-    private void upsertNotification(String userId, String eventId, NotificationItem notification) {
+    private void upsertNotification(String userId, String eventId, String title, String message, String type) {
         if (isBlank(userId) || isBlank(eventId)) {
             return;
         }
 
+        db.collection("events")
+                .document(eventId)
+                .get()
+                .addOnSuccessListener(eventDoc -> writeNotification(
+                        userId,
+                        eventId,
+                        new NotificationItem(
+                                title,
+                                message,
+                                eventId,
+                                resolveEventName(eventDoc),
+                                type,
+                                false
+                        )
+                ))
+                .addOnFailureListener(unused -> writeNotification(
+                        userId,
+                        eventId,
+                        new NotificationItem(title, message, eventId, "", type, false)
+                ));
+    }
+
+    private void writeNotification(String userId, String eventId, NotificationItem notification) {
         db.collection("users")
                 .document(userId)
                 .collection("notifications")
@@ -67,5 +96,17 @@ public class FirestoreNotificationHelper {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    @NonNull
+    private String resolveEventName(@NonNull DocumentSnapshot eventDoc) {
+        String eventName = eventDoc.getString("name");
+        if (isBlank(eventName)) {
+            eventName = eventDoc.getString("eventName");
+        }
+        if (isBlank(eventName)) {
+            eventName = eventDoc.getString("title");
+        }
+        return eventName == null ? "" : eventName.trim();
     }
 }

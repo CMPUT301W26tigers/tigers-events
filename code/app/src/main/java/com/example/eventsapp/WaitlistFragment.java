@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
@@ -31,7 +32,6 @@ public class WaitlistFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private MaterialToolbar toolbarWaitlist;
     private MaterialButton btnExportCsv;
-    private MaterialButton btnSeeCancelled;
     private FirebaseFirestore db;
     private String eventId;
 
@@ -86,7 +86,6 @@ public class WaitlistFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         toolbarWaitlist = view.findViewById(R.id.toolbar_waitlist);
         btnExportCsv = view.findViewById(R.id.btn_export_csv);
-        btnSeeCancelled = view.findViewById(R.id.btn_see_cancelled);
 
         setupToolbar();
         setupButtons();
@@ -116,7 +115,6 @@ public class WaitlistFragment extends Fragment {
      */
     private void setupButtons() {
         btnExportCsv.setOnClickListener(v -> exportEntrantsAsCsv());
-        btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
     }
 
     /**
@@ -168,6 +166,58 @@ public class WaitlistFragment extends Fragment {
                 .addOnFailureListener(e -> Toast.makeText(
                         requireContext(),
                         "Failed to notify chosen entrants",
+                        Toast.LENGTH_SHORT
+                ).show());
+    }
+
+    private void notifyWaitlistedEntrants() {
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .whereEqualTo("status", "APPLIED")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(requireContext(),
+                                "No waitlisted entrants to notify",
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    final int[] sentCount = {0};
+                    final int[] skippedCount = {0};
+
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        String userId = doc.getString("userId");
+                        if (userId == null || userId.trim().isEmpty()) {
+                            skippedCount[0]++;
+                            continue;
+                        }
+
+                        notificationHelper.sendWaitlistedNotification(userId, eventId);
+                        sentCount[0]++;
+                    }
+
+                    String message;
+                    if (sentCount[0] == 0) {
+                        message = "Waitlisted entrants found, but no linked users could be notified";
+                    } else if (skippedCount[0] == 0) {
+                        message = "Notifications sent to " + sentCount[0] + " waitlisted entrants";
+                    } else {
+                        message = "Notifications sent to " + sentCount[0]
+                                + " waitlisted entrants, skipped " + skippedCount[0];
+                    }
+
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> Toast.makeText(
+                        requireContext(),
+                        "Failed to notify waitlisted entrants",
                         Toast.LENGTH_SHORT
                 ).show());
     }

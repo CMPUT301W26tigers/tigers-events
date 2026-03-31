@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,10 +76,13 @@ public class EventsFragment extends Fragment {
         toggleEventType = view.findViewById(R.id.toggleEventType);
         btnCreateEvent = view.findViewById(R.id.btnCreateEvent);
         chipGroupFilter = view.findViewById(R.id.chipGroupFilter);
+        ImageButton btnInboxEvents = view.findViewById(R.id.btnInboxEvents);
 
         btnCreateEvent.setOnClickListener(v ->
                 Navigation.findNavController(view)
                         .navigate(R.id.action_eventsFragment_to_createEventFragment));
+        btnInboxEvents.setOnClickListener(v ->
+                Navigation.findNavController(v).navigate(R.id.inboxFragment));
 
         adapter = new EventCardAdapter(eventList, event -> {
             Bundle args = new Bundle();
@@ -155,13 +160,20 @@ public class EventsFragment extends Fragment {
      */
     private void loadCreatedEvents(String userId, int generation) {
         FirebaseFirestore.getInstance().collection("events")
-                .whereEqualTo("createdBy", userId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!isAdded() || generation != loadGeneration) return;
                     eventList.clear();
                     Set<String> activeEventIds = new HashSet<>();
                     for (QueryDocumentSnapshot snapshot : querySnapshot) {
+                        String createdBy = snapshot.getString("createdBy");
+                        List<String> coOrganizerIds = (List<String>) snapshot.get("coOrganizerIds");
+                        boolean isOrganizerEvent = Objects.equals(createdBy, userId)
+                                || (coOrganizerIds != null && coOrganizerIds.contains(userId));
+                        if (!isOrganizerEvent) {
+                            continue;
+                        }
+
                         Event event = parseEvent(snapshot);
                         if (event != null) {
                             eventList.add(event);
@@ -223,7 +235,7 @@ public class EventsFragment extends Fragment {
                                         }
                                     }
 
-                                    if (entrantStatus != null) {
+                                    if (entrantStatus != null && !"PRIVATE_INVITED".equals(entrantStatus)) {
                                         Event event = parseEvent(snapshot);
                                         if (event != null) {
                                             event.setEntrantStatus(entrantStatus);
@@ -515,6 +527,7 @@ public class EventsFragment extends Fragment {
          */
         private static String formatStatus(String status) {
             switch (status) {
+                case "PRIVATE_INVITED": return "Private Invite";
                 case "APPLIED": return "Waitlisted";
                 case "INVITED": return "Invited";
                 case "ACCEPTED": return "Accepted";

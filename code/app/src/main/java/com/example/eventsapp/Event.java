@@ -21,6 +21,7 @@ public class Event implements Serializable {
     private String description;
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
+    private boolean geolocationRequired;
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
@@ -194,6 +195,17 @@ public class Event implements Serializable {
      */
     public void setSampleSize(int sampleSize) {
         this.sampleSize = Math.max(0, sampleSize);
+    }
+
+    /**
+     * Whether entrants must grant location to join the waitlist.
+     */
+    public boolean isGeolocationRequired() {
+        return geolocationRequired;
+    }
+
+    public void setGeolocationRequired(boolean geolocationRequired) {
+        this.geolocationRequired = geolocationRequired;
     }
 
     /**
