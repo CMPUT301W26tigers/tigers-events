@@ -21,6 +21,7 @@ public class Event implements Serializable {
     private String description;
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
+    private String hostId;   // ID of the user who created this event
     private boolean geolocationRequired;
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
@@ -195,6 +196,22 @@ public class Event implements Serializable {
      */
     public void setSampleSize(int sampleSize) {
         this.sampleSize = Math.max(0, sampleSize);
+    }
+
+    /**
+     * Gets the ID of the user who created this event.
+     * @return The host user ID.
+     */
+    public String getHostId() {
+        return hostId;
+    }
+
+    /**
+     * Sets the ID of the user who created this event.
+     * @param hostId The host user ID.
+     */
+    public void setHostId(String hostId) {
+        this.hostId = hostId;
     }
 
     /**

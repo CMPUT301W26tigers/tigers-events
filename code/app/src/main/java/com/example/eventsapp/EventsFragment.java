@@ -294,7 +294,9 @@ public class EventsFragment extends Fragment {
         if (posterUrl == null) posterUrl = "";
 
         if (amount != 0) {
-            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            e.setHostId(snapshot.getString("createdBy"));
+            return e;
         }
         return null;
     }
@@ -389,7 +391,9 @@ public class EventsFragment extends Fragment {
         if (posterUrl == null) posterUrl = "";
 
         if (amount != 0) {
-            return new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+            e.setHostId(doc.getString("createdBy"));
+            return e;
         }
         return null;
     }

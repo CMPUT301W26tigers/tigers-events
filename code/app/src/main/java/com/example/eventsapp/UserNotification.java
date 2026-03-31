@@ -1,10 +1,12 @@
 package com.example.eventsapp;
 
+import java.io.Serializable;
+
 /**
  * Represents a notification intended for a user within the application's UI.
  * This class is used for runtime notification handling and display in the user's inbox.
  */
-public class UserNotification {
+public class UserNotification implements Serializable {
 
     /**
      * Enumeration of notification types.

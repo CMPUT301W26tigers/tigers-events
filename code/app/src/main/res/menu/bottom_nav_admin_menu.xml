@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/adminManageEventsFragment"
+        android:icon="@android:drawable/ic_menu_my_calendar"
+        android:title="Manage Events"/>
+    <item
+        android:id="@+id/adminManageProfilesFragment"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="Manage Profiles"/>
+    <item
+        android:id="@+id/adminManageNotificationsFragment"
+        android:icon="@android:drawable/ic_dialog_email"
+        android:title="Notifications"/>
+</menu>

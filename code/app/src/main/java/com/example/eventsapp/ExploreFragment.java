@@ -205,7 +205,9 @@ public class ExploreFragment extends Fragment {
                     if (eventDate == null) eventDate = "";
 
                     if (amount != 0) {
-                        allEvents.add(new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize));
+                        Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
+                        e.setHostId(snapshot.getString("createdBy"));
+                        allEvents.add(e);
                     }
                 }
                 adapter.notifyDataSetChanged();
