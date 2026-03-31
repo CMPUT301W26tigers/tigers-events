@@ -32,7 +32,6 @@ public class WaitlistFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private MaterialToolbar toolbarWaitlist;
     private MaterialButton btnExportCsv;
-    private MaterialButton btnSeeCancelled;
     private FirebaseFirestore db;
     private String eventId;
 
@@ -87,7 +86,6 @@ public class WaitlistFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         toolbarWaitlist = view.findViewById(R.id.toolbar_waitlist);
         btnExportCsv = view.findViewById(R.id.btn_export_csv);
-        btnSeeCancelled = view.findViewById(R.id.btn_see_cancelled);
 
         setupToolbar();
         setupButtons();
@@ -117,7 +115,6 @@ public class WaitlistFragment extends Fragment {
      */
     private void setupButtons() {
         btnExportCsv.setOnClickListener(v -> exportEntrantsAsCsv());
-        btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
     }
 
     /**

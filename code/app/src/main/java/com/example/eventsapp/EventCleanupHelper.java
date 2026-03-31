@@ -43,7 +43,8 @@ public class EventCleanupHelper {
                             String eventId = eventDoc.getString("id");
                             if (eventId == null) eventId = eventDoc.getId();
                             String createdBy = eventDoc.getString("createdBy");
-                            markHistoryAndDelete(db, eventId, createdBy);
+                            java.util.List<String> coOrganizerIds = (java.util.List<String>) eventDoc.get("coOrganizerIds");
+                            markHistoryAndDelete(db, eventId, createdBy, coOrganizerIds);
                         }
                     }
                 })
@@ -77,13 +78,26 @@ public class EventCleanupHelper {
      * Marks all participants' and organizer's eventHistory records as expired,
      * then deletes the event and its entrants from the global collection.
      */
-    private static void markHistoryAndDelete(FirebaseFirestore db, String eventId, String createdBy) {
+    private static void markHistoryAndDelete(FirebaseFirestore db, String eventId, String createdBy,
+                                             java.util.List<String> coOrganizerIds) {
         // Mark organizer's history as expired
         if (createdBy != null && !createdBy.isEmpty()) {
             db.collection("users").document(createdBy)
                     .collection("eventHistory").document(eventId)
                     .update("expired", true)
                     .addOnFailureListener(e -> Log.w(TAG, "Failed to mark organizer history expired", e));
+        }
+
+        if (coOrganizerIds != null) {
+            for (String coOrganizerId : coOrganizerIds) {
+                if (coOrganizerId == null || coOrganizerId.isEmpty()) {
+                    continue;
+                }
+                db.collection("users").document(coOrganizerId)
+                        .collection("eventHistory").document(eventId)
+                        .update("expired", true)
+                        .addOnFailureListener(e -> Log.w(TAG, "Failed to mark co-organizer history expired", e));
+            }
         }
 
         // Mark all entrants' history as expired, then delete entrant docs and event

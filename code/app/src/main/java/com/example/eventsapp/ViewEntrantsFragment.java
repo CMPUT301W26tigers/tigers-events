@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
@@ -27,12 +28,15 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -43,12 +47,20 @@ public class ViewEntrantsFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private RecyclerView rvWaitlist;
-    private TextView tvStats;
     private EntrantAdapter adapter;
-    private List<Entrant> allEntrants = new ArrayList<>();
-    private List<Entrant> filteredEntrants = new ArrayList<>();
+    private final List<Entrant> allEntrants = new ArrayList<>();
+    private final List<Entrant> filteredEntrants = new ArrayList<>();
     private ListenerRegistration listenerRegistration;
     private TextInputEditText etSearch;
+    private FirebaseFirestore db;
+    private MaterialToolbar toolbar;
+    private MaterialButton btnAddApplicant;
+    private MaterialButton btnRunLottery;
+    private MaterialButton btnExportCsv;
+    private boolean isPrivateEvent;
+    private String createdByUserId = "";
+    private final List<String> coOrganizerIds = new ArrayList<>();
+    private final List<String> pendingCoOrganizerIds = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,6 +71,7 @@ public class ViewEntrantsFragment extends Fragment {
         } else {
             eventId = "";
         }
+        db = FirebaseFirestore.getInstance();
     }
 
     @Nullable
@@ -72,19 +85,21 @@ public class ViewEntrantsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        MaterialToolbar toolbar = view.findViewById(R.id.toolbar_waitlist);
-        toolbar.setTitle("Event entrants");
+        toolbar = view.findViewById(R.id.toolbar_waitlist);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
 
         rvWaitlist = view.findViewById(R.id.rv_waitlist);
-        tvStats = view.findViewById(R.id.tv_waitlist_stats);
+        etSearch = view.findViewById(R.id.et_search_waitlist);
+
+        btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
+        btnRunLottery = view.findViewById(R.id.btn_run_lottery);
+        btnExportCsv = view.findViewById(R.id.btn_export_csv);
 
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvWaitlist.setAdapter(adapter);
 
-        etSearch = view.findViewById(R.id.et_search_waitlist);
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -98,65 +113,71 @@ public class ViewEntrantsFragment extends Fragment {
             public void afterTextChanged(Editable s) {}
         });
 
-        loadEntrantsForOrganizer();
-
-        view.findViewById(R.id.btn_add_applicant).setOnClickListener(v -> showAddApplicantDialog());
-        view.findViewById(R.id.btn_run_sampling).setOnClickListener(v -> runSampling());
-        view.findViewById(R.id.btn_view_enrolled).setOnClickListener(v -> openEnrolledFragment());
-        view.findViewById(R.id.btn_notify_chosen).setOnClickListener(v -> notifyChosenEntrants());
-
-
-        view.findViewById(R.id.btn_export_csv).setOnClickListener(v ->
+        btnAddApplicant.setOnClickListener(v -> {
+            showEntrantPickerDialog();
+        });
+        btnRunLottery.setOnClickListener(v -> runLottery());
+        btnExportCsv.setOnClickListener(v ->
                 Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-        view.findViewById(R.id.btn_see_cancelled).setOnClickListener(v ->
-                Toast.makeText(requireContext(), "See Cancelled Entrants", Toast.LENGTH_SHORT).show());
 
-        view.findViewById(R.id.btn_view_map).setOnClickListener(v -> openMapOverview());
-    }
-
-    private void openMapOverview() {
-        Bundle args = new Bundle();
-        args.putString("eventId", eventId);
-        if (getArguments() != null) {
-            args.putString("eventName", getArguments().getString("eventName"));
+        loadEventConfiguration();
+        View btnViewMap = view.findViewById(R.id.btn_view_map);
+        if (btnViewMap != null) {
+            btnViewMap.setOnClickListener(v -> openMapOverview());
         }
-        args.putBoolean("mapFocusEntrant", false);
-        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+
+        loadEventConfiguration();
     }
 
-    private void openMapFocusedOn(Entrant entrant) {
-        if (entrant == null || !entrant.hasLocation()) return;
-        Bundle args = new Bundle();
-        args.putString("eventId", eventId);
-        if (getArguments() != null) {
-            args.putString("eventName", getArguments().getString("eventName"));
+    private void loadEventConfiguration() {
+        db.collection("events")
+                .document(eventId)
+                .get()
+                .addOnSuccessListener(eventDoc -> {
+                    isPrivateEvent = Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate"));
+                    createdByUserId = valueOrEmpty(eventDoc.getString("createdBy"));
+
+                    coOrganizerIds.clear();
+                    List<String> loadedCoOrganizers = (List<String>) eventDoc.get("coOrganizerIds");
+                    if (loadedCoOrganizers != null) {
+                        coOrganizerIds.addAll(loadedCoOrganizers);
+                    }
+
+                    pendingCoOrganizerIds.clear();
+                    List<String> loadedPendingCoOrganizers = (List<String>) eventDoc.get("pendingCoOrganizerIds");
+                    if (loadedPendingCoOrganizers != null) {
+                        pendingCoOrganizerIds.addAll(loadedPendingCoOrganizers);
+                    }
+
+                    updateActionLabels();
+                    loadChosenEntrants();
+                })
+                .addOnFailureListener(unused -> {
+                    updateActionLabels();
+                    loadChosenEntrants();
+                });
+    }
+
+    private void updateActionLabels() {
+        if (!isAdded()) {
+            return;
         }
-        args.putBoolean("mapFocusEntrant", true);
-        args.putString("focusEntrantDocId", entrant.getId());
-        args.putString("focusName", entrant.getName());
-        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+
+        toolbar.setTitle("Waitlist");
+        btnAddApplicant.setVisibility(View.VISIBLE);
+        btnAddApplicant.setText("Invite Entrant");
     }
 
-    private void openEnrolledFragment() {
-        requireActivity()
-                .getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, EnrolledFragment.newInstance(eventId))
-                .addToBackStack(null)
-                .commit();
-    }
-
-    private void loadEntrantsForOrganizer() {
-        CollectionReference entrantsRef = FirebaseFirestore.getInstance()
-                .collection("events").document(eventId).collection("entrants");
+    private void loadChosenEntrants() {
+        CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
         Query query = entrantsRef.whereIn("status",
-                java.util.Arrays.asList("APPLIED", "INVITED", "ACCEPTED"));
+                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
-            if (error != null) return;
-            if (value == null) return;
-            if (!isAdded()) return;
+            if (error != null || value == null || !isAdded()) {
+                return;
+            }
 
             allEntrants.clear();
             for (QueryDocumentSnapshot doc : value) {
@@ -170,6 +191,7 @@ public class ViewEntrantsFragment extends Fragment {
                 Entrant.Status status = parseStatus(statusStr);
                 Entrant entrant = new Entrant(id, eventId, name, email, status);
                 entrant.setUserId(doc.getString("userId"));
+                entrant.setStatusCode(doc.getLong("statusCode") != null ? doc.getLong("statusCode").intValue() : 0);
                 double lat = readNumeric(doc, "latitude");
                 double lng = readNumeric(doc, "longitude");
                 if (!Double.isNaN(lat)) entrant.setLatitude(lat);
@@ -178,7 +200,6 @@ public class ViewEntrantsFragment extends Fragment {
             }
             String queryStr = (etSearch != null && etSearch.getText() != null) ? etSearch.getText().toString() : "";
             filterEntrants(queryStr);
-            updateStats();
         });
     }
 
@@ -199,89 +220,365 @@ public class ViewEntrantsFragment extends Fragment {
 
     private void filterEntrants(String query) {
         filteredEntrants.clear();
-        String q = query != null ? query.toLowerCase().trim() : "";
+        String q = query != null ? query.toLowerCase(Locale.CANADA).trim() : "";
         for (Entrant e : allEntrants) {
-            if (q.isEmpty() || (e.getName() != null && e.getName().toLowerCase().contains(q))
-                    || (e.getEmail() != null && e.getEmail().toLowerCase().contains(q))) {
+            if (q.isEmpty()
+                    || containsIgnoreCase(e.getName(), q)
+                    || containsIgnoreCase(e.getEmail(), q)) {
                 filteredEntrants.add(e);
             }
         }
         adapter.notifyDataSetChanged();
     }
 
-    private void updateStats() {
-        int waitlisted = 0, invited = 0, accepted = 0;
-        for (Entrant e : allEntrants) {
-            if (e.getStatus() == Entrant.Status.APPLIED) waitlisted++;
-            else if (e.getStatus() == Entrant.Status.INVITED) invited++;
-            else if (e.getStatus() == Entrant.Status.ACCEPTED) accepted++;
-        }
-        tvStats.setText(String.format(
-                "On waitlist: %d\nInvited: %d\nAccepted: %d\nTotal: %d",
-                waitlisted, invited, accepted, allEntrants.size()));
+    private void showEntrantPickerDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_user_picker, null);
+        TextInputEditText etUserSearch = dialogView.findViewById(R.id.et_user_picker_search);
+        RecyclerView rvUserResults = dialogView.findViewById(R.id.rv_user_picker_results);
+        TextView tvEmpty = dialogView.findViewById(R.id.tv_user_picker_empty);
+
+        List<Users> eligibleUsers = new ArrayList<>();
+        List<Users> filteredUsers = new ArrayList<>();
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle("Invite Entrant")
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        UserPickerAdapter pickerAdapter = new UserPickerAdapter(filteredUsers, selectedUser -> {
+            dialog.dismiss();
+            inviteEntrant(selectedUser);
+        });
+
+        rvUserResults.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvUserResults.setAdapter(pickerAdapter);
+
+        tvEmpty.setText("Loading users...");
+        tvEmpty.setVisibility(View.VISIBLE);
+        rvUserResults.setVisibility(View.GONE);
+
+        etUserSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty,
+                        s != null ? s.toString() : "");
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        db.collection("users")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    eligibleUsers.clear();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Users user = doc.toObject(Users.class);
+                        if (user == null) {
+                            continue;
+                        }
+                        user.setId(doc.getId());
+                        if (isEligiblePrivateInviteCandidate(user)) {
+                            eligibleUsers.add(user);
+                        }
+                    }
+
+                    eligibleUsers.sort((first, second) ->
+                            buildUserDisplayName(first).compareToIgnoreCase(buildUserDisplayName(second)));
+
+                    String query = etUserSearch.getText() != null ? etUserSearch.getText().toString() : "";
+                    filterEligibleUsers(eligibleUsers, filteredUsers, pickerAdapter, rvUserResults, tvEmpty, query);
+                })
+                .addOnFailureListener(unused -> {
+                    tvEmpty.setText("Failed to load users");
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rvUserResults.setVisibility(View.GONE);
+                });
+
+        dialog.show();
     }
 
-    private void showAddApplicantDialog() {
-        View dialogView = getLayoutInflater().inflate(android.R.layout.simple_list_item_2, null);
-        EditText editName = new EditText(requireContext());
-        editName.setHint("Name");
-        EditText editEmail = new EditText(requireContext());
-        editEmail.setHint("Email");
-        editEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+    private void openMapOverview() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", false);
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+    }
 
+    private void openMapFocusedOn(Entrant entrant) {
+        if (entrant == null || !entrant.hasLocation()) {
+            return;
+        }
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        if (getArguments() != null) {
+            args.putString("eventName", getArguments().getString("eventName"));
+        }
+        args.putBoolean("mapFocusEntrant", true);
+        args.putString("focusEntrantDocId", entrant.getId());
+        args.putString("focusName", entrant.getName());
+        Navigation.findNavController(requireView()).navigate(R.id.entrantMapFragment, args);
+    }
+
+    private void showUserSearchDialog(boolean coOrganizerInvite) {
         android.widget.LinearLayout layout = new android.widget.LinearLayout(requireContext());
         layout.setOrientation(android.widget.LinearLayout.VERTICAL);
         layout.setPadding(50, 40, 50, 10);
+
+        EditText editName = new EditText(requireContext());
+        editName.setHint("Search by name");
         layout.addView(editName);
+
+        EditText editEmail = new EditText(requireContext());
+        editEmail.setHint("Search by email");
+        editEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         layout.addView(editEmail);
 
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Add Applicant")
+        EditText editPhone = new EditText(requireContext());
+        editPhone.setHint("Search by phone");
+        editPhone.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
+        layout.addView(editPhone);
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(coOrganizerInvite ? "Invite Co-Organizer" : "Invite Entrant")
                 .setView(layout)
-                .setPositiveButton("Add", (d, w) -> {
-                    String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-                    String email = editEmail.getText() != null ? editEmail.getText().toString().trim() : "";
-                    if (name.isEmpty()) {
-                        Toast.makeText(requireContext(), "Name required", Toast.LENGTH_SHORT).show();
+                .setPositiveButton("Search", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+
+        dialog.setOnShowListener(unused -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String nameFilter = valueOrEmpty(editName.getText() != null ? editName.getText().toString() : "");
+            String emailFilter = valueOrEmpty(editEmail.getText() != null ? editEmail.getText().toString() : "");
+            String phoneFilter = valueOrEmpty(editPhone.getText() != null ? editPhone.getText().toString() : "");
+
+            if (nameFilter.isEmpty() && emailFilter.isEmpty() && phoneFilter.isEmpty()) {
+                Toast.makeText(requireContext(), "Enter at least one search field", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            searchUsers(nameFilter, emailFilter, phoneFilter, coOrganizerInvite, dialog);
+        }));
+
+        dialog.show();
+    }
+
+    private void filterEligibleUsers(List<Users> eligibleUsers,
+                                     List<Users> filteredUsers,
+                                     UserPickerAdapter pickerAdapter,
+                                     RecyclerView rvUserResults,
+                                     TextView tvEmpty,
+                                     String query) {
+        filteredUsers.clear();
+        String normalizedQuery = valueOrEmpty(query).toLowerCase(Locale.CANADA);
+        String normalizedPhoneQuery = normalizePhone(query);
+
+        for (Users user : eligibleUsers) {
+            String userName = buildUserDisplayName(user).toLowerCase(Locale.CANADA);
+            String userEmail = valueOrEmpty(user.getEmail()).toLowerCase(Locale.CANADA);
+            String userPhone = normalizePhone(user.getPhoneNumber());
+
+            if (normalizedQuery.isEmpty()
+                    || userName.contains(normalizedQuery)
+                    || userEmail.contains(normalizedQuery)
+                    || (!normalizedPhoneQuery.isEmpty() && userPhone.contains(normalizedPhoneQuery))) {
+                filteredUsers.add(user);
+            }
+        }
+
+        pickerAdapter.notifyDataSetChanged();
+
+        if (filteredUsers.isEmpty()) {
+            tvEmpty.setText(eligibleUsers.isEmpty() ? "No eligible users found" : "No matching users");
+            tvEmpty.setVisibility(View.VISIBLE);
+            rvUserResults.setVisibility(View.GONE);
+            return;
+        }
+
+        tvEmpty.setVisibility(View.GONE);
+        rvUserResults.setVisibility(View.VISIBLE);
+    }
+
+    private void searchUsers(String nameFilter, String emailFilter, String phoneFilter,
+                             boolean coOrganizerInvite, AlertDialog sourceDialog) {
+        db.collection("users")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Users> matches = new ArrayList<>();
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        Users user = doc.toObject(Users.class);
+                        if (user == null) {
+                            continue;
+                        }
+                        user.setId(doc.getId());
+                        if (matchesSearch(user, nameFilter, emailFilter, phoneFilter)) {
+                            matches.add(user);
+                        }
+                    }
+
+                    if (matches.isEmpty()) {
+                        Toast.makeText(requireContext(), "No matching users found", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    addApplicant(name, email);
+
+                    sourceDialog.dismiss();
+                    showUserSelectionDialog(matches, coOrganizerInvite);
+                })
+                .addOnFailureListener(unused ->
+                        Toast.makeText(requireContext(), "Failed to search users", Toast.LENGTH_SHORT).show());
+    }
+
+    private boolean matchesSearch(Users user, String nameFilter, String emailFilter, String phoneFilter) {
+        return containsIgnoreCase(user.getName(), nameFilter)
+                && containsIgnoreCase(user.getEmail(), emailFilter)
+                && normalizePhone(user.getPhoneNumber()).contains(normalizePhone(phoneFilter));
+    }
+
+    private void showUserSelectionDialog(List<Users> matches, boolean coOrganizerInvite) {
+        String[] labels = new String[matches.size()];
+        for (int i = 0; i < matches.size(); i++) {
+            Users user = matches.get(i);
+            labels[i] = valueOrEmpty(user.getName()) + " - "
+                    + valueOrEmpty(user.getEmail()) + " - "
+                    + valueOrEmpty(user.getPhoneNumber());
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(coOrganizerInvite ? "Select Co-Organizer" : "Select Entrant")
+                .setItems(labels, (dialog, which) -> {
+                    Users selectedUser = matches.get(which);
+                    if (coOrganizerInvite) {
+                        inviteCoOrganizer(selectedUser);
+                    } else {
+                        inviteEntrant(selectedUser);
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void addApplicant(String name, String email) {
-        String id = java.util.UUID.randomUUID().toString();
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", id);
-        data.put("eventId", eventId);
-        data.put("name", name);
-        data.put("email", email);
-        data.put("status", "APPLIED");
+    private boolean isEligiblePrivateInviteCandidate(Users user) {
+        String userId = valueOrEmpty(user.getId());
+        if (userId.isEmpty() || isEventOrganizer(userId)) {
+            return false;
+        }
 
-        FirebaseFirestore.getInstance()
-                .collection("events").document(eventId).collection("entrants").document(id)
-                .set(data)
-                .addOnSuccessListener(v -> Toast.makeText(requireContext(), "Applicant added", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to add", Toast.LENGTH_SHORT).show());
+        for (Entrant entrant : allEntrants) {
+            if (userId.equals(valueOrEmpty(entrant.getUserId()))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    private void runSampling() {
-        FirebaseFirestore.getInstance()
-                .collection("events").document(eventId)
+    private String buildUserDisplayName(Users user) {
+        String name = valueOrEmpty(user.getName());
+        return name.isEmpty() ? "Unnamed User" : name;
+    }
+
+    private void inviteEntrant(Users user) {
+        String userId = user.getId();
+        if (userId == null || userId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (isEventOrganizer(userId)) {
+            Toast.makeText(requireContext(), "Organizers cannot join the entrant pool", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .collection("entrants")
+                .whereEqualTo("userId", userId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    DocumentReference entrantRef;
+                    String existingStatus = null;
+                    if (querySnapshot.isEmpty()) {
+                        entrantRef = db.collection("events").document(eventId).collection("entrants").document(userId);
+                    } else {
+                        entrantRef = querySnapshot.getDocuments().get(0).getReference();
+                        existingStatus = querySnapshot.getDocuments().get(0).getString("status");
+                    }
+
+                    if ("PRIVATE_INVITED".equals(existingStatus)
+                            || "APPLIED".equals(existingStatus)
+                            || "INVITED".equals(existingStatus)
+                            || "ACCEPTED".equals(existingStatus)) {
+                        Toast.makeText(requireContext(), "User is already linked to this event", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("id", entrantRef.getId());
+                    data.put("eventId", eventId);
+                    data.put("name", valueOrEmpty(user.getName()));
+                    data.put("email", valueOrEmpty(user.getEmail()));
+                    data.put("phoneNumber", valueOrEmpty(user.getPhoneNumber()));
+                    data.put("userId", userId);
+                    data.put("status", "PRIVATE_INVITED");
+                    data.put("statusCode", -1);
+
+                    entrantRef.set(data, SetOptions.merge())
+                            .addOnSuccessListener(unused -> {
+                                notificationHelper.sendPrivateWaitlistInvitationNotification(userId, eventId);
+                                Toast.makeText(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(unused ->
+                                    Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
+                });
+    }
+
+    private void inviteCoOrganizer(Users user) {
+        String userId = user.getId();
+        if (userId == null || userId.trim().isEmpty()) {
+            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User is already an organizer for this event", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (pendingCoOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User already has a pending co-organizer invite", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .update("pendingCoOrganizerIds", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                .addOnSuccessListener(unused -> {
+                    pendingCoOrganizerIds.add(userId);
+                    notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
+                    Toast.makeText(requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(unused ->
+                        Toast.makeText(requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show());
+    }
+
+    private boolean isEventOrganizer(String userId) {
+        return createdByUserId.equals(userId) || coOrganizerIds.contains(userId);
+    }
+
+    private void runLottery() {
+        db.collection("events").document(eventId)
                 .get()
                 .addOnSuccessListener(eventDoc -> {
-                    DocumentSnapshot doc = eventDoc;
-                    Long sampleSizeLong = doc != null ? doc.getLong("sampleSize") : null;
+                    Long sampleSizeLong = eventDoc != null ? eventDoc.getLong("sampleSize") : null;
                     int sampleSize = sampleSizeLong != null ? sampleSizeLong.intValue() : 0;
                     if (sampleSize <= 0) {
                         Toast.makeText(requireContext(), "Set sample size in event first", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    CollectionReference entrantsRef = FirebaseFirestore.getInstance()
-                            .collection("events").document(eventId).collection("entrants");
+                    CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
                     entrantsRef.whereEqualTo("status", "APPLIED")
                             .get()
                             .addOnSuccessListener(appliedQuery -> {
@@ -293,24 +590,31 @@ public class ViewEntrantsFragment extends Fragment {
                                 }
                                 Collections.shuffle(applicants);
                                 int toInvite = Math.min(sampleSize, applicants.size());
-                                WriteBatch batch = FirebaseFirestore.getInstance().batch();
+                                WriteBatch batch = db.batch();
+                                List<String> invitedUserIds = new ArrayList<>();
                                 for (int i = 0; i < toInvite; i++) {
                                     DocumentReference ref = applicants.get(i).getReference();
-                                    batch.update(ref, "status", "INVITED");
-                                    // Update history status for invited entrants
+                                    batch.update(ref, "status", "INVITED", "statusCode", 1);
                                     String invitedUserId = applicants.get(i).getString("userId");
-                                    EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
+                                    if (invitedUserId != null && !invitedUserId.trim().isEmpty()) {
+                                        invitedUserIds.add(invitedUserId);
+                                    }
                                 }
                                 batch.commit()
-                                        .addOnSuccessListener(v -> Toast.makeText(requireContext(),
-                                                "Invited " + toInvite + " applicants", Toast.LENGTH_SHORT).show())
+                                        .addOnSuccessListener(v -> {
+                                            for (String invitedUserId : invitedUserIds) {
+                                                notificationHelper.sendInvitationNotification(invitedUserId, eventId);
+                                                EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
+                                            }
+                                            Toast.makeText(requireContext(),
+                                                    "Lottery run for " + toInvite + " applicants", Toast.LENGTH_SHORT).show();
+                                        })
                                         .addOnFailureListener(e -> Toast.makeText(requireContext(),
-                                                "Sampling failed", Toast.LENGTH_SHORT).show());
+                                                "Lottery failed", Toast.LENGTH_SHORT).show());
                             });
                 })
                 .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show());
     }
-
 
     @Override
     public void onDestroyView() {
@@ -320,65 +624,78 @@ public class ViewEntrantsFragment extends Fragment {
         }
     }
 
-    /**
-     * Sends notifications to all entrants who were selected in the lottery.
-     *
-     * Filters the list of entrants and identifies those with the status "INVITED".
-     * These entrants are considered chosen entrants and should receive a notification informing
-     * them that they have been selected to sign up for the event.
-     *
-     * For each invited entrant NotificationItem is created and stored
-     * in that user's Firestore notifications collection.
-     *
-     * If no invited entrants exist, a message is displayed to the organizer indicating that
-     * there are no entrants to notify.
-     *
-     * This method fulfills US 02.02.01: organizer sends notifications
-     * to entrants who won the event lottery.
-     */
-    private void notifyChosenEntrants() {
+    private boolean containsIgnoreCase(String value, String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return true;
+        }
+        return value != null && value.toLowerCase(Locale.CANADA).contains(query.toLowerCase(Locale.CANADA));
+    }
 
-        if (allEntrants == null || allEntrants.isEmpty()) {
-            Toast.makeText(requireContext(), "No entrants available", Toast.LENGTH_SHORT).show();
-            return;
+    private String normalizePhone(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("[^0-9]", "");
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static class UserPickerAdapter extends RecyclerView.Adapter<UserPickerAdapter.UserPickerViewHolder> {
+        interface OnUserSelectedListener {
+            void onUserSelected(Users user);
         }
 
-        List<Entrant> chosenEntrants = new ArrayList<>();
+        private final List<Users> users;
+        private final OnUserSelectedListener onUserSelectedListener;
+        UserPickerAdapter(List<Users> users, OnUserSelectedListener onUserSelectedListener) {
+            this.users = users;
+            this.onUserSelectedListener = onUserSelectedListener;
+        }
 
-        for (Entrant entrant : allEntrants) {
-            if (entrant != null && entrant.getStatus() == Entrant.Status.INVITED) {
-                chosenEntrants.add(entrant);
+        @NonNull
+        @Override
+        public UserPickerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_user_picker, parent, false);
+            return new UserPickerViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull UserPickerViewHolder holder, int position) {
+            Users user = users.get(position);
+            holder.tvName.setText(user.getName() == null || user.getName().trim().isEmpty()
+                    ? "Unnamed User" : user.getName().trim());
+
+            String email = user.getEmail() == null ? "" : user.getEmail().trim();
+            String phone = user.getPhoneNumber() == null ? "" : user.getPhoneNumber().trim();
+            if (!email.isEmpty() && !phone.isEmpty()) {
+                holder.tvDetails.setText(email + " | " + phone);
+            } else if (!email.isEmpty()) {
+                holder.tvDetails.setText(email);
+            } else if (!phone.isEmpty()) {
+                holder.tvDetails.setText(phone);
+            } else {
+                holder.tvDetails.setText("No contact info");
+            }
+
+            holder.itemView.setOnClickListener(v -> onUserSelectedListener.onUserSelected(user));
+        }
+
+        @Override
+        public int getItemCount() {
+            return users.size();
+        }
+
+        static class UserPickerViewHolder extends RecyclerView.ViewHolder {
+            private final TextView tvName;
+            private final TextView tvDetails;
+
+            UserPickerViewHolder(@NonNull View itemView) {
+                super(itemView);
+                tvName = itemView.findViewById(R.id.tv_user_picker_name);
+                tvDetails = itemView.findViewById(R.id.tv_user_picker_details);
             }
         }
-
-        if (chosenEntrants.isEmpty()) {
-            Toast.makeText(requireContext(), "No chosen entrants to notify", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int sentCount = 0;
-        int skippedCount = 0;
-
-        for (Entrant entrant : chosenEntrants) {
-            String userId = entrant.getUserId();
-            if (userId == null || userId.trim().isEmpty()) {
-                skippedCount++;
-                continue;
-            }
-
-            notificationHelper.sendInvitationNotification(userId, eventId);
-            sentCount++;
-        }
-
-        String message;
-        if (sentCount == 0) {
-            message = "Chosen entrants found, but no linked users could be notified";
-        } else if (skippedCount == 0) {
-            message = "Notifications sent to " + sentCount + " entrants";
-        } else {
-            message = "Notifications sent to " + sentCount + " entrants, skipped " + skippedCount;
-        }
-
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
     }
 }

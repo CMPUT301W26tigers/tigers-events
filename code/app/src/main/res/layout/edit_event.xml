@@ -81,6 +81,7 @@
 
             <!-- ── Name Section ── -->
             <LinearLayout
+                android:id="@+id/share_qr_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -135,6 +136,7 @@
 
             <!-- ── Description Section ── -->
             <LinearLayout
+                android:id="@+id/share_link_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -347,22 +349,31 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="20dp"
-                android:text="+ View Waitlist"
+                android:text="Manage Waitlist"
                 android:textAllCaps="false"
                 android:textSize="14sp"
                 app:cornerRadius="24dp"
                 app:backgroundTint="@color/dark_grey"/>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_view_enrolled"
+                android:id="@+id/btn_toggle_private_event"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="10dp"
-                android:text="View Enrolled Entrants"
+                android:text="Set Event Private"
                 android:textAllCaps="false"
                 android:textSize="14sp"
                 app:cornerRadius="24dp"
                 app:backgroundTint="@color/dark_grey"/>
+
+            <TextView
+                android:id="@+id/tv_private_event_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Private events are hidden from Explore and do not generate a shareable QR code."
+                android:textColor="#757575"
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/tv_share"

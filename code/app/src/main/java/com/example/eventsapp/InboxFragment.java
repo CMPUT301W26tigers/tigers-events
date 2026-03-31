@@ -16,13 +16,16 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A fragment that displays the user's notification inbox.
@@ -131,8 +134,10 @@ public class InboxFragment extends Fragment {
             notificationListener.remove();
         }
 
+        String userId = currentUser.getId();
+
         notificationListener = db.collection("users")
-                .document(currentUser.getId())
+                .document(userId)
                 .collection("notifications")
                 .addSnapshotListener((value, error) -> {
                     if (error != null || value == null || !isAdded()) {
@@ -158,7 +163,7 @@ public class InboxFragment extends Fragment {
                             continue;
                         }
 
-                        resolveEventName(item.getEventId(), eventName -> onNotificationResolved(
+                        resolveEventName(userId, doc.getId(), item, eventName -> onNotificationResolved(
                                 loadedNotifications,
                                 remaining,
                                 index,
@@ -186,7 +191,15 @@ public class InboxFragment extends Fragment {
         renderNotifications(notifications);
     }
 
-    private void resolveEventName(@Nullable String eventId, EventNameCallback callback) {
+    private void resolveEventName(@NonNull String userId, @NonNull String notificationId,
+                                  @Nullable NotificationItem item, EventNameCallback callback) {
+        String storedEventName = item != null ? item.getEventName() : null;
+        if (storedEventName != null && !storedEventName.trim().isEmpty()) {
+            callback.onResolved(storedEventName);
+            return;
+        }
+
+        String eventId = item != null ? item.getEventId() : null;
         if (eventId == null || eventId.trim().isEmpty()) {
             callback.onResolved("Event update");
             return;
@@ -195,13 +208,29 @@ public class InboxFragment extends Fragment {
         db.collection("events").document(eventId)
                 .get()
                 .addOnSuccessListener(doc -> {
-                    String eventName = doc.getString("name");
-                    if (eventName == null || eventName.trim().isEmpty()) {
-                        eventName = eventId;
+                    String eventName = getDisplayEventName(doc);
+                    if (!eventName.equals("Event update")) {
+                        db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .document(notificationId)
+                                .update("eventName", eventName);
                     }
                     callback.onResolved(eventName);
                 })
-                .addOnFailureListener(e -> callback.onResolved(eventId));
+                .addOnFailureListener(e -> callback.onResolved("Event update"));
+    }
+
+    @NonNull
+    private String getDisplayEventName(@NonNull DocumentSnapshot doc) {
+        String eventName = doc.getString("name");
+        if (eventName == null || eventName.trim().isEmpty()) {
+            eventName = doc.getString("eventName");
+        }
+        if (eventName == null || eventName.trim().isEmpty()) {
+            eventName = doc.getString("title");
+        }
+        return eventName == null || eventName.trim().isEmpty() ? "Event update" : eventName.trim();
     }
 
     private UserNotification toUserNotification(String notificationId, NotificationItem item, String eventName) {
@@ -218,6 +247,12 @@ public class InboxFragment extends Fragment {
     private UserNotification.Type parseNotificationType(@Nullable String type) {
         if ("invitation".equalsIgnoreCase(type)) {
             return UserNotification.Type.INVITATION;
+        }
+        if ("private_waitlist_invitation".equalsIgnoreCase(type)) {
+            return UserNotification.Type.PRIVATE_WAITLIST_INVITATION;
+        }
+        if ("co_organizer_invitation".equalsIgnoreCase(type)) {
+            return UserNotification.Type.CO_ORGANIZER_INVITATION;
         }
         if ("not_selected".equalsIgnoreCase(type) || "rejected".equalsIgnoreCase(type)) {
             return UserNotification.Type.NOT_SELECTED;
@@ -254,7 +289,7 @@ public class InboxFragment extends Fragment {
 
         header.setBackgroundColor(ContextCompat.getColor(requireContext(), getBackgroundColor(notification.getType())));
         icon.setImageResource(getIcon(notification.getType()));
-        actions.setVisibility(notification.getType() == UserNotification.Type.INVITATION ? View.VISIBLE : View.GONE);
+        actions.setVisibility(isActionableNotification(notification.getType()) ? View.VISIBLE : View.GONE);
 
         View.OnClickListener toggleListener = v -> {
             boolean isExpanded = details.getVisibility() == View.VISIBLE;
@@ -266,8 +301,8 @@ public class InboxFragment extends Fragment {
         chevron.setOnClickListener(toggleListener);
         title.setOnClickListener(toggleListener);
 
-        declineButton.setOnClickListener(v -> handleInvitationResponse(notification, false));
-        acceptButton.setOnClickListener(v -> handleInvitationResponse(notification, true));
+        declineButton.setOnClickListener(v -> handleActionableNotificationResponse(notification, false));
+        acceptButton.setOnClickListener(v -> handleActionableNotificationResponse(notification, true));
     }
 
     private void bindWaitlistGroup(View itemView, List<UserNotification> waitlistedNotifications) {
@@ -307,7 +342,13 @@ public class InboxFragment extends Fragment {
         title.setOnClickListener(toggleListener);
     }
 
-    private void handleInvitationResponse(UserNotification notification, boolean accept) {
+    private boolean isActionableNotification(UserNotification.Type type) {
+        return type == UserNotification.Type.INVITATION
+                || type == UserNotification.Type.PRIVATE_WAITLIST_INVITATION
+                || type == UserNotification.Type.CO_ORGANIZER_INVITATION;
+    }
+
+    private void handleActionableNotificationResponse(UserNotification notification, boolean accept) {
         Users currentUser = getActiveUser();
         if (currentUser == null) {
             return;
@@ -317,18 +358,31 @@ public class InboxFragment extends Fragment {
                 && notification.getNotificationId() != null
                 && notification.getEventId() != null
                 && !notification.getEventId().trim().isEmpty()) {
-            updateFirestoreInvitation(currentUser, notification, accept);
+            updateFirestoreActionableNotification(currentUser, notification, accept);
             return;
         }
 
-        boolean handled = accept
+        boolean handled = notification.getType() == UserNotification.Type.INVITATION
+                && (accept
                 ? invitationResponseController.acceptInvitation(currentUser, notification)
-                : invitationResponseController.declineInvitation(currentUser, notification);
+                : invitationResponseController.declineInvitation(currentUser, notification));
         if (handled) {
             notifications.clear();
             notifications.addAll(currentUser.getNotifications());
             renderNotifications(notifications);
         }
+    }
+
+    private void updateFirestoreActionableNotification(Users currentUser, UserNotification notification, boolean accept) {
+        if (notification.getType() == UserNotification.Type.PRIVATE_WAITLIST_INVITATION) {
+            updateFirestorePrivateWaitlistInvitation(currentUser, notification, accept);
+            return;
+        }
+        if (notification.getType() == UserNotification.Type.CO_ORGANIZER_INVITATION) {
+            updateFirestoreCoOrganizerInvitation(currentUser, notification, accept);
+            return;
+        }
+        updateFirestoreInvitation(currentUser, notification, accept);
     }
 
     private void updateFirestoreInvitation(Users currentUser, UserNotification notification, boolean accept) {
@@ -361,6 +415,77 @@ public class InboxFragment extends Fragment {
                             currentUser.acceptInvitation(notification.getEventName());
                         } else {
                             currentUser.declineInvitation(notification.getEventName());
+                        }
+                    });
+                });
+    }
+
+    private void updateFirestorePrivateWaitlistInvitation(Users currentUser, UserNotification notification, boolean accept) {
+        db.collection("events")
+                .document(notification.getEventId())
+                .collection("entrants")
+                .whereEqualTo("userId", currentUser.getId())
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    WriteBatch batch = db.batch();
+                    if (!querySnapshot.isEmpty()) {
+                        DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
+                        if (accept) {
+                            batch.update(entrantDoc.getReference(), "status", "APPLIED", "statusCode", 0);
+                        } else {
+                            batch.delete(entrantDoc.getReference());
+                        }
+                    }
+
+                    batch.delete(db.collection("users")
+                            .document(currentUser.getId())
+                            .collection("notifications")
+                            .document(notification.getNotificationId()));
+
+                    batch.commit().addOnSuccessListener(unused -> {
+                        if (accept) {
+                            currentUser.addWaitlistedEvent(notification.getEventName());
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "APPLIED");
+                        } else {
+                            currentUser.declineInvitation(notification.getEventName());
+                        }
+                    });
+                });
+    }
+
+    private void updateFirestoreCoOrganizerInvitation(Users currentUser, UserNotification notification, boolean accept) {
+        db.collection("events")
+                .document(notification.getEventId())
+                .collection("entrants")
+                .whereEqualTo("userId", currentUser.getId())
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    WriteBatch batch = db.batch();
+                    if (accept) {
+                        batch.update(
+                                db.collection("events").document(notification.getEventId()),
+                                "coOrganizerIds", FieldValue.arrayUnion(currentUser.getId()),
+                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
+                        );
+                        for (DocumentSnapshot entrantDoc : querySnapshot.getDocuments()) {
+                            batch.delete(entrantDoc.getReference());
+                        }
+                    } else {
+                        batch.update(
+                                db.collection("events").document(notification.getEventId()),
+                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
+                        );
+                    }
+
+                    batch.delete(db.collection("users")
+                            .document(currentUser.getId())
+                            .collection("notifications")
+                            .document(notification.getNotificationId()));
+
+                    batch.commit().addOnSuccessListener(unused -> {
+                        if (accept) {
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED");
                         }
                     });
                 });
@@ -419,6 +544,58 @@ public class InboxFragment extends Fragment {
         return currentUser != null ? currentUser : UserSession.getCurrentUser();
     }
 
+    private void writeHistoryRecordForUser(@Nullable String userId, @Nullable String eventId, @NonNull String status) {
+        if (userId == null || userId.trim().isEmpty() || eventId == null || eventId.trim().isEmpty()) {
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(eventDoc -> {
+                    if (!eventDoc.exists()) {
+                        return;
+                    }
+                    EventCleanupHelper.writeHistoryRecord(userId, eventId, buildHistoryData(eventDoc), status);
+                });
+    }
+
+    @NonNull
+    private Map<String, Object> buildHistoryData(@NonNull DocumentSnapshot eventDoc) {
+        Map<String, Object> historyData = new HashMap<>();
+        historyData.put("id", valueOrDefault(eventDoc.getString("id"), eventDoc.getId()));
+        historyData.put("name", valueOrDefault(eventDoc.getString("name"), ""));
+        historyData.put("amount", eventDoc.getLong("amount") != null ? eventDoc.getLong("amount") : 0L);
+        historyData.put("description", valueOrDefault(eventDoc.getString("description"), ""));
+        historyData.put("event_date", valueOrDefault(eventDoc.getString("event_date"), ""));
+        historyData.put("registration_start", valueOrDefault(eventDoc.getString("registration_start"), ""));
+        historyData.put("registration_end", valueOrDefault(eventDoc.getString("registration_end"), ""));
+        historyData.put("posterUrl", valueOrDefault(eventDoc.getString("posterUrl"), ""));
+        historyData.put("sampleSize", eventDoc.getLong("sampleSize") != null ? eventDoc.getLong("sampleSize") : 0L);
+        historyData.put("isPrivate", Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate")));
+
+        List<String> coOrganizerIds = (List<String>) eventDoc.get("coOrganizerIds");
+        historyData.put("coOrganizerIds", coOrganizerIds != null ? new ArrayList<>(coOrganizerIds) : new ArrayList<String>());
+
+        List<String> pendingCoOrganizerIds = (List<String>) eventDoc.get("pendingCoOrganizerIds");
+        historyData.put("pendingCoOrganizerIds",
+                pendingCoOrganizerIds != null ? new ArrayList<>(pendingCoOrganizerIds) : new ArrayList<String>());
+
+        String createdBy = eventDoc.getString("createdBy");
+        if (createdBy != null && !createdBy.trim().isEmpty()) {
+            historyData.put("createdBy", createdBy);
+        }
+
+        return historyData;
+    }
+
+    @NonNull
+    private String valueOrDefault(@Nullable String value, @NonNull String fallback) {
+        if (value == null || value.trim().isEmpty()) {
+            return fallback;
+        }
+        return value;
+    }
+
     /**
      * Returns the background color resource ID based on the notification type.
      *
@@ -429,6 +606,8 @@ public class InboxFragment extends Fragment {
     private int getBackgroundColor(UserNotification.Type type) {
         switch (type) {
             case INVITATION:
+            case PRIVATE_WAITLIST_INVITATION:
+            case CO_ORGANIZER_INVITATION:
                 return R.color.notification_green;
             case NOT_SELECTED:
                 return R.color.notification_red;
@@ -449,6 +628,10 @@ public class InboxFragment extends Fragment {
         switch (type) {
             case INVITATION:
                 return android.R.drawable.checkbox_on_background;
+            case PRIVATE_WAITLIST_INVITATION:
+                return android.R.drawable.ic_input_add;
+            case CO_ORGANIZER_INVITATION:
+                return android.R.drawable.ic_menu_manage;
             case NOT_SELECTED:
                 return android.R.drawable.ic_delete;
             case WAITLISTED:
