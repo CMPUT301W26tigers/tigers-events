@@ -19,4 +19,9 @@
         android:name="com.example.eventsapp.AdminManageNotificationsFragment"
         android:label="Manage Notifications" />
 
+    <fragment
+        android:id="@+id/adminEventDetailFragment"
+        android:name="com.example.eventsapp.AdminEventDetailFragment"
+        android:label="Event Detail" />
+
 </navigation>

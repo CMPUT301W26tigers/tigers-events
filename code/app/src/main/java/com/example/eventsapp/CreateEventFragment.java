@@ -304,6 +304,7 @@ public class CreateEventFragment extends Fragment {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
             data.put("createdBy", currentUser.getId());
+            data.put("hostId", currentUser.getId());
         }
 
         DocumentReference docRef = db.collection("events").document(event.getId());

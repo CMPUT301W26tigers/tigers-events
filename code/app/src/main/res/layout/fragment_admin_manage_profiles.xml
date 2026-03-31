@@ -61,15 +61,20 @@
             android:paddingStart="16dp"
             android:paddingEnd="12dp">
 
-            <TextView
-                android:id="@+id/tvSearchHintUsers"
+            <EditText
+                android:id="@+id/etSearchUsers"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Search for a user"
-                android:textColor="@color/colorTextHint"
+                android:hint="Search for a user"
+                android:textColorHint="@color/colorTextHint"
+                android:textColor="@color/colorTextPrimary"
                 android:textSize="15sp"
                 android:paddingStart="4dp"
                 android:paddingEnd="12dp"
+                android:background="@null"
+                android:inputType="text"
+                android:imeOptions="actionSearch"
+                android:singleLine="true"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/ivSearchUsers"
                 app:layout_constraintTop_toTopOf="parent"

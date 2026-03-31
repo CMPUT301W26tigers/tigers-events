@@ -2,6 +2,7 @@ package com.example.eventsapp;
 
 import com.google.firebase.firestore.Exclude;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.List;
  * A user can be an entrant, organizer, or admin.
  * This class stores user profile information, account settings, and event-related lists.
  */
-public class Users {
+public class Users implements Serializable {
     private String id;
     private String name;
     private String firstName;
@@ -22,6 +23,7 @@ public class Users {
     private String deviceId;
     private String location;
     private String accountType;
+    private String profilePictureUrl;
     private List<UserNotification> notifications = new ArrayList<>();
     private List<String> invitedEvents = new ArrayList<>();
     private List<String> registeredEvents = new ArrayList<>();
@@ -271,6 +273,14 @@ public class Users {
      */
     public void setAccountType(String accountType) {
         this.accountType = accountType;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public void setProfilePictureUrl(String profilePictureUrl) {
+        this.profilePictureUrl = profilePictureUrl;
     }
 
     /**
