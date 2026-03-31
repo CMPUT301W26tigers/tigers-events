@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -15,6 +16,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -22,14 +25,15 @@ import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -55,6 +59,7 @@ public class EditEventFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
     private FirebaseFirestore db;
+    private FirebaseStorage storage;
 
     private TextInputEditText editName;
     private TextInputEditText editDescription;
@@ -77,6 +82,23 @@ public class EditEventFragment extends Fragment {
     private final List<String> pendingCoOrganizerIds = new ArrayList<>();
     private MaterialSwitch switchGeolocationRequired;
 
+    private Uri posterUri;
+    private String currentPosterUrl;
+    private boolean posterRemoved = false;
+
+    private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    posterUri = uri;
+                    posterRemoved = false;
+                    Glide.with(this).load(posterUri).into(ivPoster);
+                    View placeholder = getView().findViewById(R.id.tv_poster_placeholder);
+                    if (placeholder != null) placeholder.setVisibility(View.GONE);
+                }
+            }
+    );
+
     /**
      * Called to have the fragment instantiate its user interface view.
      */
@@ -95,6 +117,7 @@ public class EditEventFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
 
         // Get eventId from navigation arguments
         if (getArguments() != null) {
@@ -155,6 +178,10 @@ public class EditEventFragment extends Fragment {
         view.findViewById(R.id.btn_edit_logistics).setOnClickListener(v ->
                 editEventDate.performClick());
 
+        // Poster editing
+        view.findViewById(R.id.btn_edit_poster).setOnClickListener(v -> showPosterOptionsDialog());
+        ivPoster.setOnClickListener(v -> showPosterOptionsDialog());
+
         // View Waitlist — navigate to ViewEntrantsFragment
         view.findViewById(R.id.btn_view_waitlist).setOnClickListener(v -> {
             Bundle args = new Bundle();
@@ -207,6 +234,28 @@ public class EditEventFragment extends Fragment {
         loadEventFromFirestore();
     }
 
+    private void showPosterOptionsDialog() {
+        String[] options = {"Change Poster", "Remove Poster"};
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Event Poster")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        pickImageLauncher.launch("image/*");
+                    } else {
+                        removePoster();
+                    }
+                })
+                .show();
+    }
+
+    private void removePoster() {
+        posterUri = null;
+        posterRemoved = true;
+        ivPoster.setImageResource(android.R.color.darker_gray);
+        View placeholder = getView().findViewById(R.id.tv_poster_placeholder);
+        if (placeholder != null) placeholder.setVisibility(View.VISIBLE);
+    }
+
     /**
      * Loads the event document from Firestore and pre-fills all form fields.
      */
@@ -239,6 +288,13 @@ public class EditEventFragment extends Fragment {
                     if (sampleLong != null) editSampleSize.setText(String.valueOf(sampleLong.intValue()));
                     isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
                     createdByUserId = valueOrEmpty(doc.getString("createdBy"));
+
+                    currentPosterUrl = doc.getString("posterUrl");
+                    if (currentPosterUrl != null && !currentPosterUrl.isEmpty()) {
+                        Glide.with(this).load(currentPosterUrl).into(ivPoster);
+                        View placeholder = getView().findViewById(R.id.tv_poster_placeholder);
+                        if (placeholder != null) placeholder.setVisibility(View.GONE);
+                    }
 
                     coOrganizerIds.clear();
                     List<String> loadedCoOrganizers = (List<String>) doc.get("coOrganizerIds");
@@ -552,7 +608,36 @@ public class EditEventFragment extends Fragment {
         data.put("isPrivate", isPrivateEvent);
         data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
-        // Preserve createdBy and posterUrl by using update instead of set
+        uploadPosterAndSave(data);
+    }
+
+    private void uploadPosterAndSave(Map<String, Object> data) {
+        if (posterRemoved) {
+            data.put("posterUrl", "");
+            performFirestoreUpdate(data);
+            return;
+        }
+
+        if (posterUri == null) {
+            // Keep existing posterUrl if not removed and no new one selected
+            performFirestoreUpdate(data);
+            return;
+        }
+
+        StorageReference ref = storage.getReference().child("posters/" + eventId + ".jpg");
+        ref.putFile(posterUri)
+                .addOnSuccessListener(taskSnapshot -> ref.getDownloadUrl().addOnSuccessListener(uri -> {
+                    data.put("posterUrl", uri.toString());
+                    performFirestoreUpdate(data);
+                }))
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to upload poster", e);
+                    Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                    performFirestoreUpdate(data);
+                });
+    }
+
+    private void performFirestoreUpdate(Map<String, Object> data) {
         db.collection("events").document(eventId)
                 .update(data)
                 .addOnSuccessListener(aVoid -> {
@@ -562,7 +647,7 @@ public class EditEventFragment extends Fragment {
                     // Update organizer history record
                     Users currentUser = UserManager.getInstance().getCurrentUser();
                     if (currentUser != null && currentUser.getId() != null) {
-                        // Need posterUrl for history — fetch it from the doc we just updated
+                        // Need all fields for history — fetch it from the doc we just updated
                         db.collection("events").document(eventId).get()
                                 .addOnSuccessListener(doc -> {
                                     if (!isAdded()) return;

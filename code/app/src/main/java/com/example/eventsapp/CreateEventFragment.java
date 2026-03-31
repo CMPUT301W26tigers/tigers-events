@@ -3,6 +3,7 @@ package com.example.eventsapp;
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,17 +13,22 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -52,6 +58,7 @@ public class CreateEventFragment extends Fragment {
     private ImageView ivPoster;
     private ImageView ivQR;
     private FirebaseFirestore db;
+    private FirebaseStorage storage;
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
@@ -64,6 +71,19 @@ public class CreateEventFragment extends Fragment {
     private MaterialButton btnViewWaitlist;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
+
+    private Uri posterUri;
+    private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    posterUri = uri;
+                    Glide.with(this).load(posterUri).into(ivPoster);
+                    View placeholder = getView().findViewById(R.id.tv_poster_placeholder);
+                    if (placeholder != null) placeholder.setVisibility(View.GONE);
+                }
+            }
+    );
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -95,6 +115,7 @@ public class CreateEventFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         db = FirebaseFirestore.getInstance();
+        storage = FirebaseStorage.getInstance();
 
         editName = view.findViewById(R.id.edit_name);
         editDescription = view.findViewById(R.id.edit_description);
@@ -159,6 +180,10 @@ public class CreateEventFragment extends Fragment {
         view.findViewById(R.id.btn_edit_logistics).setOnClickListener(v -> {
             editEventDate.performClick();
         });
+
+        // Poster click listener
+        view.findViewById(R.id.btn_edit_poster).setOnClickListener(v -> pickImageLauncher.launch("image/*"));
+        ivPoster.setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         // Save event and go to waitlist (chosen entrants)
         btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
@@ -337,7 +362,6 @@ public class CreateEventFragment extends Fragment {
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
         data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
@@ -353,7 +377,7 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        saveEventToFirestore(event, data, currentUser, () -> {
+        uploadPosterAndSave(event, data, currentUser, () -> {
             if (!isAdded()) {
                 return;
             }
@@ -436,7 +460,6 @@ public class CreateEventFragment extends Fragment {
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
         data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
@@ -451,12 +474,35 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        saveEventToFirestore(event, data, currentUser, () -> {
+        uploadPosterAndSave(event, data, currentUser, () -> {
             if (!isAdded()) {
                 return;
             }
             Navigation.findNavController(requireView()).popBackStack();
         });
+    }
+
+    private void uploadPosterAndSave(Event event, Map<String, Object> data, @Nullable Users currentUser,
+                                     @NonNull Runnable onSuccess) {
+        if (posterUri == null) {
+            data.put("posterUrl", "");
+            saveEventToFirestore(event, data, currentUser, onSuccess);
+            return;
+        }
+
+        StorageReference ref = storage.getReference().child("posters/" + event.getId() + ".jpg");
+        ref.putFile(posterUri)
+                .addOnSuccessListener(taskSnapshot -> ref.getDownloadUrl().addOnSuccessListener(uri -> {
+                    data.put("posterUrl", uri.toString());
+                    event.setPosterUrl(uri.toString());
+                    saveEventToFirestore(event, data, currentUser, onSuccess);
+                }))
+                .addOnFailureListener(e -> {
+                    Log.e("CreateEvent", "Failed to upload poster", e);
+                    Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                    data.put("posterUrl", "");
+                    saveEventToFirestore(event, data, currentUser, onSuccess);
+                });
     }
 
     private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
