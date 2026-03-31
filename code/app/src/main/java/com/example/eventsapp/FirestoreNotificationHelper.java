@@ -19,7 +19,7 @@ public class FirestoreNotificationHelper {
     }
 
     public void sendWaitlistedNotification(String userId, String eventId) {
-        sendOptionalNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId, new NotificationItem(
                 "Event waitlisted",
                 "You are currently on the waitlist for this event.",
                 eventId,
@@ -29,7 +29,7 @@ public class FirestoreNotificationHelper {
     }
 
     public void sendInvitationNotification(String userId, String eventId) {
-        sendCriticalNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId, new NotificationItem(
                 "Event Invitation",
                 "You were selected from the waitlist for this event.",
                 eventId,
@@ -39,33 +39,13 @@ public class FirestoreNotificationHelper {
     }
 
     public void sendNotSelectedNotification(String userId, String eventId) {
-        sendOptionalNotification(userId, eventId, new NotificationItem(
+        upsertNotification(userId, eventId, new NotificationItem(
                 "Removed from Event",
                 "You were not selected from the waitlist for this event.",
                 eventId,
                 "not_selected",
                 false
         ));
-    }
-
-    private void sendOptionalNotification(String userId, String eventId, NotificationItem notification) {
-        if (isBlank(userId) || isBlank(eventId)) return;
-
-        db.collection("users")
-                .document(userId)
-                .get()
-                .addOnSuccessListener(userDoc -> {
-                    Boolean enabled = userDoc.getBoolean("notificationsEnabled");
-                    if (enabled != null && !enabled) {
-                        return;
-                    }
-                    upsertNotification(userId, eventId, notification);
-                });
-    }
-
-    private void sendCriticalNotification(String userId, String eventId, NotificationItem notification) {
-        if (isBlank(userId) || isBlank(eventId)) return;
-        upsertNotification(userId, eventId, notification);
     }
 
     private void upsertNotification(String userId, String eventId, NotificationItem notification) {
