@@ -78,7 +78,7 @@ public class ViewEntrantsFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.view_waitlist, container, false);
+        return inflater.inflate(R.layout.fragment_organizer_waitlist, container, false);
     }
 
     @Override
@@ -86,7 +86,8 @@ public class ViewEntrantsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         toolbar = view.findViewById(R.id.toolbar_waitlist);
-        toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+        toolbar.setNavigationOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         rvWaitlist = view.findViewById(R.id.rv_waitlist);
         etSearch = view.findViewById(R.id.et_search_waitlist);
@@ -138,16 +139,10 @@ public class ViewEntrantsFragment extends Fragment {
                     createdByUserId = valueOrEmpty(eventDoc.getString("createdBy"));
 
                     coOrganizerIds.clear();
-                    List<String> loadedCoOrganizers = (List<String>) eventDoc.get("coOrganizerIds");
-                    if (loadedCoOrganizers != null) {
-                        coOrganizerIds.addAll(loadedCoOrganizers);
-                    }
+                    coOrganizerIds.addAll(FirestoreDataUtils.getStringList(eventDoc, "coOrganizerIds"));
 
                     pendingCoOrganizerIds.clear();
-                    List<String> loadedPendingCoOrganizers = (List<String>) eventDoc.get("pendingCoOrganizerIds");
-                    if (loadedPendingCoOrganizers != null) {
-                        pendingCoOrganizerIds.addAll(loadedPendingCoOrganizers);
-                    }
+                    pendingCoOrganizerIds.addAll(FirestoreDataUtils.getStringList(eventDoc, "pendingCoOrganizerIds"));
 
                     updateActionLabels();
                     loadChosenEntrants();

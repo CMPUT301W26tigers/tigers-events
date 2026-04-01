@@ -37,10 +37,10 @@ public class WaitlistFragment extends Fragment {
 
     /**
      * Default constructor for WaitlistFragment.
-     * Uses the layout R.layout.view_waitlist.
+     * Uses the layout R.layout.fragment_organizer_waitlist.
      */
     public WaitlistFragment() {
-        super(R.layout.view_waitlist);
+        super(R.layout.fragment_organizer_waitlist);
     }
 
     /**

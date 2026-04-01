@@ -8,6 +8,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.os.BundleCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
@@ -33,7 +34,7 @@ public class AdminEventDetailFragment extends Fragment {
         Bundle args = getArguments();
         if (args == null) return;
 
-        Event event = (Event) args.getSerializable(ARG_EVENT);
+        Event event = BundleCompat.getSerializable(args, ARG_EVENT, Event.class);
         if (event == null) return;
 
         ((TextView) view.findViewById(R.id.tvAdminEventName)).setText(event.getName());

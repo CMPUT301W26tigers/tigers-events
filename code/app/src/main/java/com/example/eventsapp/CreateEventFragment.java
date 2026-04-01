@@ -118,7 +118,8 @@ public class CreateEventFragment extends Fragment {
         setupDatePickers();
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+        toolbar.setNavigationOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         // Apply underline to section headers programmatically (paintFlags not available in XML)
         int[] sectionHeaderIds = {
@@ -131,7 +132,8 @@ public class CreateEventFragment extends Fragment {
         }
 
         MaterialButton btnBack = view.findViewById(R.id.btn_back);
-        btnBack.setOnClickListener(v -> requireActivity().onBackPressed());
+        btnBack.setOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         // Create new event - generate unique ID and QR
         Event event = new Event(null, "", 1, "", "", "", "", "",  0);

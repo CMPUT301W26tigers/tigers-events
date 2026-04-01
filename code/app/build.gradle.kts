@@ -30,6 +30,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    packaging {
+        jniLibs {
+            keepDebugSymbols += "**/libdatastore_shared_counter.so"
+        }
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:unchecked"))
 }
 
 dependencies {

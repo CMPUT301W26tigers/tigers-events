@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.os.BundleCompat;
 import androidx.fragment.app.DialogFragment;
 
 import java.util.Objects;
@@ -88,7 +89,7 @@ public class EventDialogFragment extends DialogFragment {
         Event event;
 
         if (Objects.equals(tag, "Event Details") && bundle != null){
-            event = (Event) bundle.getSerializable("Event");
+            event = BundleCompat.getSerializable(bundle, "Event", Event.class);
             assert event != null;
             editEventName.setText(event.getName());
             editAmount.setText(String.valueOf(event.getAmount()));

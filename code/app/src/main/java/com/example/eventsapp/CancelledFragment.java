@@ -27,6 +27,7 @@ public class CancelledFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar_cancelled);
-        toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+        toolbar.setNavigationOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
     }
 }

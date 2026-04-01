@@ -573,10 +573,10 @@ public class InboxFragment extends Fragment {
         historyData.put("sampleSize", eventDoc.getLong("sampleSize") != null ? eventDoc.getLong("sampleSize") : 0L);
         historyData.put("isPrivate", Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate")));
 
-        List<String> coOrganizerIds = (List<String>) eventDoc.get("coOrganizerIds");
+        List<String> coOrganizerIds = FirestoreDataUtils.getStringList(eventDoc, "coOrganizerIds");
         historyData.put("coOrganizerIds", coOrganizerIds != null ? new ArrayList<>(coOrganizerIds) : new ArrayList<String>());
 
-        List<String> pendingCoOrganizerIds = (List<String>) eventDoc.get("pendingCoOrganizerIds");
+        List<String> pendingCoOrganizerIds = FirestoreDataUtils.getStringList(eventDoc, "pendingCoOrganizerIds");
         historyData.put("pendingCoOrganizerIds",
                 pendingCoOrganizerIds != null ? new ArrayList<>(pendingCoOrganizerIds) : new ArrayList<String>());
 
