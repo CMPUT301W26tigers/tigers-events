@@ -66,6 +66,8 @@ public class EditEventFragment extends Fragment {
     private MaterialButton btnTogglePrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
     private View shareTitle;
+    private MaterialButton btnViewWaitlist;
+    private MaterialButton btnManageEnrolledList;
 
     private FirebaseFirestore db;
     private Uri posterUri;
@@ -137,6 +139,8 @@ public class EditEventFragment extends Fragment {
         btnTogglePrivateEvent = view.findViewById(R.id.btn_toggle_private_event);
         switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         shareTitle = view.findViewById(R.id.tv_share);
+        btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
+        btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
 
         setupDatePickers();
 
@@ -158,11 +162,18 @@ public class EditEventFragment extends Fragment {
 
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveEventChanges());
         view.findViewById(R.id.btn_back).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
-        
+
         btnTogglePrivateEvent.setOnClickListener(v -> {
             isPrivateEvent = !isPrivateEvent;
             updatePrivateUi();
         });
+
+        if (btnViewWaitlist != null) {
+            btnViewWaitlist.setOnClickListener(v -> openWaitlistManager());
+        }
+        if (btnManageEnrolledList != null) {
+            btnManageEnrolledList.setOnClickListener(v -> openEnrolledManager());
+        }
 
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
         view.findViewById(R.id.btn_share_link).setOnClickListener(v -> shareLink());
@@ -269,6 +280,24 @@ public class EditEventFragment extends Fragment {
 
     private void shareLink() {
         shareQR(); // Same logic for now
+    }
+
+    private void openWaitlistManager() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+
+        String eventName = getText(editName);
+        if (!eventName.isEmpty()) {
+            args.putString("eventName", eventName);
+        }
+
+        Navigation.findNavController(requireView()).navigate(R.id.viewEntrantsFragment, args);
+    }
+
+    private void openEnrolledManager() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        Navigation.findNavController(requireView()).navigate(R.id.enrolledFragment, args);
     }
 
     private void saveEventChanges() {

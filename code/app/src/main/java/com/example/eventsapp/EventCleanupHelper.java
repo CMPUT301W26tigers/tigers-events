@@ -43,7 +43,8 @@ public class EventCleanupHelper {
                             String eventId = eventDoc.getString("id");
                             if (eventId == null) eventId = eventDoc.getId();
                             String createdBy = eventDoc.getString("createdBy");
-                            java.util.List<String> coOrganizerIds = (java.util.List<String>) eventDoc.get("coOrganizerIds");
+                            java.util.List<String> coOrganizerIds =
+                                    FirestoreDataUtils.getStringList(eventDoc, "coOrganizerIds");
                             markHistoryAndDelete(db, eventId, createdBy, coOrganizerIds);
                         }
                     }

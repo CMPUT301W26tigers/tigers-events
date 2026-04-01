@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.os.BundleCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -62,7 +63,7 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        Users user = (Users) requireArguments().getSerializable(ARG_USER);
+        Users user = BundleCompat.getSerializable(requireArguments(), ARG_USER, Users.class);
         if (user == null) return;
 
         // Resolve display name

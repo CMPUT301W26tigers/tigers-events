@@ -94,6 +94,21 @@
     </fragment>
 
     <fragment
+        android:id="@+id/enrolledFragment"
+        android:name="com.example.eventsapp.EnrolledFragment"
+        android:label="Enrolled">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/cancelledFragment"
+        android:name="com.example.eventsapp.CancelledFragment"
+        android:label="Cancelled" />
+
+    <fragment
         android:id="@+id/eventDetailFragment"
         android:name="com.example.eventsapp.EventDetailFragment"
         android:label="Event Details">

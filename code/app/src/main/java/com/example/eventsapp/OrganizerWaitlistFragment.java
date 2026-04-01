@@ -66,8 +66,9 @@ public class OrganizerWaitlistFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        MaterialToolbar toolbar = view.findViewById(R.id.toolbar_organizer_waitlist);
-        toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+        MaterialToolbar toolbar = view.findViewById(R.id.toolbar_waitlist);
+        toolbar.setNavigationOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         toolbar.inflateMenu(R.menu.menu_waitlist);
 
@@ -92,9 +93,9 @@ public class OrganizerWaitlistFragment extends Fragment {
             return false;
         });
 
-        rvWaitlist = view.findViewById(R.id.rv_organizer_waitlist);
-        etSearchWaitlist = view.findViewById(R.id.et_search_organizer_waitlist);
-        tvWaitlistStats = view.findViewById(R.id.tv_organizer_waitlist_stats);
+        rvWaitlist = view.findViewById(R.id.rv_waitlist);
+        etSearchWaitlist = view.findViewById(R.id.et_search_waitlist);
+        tvWaitlistStats = view.findViewById(R.id.tv_waitlist_stats);
 
         adapter = new OrganizerEntrantAdapter(filteredEntrants, new OrganizerEntrantAdapter.OnEntrantActionListener() {
             @Override

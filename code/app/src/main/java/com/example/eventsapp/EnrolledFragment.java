@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -40,7 +41,7 @@ import java.util.Map;
  */
 public class EnrolledFragment extends Fragment {
 
-    private static final String ARG_EVENT_ID = "event_id";
+    private static final String ARG_EVENT_ID = "eventId";
 
     private MaterialToolbar toolbarEnrolled;
     private RecyclerView rvEnrolled;
@@ -59,7 +60,7 @@ public class EnrolledFragment extends Fragment {
     private String eventId;
 
     public EnrolledFragment() {
-        super(R.layout.view_enrolled);
+        super(R.layout.fragment_organizer_enrolled);
     }
 
     public static EnrolledFragment newInstance(String eventId) {
@@ -186,11 +187,6 @@ public class EnrolledFragment extends Fragment {
     }
 
     private void openCancelledFragment() {
-        requireActivity()
-                .getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment, new CancelledFragment())
-                .addToBackStack(null)
-                .commit();
+        Navigation.findNavController(requireView()).navigate(R.id.cancelledFragment);
     }
 }

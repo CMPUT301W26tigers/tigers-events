@@ -158,7 +158,8 @@ public class EventDetailFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
-        toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
+        toolbar.setNavigationOnClickListener(v ->
+                requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         tvName = view.findViewById(R.id.tv_name);
         tvDescription = view.findViewById(R.id.tv_description);
@@ -748,7 +749,7 @@ public class EventDetailFragment extends Fragment {
             return true;
         }
 
-        List<String> coOrganizerIds = (List<String>) eventDoc.get("coOrganizerIds");
+        List<String> coOrganizerIds = FirestoreDataUtils.getStringList(eventDoc, "coOrganizerIds");
         return coOrganizerIds != null && coOrganizerIds.contains(userId);
     }
 

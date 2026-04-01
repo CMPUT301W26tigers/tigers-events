@@ -168,7 +168,8 @@ public class EventsFragment extends Fragment {
                     Set<String> activeEventIds = new HashSet<>();
                     for (QueryDocumentSnapshot snapshot : querySnapshot) {
                         String createdBy = snapshot.getString("createdBy");
-                        List<String> coOrganizerIds = (List<String>) snapshot.get("coOrganizerIds");
+                        List<String> coOrganizerIds =
+                                FirestoreDataUtils.getStringList(snapshot, "coOrganizerIds");
                         boolean isOrganizerEvent = Objects.equals(createdBy, userId)
                                 || (coOrganizerIds != null && coOrganizerIds.contains(userId));
                         if (!isOrganizerEvent) {
