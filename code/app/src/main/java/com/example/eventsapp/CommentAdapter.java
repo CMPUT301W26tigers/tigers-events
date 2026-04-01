@@ -26,6 +26,7 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
     private String eventCreatorId;
     private String currentUserId;
+    private String currentUserAccountType;
     private OnCommentDeleteListener deleteListener;
 
     public CommentAdapter(List<Comment> commentList) {
@@ -54,6 +55,15 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         notifyDataSetChanged();
     }
 
+    /**
+     * Sets the current user's account type to determine permissions.
+     * @param accountType The account type of the logged-in user (e.g., "Admin").
+     */
+    public void setCurrentUserAccountType(String accountType) {
+        this.currentUserAccountType = accountType;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -77,8 +87,11 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
             holder.tvHostTag.setVisibility(View.GONE);
         }
 
-        // Show delete button if current user is the event creator
-        if (currentUserId != null && currentUserId.equals(eventCreatorId)) {
+        // Show delete button if current user is the event creator OR is an Admin
+        boolean isAdmin = "Admin".equalsIgnoreCase(currentUserAccountType);
+        boolean isCreator = currentUserId != null && currentUserId.equals(eventCreatorId);
+
+        if (isAdmin || isCreator) {
             holder.btnDelete.setVisibility(View.VISIBLE);
             holder.btnDelete.setOnClickListener(v -> {
                 if (deleteListener != null) {

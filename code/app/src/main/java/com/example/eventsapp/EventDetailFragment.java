@@ -182,6 +182,7 @@ public class EventDetailFragment extends Fragment {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null) {
             commentAdapter.setCurrentUserId(currentUser.getId());
+            commentAdapter.setCurrentUserAccountType(currentUser.getAccountType());
         }
 
         commentAdapter.setOnCommentDeleteListener(this::deleteComment);
