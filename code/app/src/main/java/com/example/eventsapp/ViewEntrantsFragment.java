@@ -40,7 +40,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Organizer view: waitlisted entrants (APPLIED) plus invited and accepted.
+ * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
+ * Accepted entrants belong on the enrolled screen.
  */
 public class ViewEntrantsFragment extends Fragment {
 
@@ -56,7 +57,6 @@ public class ViewEntrantsFragment extends Fragment {
     private MaterialToolbar toolbar;
     private MaterialButton btnAddApplicant;
     private MaterialButton btnRunLottery;
-    private MaterialButton btnExportCsv;
     private boolean isPrivateEvent;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
@@ -94,8 +94,6 @@ public class ViewEntrantsFragment extends Fragment {
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
         btnRunLottery = view.findViewById(R.id.btn_run_lottery);
-        btnExportCsv = view.findViewById(R.id.btn_export_csv);
-
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -118,16 +116,12 @@ public class ViewEntrantsFragment extends Fragment {
             showEntrantPickerDialog();
         });
         btnRunLottery.setOnClickListener(v -> runLottery());
-        btnExportCsv.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-
         loadEventConfiguration();
         View btnViewMap = view.findViewById(R.id.btn_view_map);
         if (btnViewMap != null) {
             btnViewMap.setOnClickListener(v -> openMapOverview());
         }
 
-        loadEventConfiguration();
     }
 
     private void loadEventConfiguration() {
@@ -167,7 +161,7 @@ public class ViewEntrantsFragment extends Fragment {
         CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
         Query query = entrantsRef.whereIn("status",
-                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"));
+                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null || value == null || !isAdded()) {
@@ -449,7 +443,7 @@ public class ViewEntrantsFragment extends Fragment {
                 .setItems(labels, (dialog, which) -> {
                     Users selectedUser = matches.get(which);
                     if (coOrganizerInvite) {
-                        inviteCoOrganizer(selectedUser);
+                        CoOrganizerInviteHelper.inviteCoOrganizer(this, db, eventId, selectedUser);
                     } else {
                         inviteEntrant(selectedUser);
                     }
@@ -530,32 +524,6 @@ public class ViewEntrantsFragment extends Fragment {
                             .addOnFailureListener(unused ->
                                     Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
                 });
-    }
-
-    private void inviteCoOrganizer(Users user) {
-        String userId = user.getId();
-        if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
-            Toast.makeText(requireContext(), "User is already an organizer for this event", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (pendingCoOrganizerIds.contains(userId)) {
-            Toast.makeText(requireContext(), "User already has a pending co-organizer invite", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        db.collection("events").document(eventId)
-                .update("pendingCoOrganizerIds", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
-                .addOnSuccessListener(unused -> {
-                    pendingCoOrganizerIds.add(userId);
-                    notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
-                    Toast.makeText(requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(unused ->
-                        Toast.makeText(requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show());
     }
 
     private boolean isEventOrganizer(String userId) {
