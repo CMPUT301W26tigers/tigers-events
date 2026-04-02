@@ -395,11 +395,24 @@ public class InboxFragment extends Fragment {
                 .addOnSuccessListener(querySnapshot -> {
                     WriteBatch batch = db.batch();
                     if (!querySnapshot.isEmpty()) {
+                        DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
                         String status = accept ? "ACCEPTED" : "DECLINED";
                         int statusCode = accept ? 2 : 3;
-                        batch.update(querySnapshot.getDocuments().get(0).getReference(),
+                        batch.update(entrantDoc.getReference(),
                                 "status", status,
                                 "statusCode", statusCode);
+                        if (accept) {
+                            Map<String, Object> enrolledData = new HashMap<>();
+                            enrolledData.put("userId", currentUser.getId());
+                            enrolledData.put("name", entrantDoc.getString("name"));
+                            enrolledData.put("email", entrantDoc.getString("email"));
+                            enrolledData.put("status", "Accepted");
+                            batch.set(db.collection("events")
+                                            .document(notification.getEventId())
+                                            .collection("enrolled")
+                                            .document(entrantDoc.getId()),
+                                    enrolledData);
+                        }
                         // Update event history status
                         EventCleanupHelper.updateHistoryStatus(
                                 currentUser.getId(), notification.getEventId(), status);
@@ -455,49 +468,56 @@ public class InboxFragment extends Fragment {
     }
 
     private void updateFirestoreCoOrganizerInvitation(Users currentUser, UserNotification notification, boolean accept) {
+        if (!accept) {
+            WriteBatch batch = db.batch();
+            batch.update(
+                    db.collection("events").document(notification.getEventId()),
+                    "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
+            );
+            batch.delete(db.collection("users")
+                    .document(currentUser.getId())
+                    .collection("notifications")
+                    .document(notification.getNotificationId()));
+            batch.commit();
+            return;
+        }
+
         db.collection("events")
                 .document(notification.getEventId())
                 .collection("entrants")
                 .whereEqualTo("userId", currentUser.getId())
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    String currentUserId = currentUser.getId();
                     WriteBatch batch = db.batch();
-                    if (accept) {
-                        batch.update(
-                                db.collection("events").document(notification.getEventId()),
-                                "coOrganizerIds", FieldValue.arrayUnion(currentUser.getId()),
-                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
-                        );
-                        for (DocumentSnapshot entrantDoc : querySnapshot.getDocuments()) {
-                            batch.delete(entrantDoc.getReference());
-                        }
-                    } else {
-                        batch.update(
-                                db.collection("events").document(notification.getEventId()),
-                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
-                        );
+                    batch.update(
+                            db.collection("events").document(notification.getEventId()),
+                            "coOrganizerIds", FieldValue.arrayUnion(currentUserId),
+                            "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUserId)
+                    );
+
+                    for (DocumentSnapshot entrantDoc : querySnapshot.getDocuments()) {
+                        batch.delete(entrantDoc.getReference());
                     }
+
+                    batch.delete(db.collection("events")
+                            .document(notification.getEventId())
+                            .collection("enrolled")
+                            .document(currentUserId));
 
                     batch.delete(db.collection("users")
                             .document(currentUser.getId())
                             .collection("notifications")
                             .document(notification.getNotificationId()));
 
-                    batch.commit().addOnSuccessListener(unused -> {
-                        if (accept) {
-                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED");
-                        }
-                    });
+                    batch.commit().addOnSuccessListener(unused ->
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED"));
                 });
     }
 
     private void handleWaitlistResponse(UserNotification notification, boolean decline) {
         Users currentUser = getActiveUser();
         if (currentUser == null) {
-            return;
-        }
-
-        if (!decline) {
             return;
         }
 
@@ -525,7 +545,7 @@ public class InboxFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     WriteBatch batch = db.batch();
-                    if (!querySnapshot.isEmpty()) {
+                    if (decline && !querySnapshot.isEmpty()) {
                         batch.delete(querySnapshot.getDocuments().get(0).getReference());
                     }
 
@@ -534,8 +554,16 @@ public class InboxFragment extends Fragment {
                             .collection("notifications")
                             .document(notification.getNotificationId()));
 
-                    batch.commit().addOnSuccessListener(unused ->
-                            currentUser.removeWaitlistedEvent(notification.getEventName()));
+                    batch.commit().addOnSuccessListener(unused -> {
+                        currentUser.removeNotification(notification);
+                        if (decline) {
+                            currentUser.removeWaitlistedEvent(notification.getEventName());
+                            EventCleanupHelper.deleteHistoryRecord(currentUser.getId(), notification.getEventId());
+                        }
+                        notifications.clear();
+                        notifications.addAll(currentUser.getNotifications());
+                        renderNotifications(notifications);
+                    });
                 });
     }
 

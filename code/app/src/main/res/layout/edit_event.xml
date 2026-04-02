@@ -298,6 +298,21 @@
                     android:textSize="14sp"/>
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_invite_coorganizer"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:text="Invite Co-Organizer"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                app:backgroundTint="@color/dark_grey"
+                app:cornerRadius="24dp"
+                app:icon="@android:drawable/ic_menu_add"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"
+                app:iconTint="@android:color/white" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_capacity"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
@@ -345,16 +360,49 @@
                 android:text="Require location to join waitlist" />
 
             <!-- ── View Waitlist Button ── -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_view_waitlist"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Manage Waitlist"
-                android:textAllCaps="false"
-                android:textSize="14sp"
-                app:cornerRadius="24dp"
-                app:backgroundTint="@color/dark_grey"/>
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_view_waitlist"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:text="Manage Waitlist"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    app:backgroundTint="@color/dark_grey"
+                    app:cornerRadius="28dp"
+                    app:icon="@android:drawable/ic_menu_sort_by_size"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconTint="@android:color/white" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_manage_enrolled_list"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:text="Manage Enrolled"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    app:backgroundTint="@color/dark_grey"
+                    app:cornerRadius="28dp"
+                    app:icon="@android:drawable/ic_menu_agenda"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconTint="@android:color/white" />
+
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_toggle_private_event"
@@ -473,6 +521,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_back"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="12dp"
