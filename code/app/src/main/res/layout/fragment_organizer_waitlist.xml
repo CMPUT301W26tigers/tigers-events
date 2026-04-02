@@ -76,22 +76,6 @@
             app:icon="@android:drawable/ic_input_add"
             app:iconPadding="6dp"
             app:iconTint="@android:color/white" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_invite_coorganizer"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
-            android:text="Invite Co-Organizer"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dark_grey"
-            app:cornerRadius="24dp"
-            app:icon="@android:drawable/ic_menu_add"
-            app:iconPadding="6dp"
-            app:iconTint="@android:color/white" />
     </LinearLayout>
 
     <LinearLayout

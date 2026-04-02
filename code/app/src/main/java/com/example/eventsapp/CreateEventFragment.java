@@ -71,6 +71,7 @@ public class CreateEventFragment extends Fragment {
     private View shareEventLink;
     private MaterialButton btnViewWaitlist;
     private MaterialButton btnManageEnrolledList;
+    private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
     private Uri posterUri;
@@ -151,6 +152,7 @@ public class CreateEventFragment extends Fragment {
         shareEventLink = view.findViewById(R.id.tv_event_link);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
         btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
 
@@ -206,6 +208,14 @@ public class CreateEventFragment extends Fragment {
         btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
         if (btnManageEnrolledList != null) {
             btnManageEnrolledList.setOnClickListener(v -> saveAndNavigateToEnrolled(event));
+        }
+        if (btnInviteCoOrganizer != null) {
+            btnInviteCoOrganizer.setOnClickListener(v -> ensureDraftSaved(event, () -> {
+                if (!isAdded()) {
+                    return;
+                }
+                CoOrganizerInviteHelper.showInviteDialog(this, db, event.getId());
+            }));
         }
 
         // Done: save and go back to Your Events
@@ -453,8 +463,10 @@ public class CreateEventFragment extends Fragment {
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
         data.put("isPrivate", isPrivateEvent);
-        data.put("coOrganizerIds", new ArrayList<String>());
-        data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        if (!draftSaved) {
+            data.put("coOrganizerIds", new ArrayList<String>());
+            data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        }
         data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();

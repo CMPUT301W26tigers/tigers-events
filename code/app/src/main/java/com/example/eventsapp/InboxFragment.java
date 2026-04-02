@@ -468,39 +468,50 @@ public class InboxFragment extends Fragment {
     }
 
     private void updateFirestoreCoOrganizerInvitation(Users currentUser, UserNotification notification, boolean accept) {
+        if (!accept) {
+            WriteBatch batch = db.batch();
+            batch.update(
+                    db.collection("events").document(notification.getEventId()),
+                    "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
+            );
+            batch.delete(db.collection("users")
+                    .document(currentUser.getId())
+                    .collection("notifications")
+                    .document(notification.getNotificationId()));
+            batch.commit();
+            return;
+        }
+
         db.collection("events")
                 .document(notification.getEventId())
                 .collection("entrants")
                 .whereEqualTo("userId", currentUser.getId())
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    String currentUserId = currentUser.getId();
                     WriteBatch batch = db.batch();
-                    if (accept) {
-                        batch.update(
-                                db.collection("events").document(notification.getEventId()),
-                                "coOrganizerIds", FieldValue.arrayUnion(currentUser.getId()),
-                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
-                        );
-                        for (DocumentSnapshot entrantDoc : querySnapshot.getDocuments()) {
-                            batch.delete(entrantDoc.getReference());
-                        }
-                    } else {
-                        batch.update(
-                                db.collection("events").document(notification.getEventId()),
-                                "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUser.getId())
-                        );
+                    batch.update(
+                            db.collection("events").document(notification.getEventId()),
+                            "coOrganizerIds", FieldValue.arrayUnion(currentUserId),
+                            "pendingCoOrganizerIds", FieldValue.arrayRemove(currentUserId)
+                    );
+
+                    for (DocumentSnapshot entrantDoc : querySnapshot.getDocuments()) {
+                        batch.delete(entrantDoc.getReference());
                     }
+
+                    batch.delete(db.collection("events")
+                            .document(notification.getEventId())
+                            .collection("enrolled")
+                            .document(currentUserId));
 
                     batch.delete(db.collection("users")
                             .document(currentUser.getId())
                             .collection("notifications")
                             .document(notification.getNotificationId()));
 
-                    batch.commit().addOnSuccessListener(unused -> {
-                        if (accept) {
-                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED");
-                        }
-                    });
+                    batch.commit().addOnSuccessListener(unused ->
+                            writeHistoryRecordForUser(currentUser.getId(), notification.getEventId(), "ORGANIZED"));
                 });
     }
 

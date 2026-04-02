@@ -64,6 +64,7 @@ public class EditEventFragment extends Fragment {
     private View shareTitle;
     private MaterialButton btnViewWaitlist;
     private MaterialButton btnManageEnrolledList;
+    private MaterialButton btnInviteCoOrganizer;
 
     private FirebaseFirestore db;
     private Uri posterUri;
@@ -137,6 +138,7 @@ public class EditEventFragment extends Fragment {
         shareTitle = view.findViewById(R.id.tv_share);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
         btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
 
         setupDatePickers();
 
@@ -168,6 +170,10 @@ public class EditEventFragment extends Fragment {
         }
         if (btnManageEnrolledList != null) {
             btnManageEnrolledList.setOnClickListener(v -> openEnrolledManager());
+        }
+        if (btnInviteCoOrganizer != null) {
+            btnInviteCoOrganizer.setOnClickListener(v ->
+                    CoOrganizerInviteHelper.showInviteDialog(this, db, eventId));
         }
 
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
