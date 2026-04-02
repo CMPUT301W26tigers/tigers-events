@@ -10,6 +10,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -71,6 +73,27 @@ public class EnrolledFragment extends Fragment {
         return fragment;
     }
 
+    private final ActivityResultLauncher<String> csvExportLauncher = registerForActivityResult(
+            new ActivityResultContracts.CreateDocument("text/csv"),
+            uri -> {
+                if (uri != null) {
+                    String[] headers = {"Name", "Email", "Status"};
+
+                    boolean success = CSVExporter.exportToCsv(requireContext(), uri, headers, allEnrolledEntrants,
+                            entrant -> new String[]{
+                                    entrant.getName(),
+                                    entrant.getEmail(),
+                                    entrant.getStatus()
+                            });
+
+                    if (success) {
+                        Toast.makeText(requireContext(), "Enrolled list exported successfully!", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to export enrolled list.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -122,8 +145,14 @@ public class EnrolledFragment extends Fragment {
             public void afterTextChanged(Editable s) {}
         });
 
-        btnExportCsv.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
+        btnExportCsv.setOnClickListener(v -> {
+            if (allEnrolledEntrants.isEmpty()) {
+                Toast.makeText(requireContext(), "No enrolled entrants to export", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            csvExportLauncher.launch("Enrolled_Export.csv");
+        });
+
         btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
 
         loadEnrolledEntrants();
