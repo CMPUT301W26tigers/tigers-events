@@ -212,30 +212,19 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void deleteUserAndEvents(Users user) {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
         String userId = user.getId();
 
-        // Delete all events created by this user, then delete the user document
-        db.collection("events")
-                .whereEqualTo("createdBy", userId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        db.collection("events").document(doc.getId()).delete();
-                    }
-                    // Now delete the user document
-                    db.collection("users").document(userId).delete()
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(requireContext(), "Account deleted", Toast.LENGTH_SHORT).show();
-                                if (deleteListener != null) deleteListener.onAccountDeleted(userId);
-                                dismiss();
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(requireContext(), "Failed to delete account", Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .addOnFailureListener(e -> {
+        EventCleanupHelper.deleteUserCompletely(userId,
+                () -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Account deleted", Toast.LENGTH_SHORT).show();
+                    if (deleteListener != null) deleteListener.onAccountDeleted(userId);
+                    dismiss();
+                },
+                e -> {
+                    if (!isAdded()) return;
                     Toast.makeText(requireContext(), "Failed to delete account", Toast.LENGTH_SHORT).show();
-                });
+                }
+        );
     }
 }

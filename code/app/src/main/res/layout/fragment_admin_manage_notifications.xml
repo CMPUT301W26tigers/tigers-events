@@ -61,13 +61,18 @@
             android:paddingStart="16dp"
             android:paddingEnd="12dp">
 
-            <TextView
-                android:id="@+id/tvSearchHintNotifications"
+            <EditText
+                android:id="@+id/etSearchNotifications"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Search for a notification"
-                android:textColor="@color/colorTextHint"
+                android:hint="Search for a notification"
+                android:textColor="@color/colorTextPrimary"
+                android:textColorHint="@color/colorTextHint"
                 android:textSize="15sp"
+                android:background="@null"
+                android:inputType="text"
+                android:singleLine="true"
+                android:maxLines="1"
                 android:paddingStart="4dp"
                 android:paddingEnd="12dp"
                 app:layout_constraintStart_toStartOf="parent"

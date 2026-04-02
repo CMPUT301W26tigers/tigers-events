@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -261,6 +262,17 @@ public class ExploreFragment extends Fragment {
             );
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
+
+            View avatarCircle = holder.itemView.findViewById(R.id.avatarCircle);
+            View cardThumb = holder.itemView.findViewById(R.id.cardThumb);
+            if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
+                avatarCircle.setVisibility(View.GONE);
+                cardThumb.setVisibility(View.VISIBLE);
+            } else {
+                avatarCircle.setVisibility(View.VISIBLE);
+                cardThumb.setVisibility(View.GONE);
+            }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }

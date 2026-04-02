@@ -3,6 +3,7 @@ package com.example.eventsapp;
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,17 +13,22 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -65,6 +71,19 @@ public class CreateEventFragment extends Fragment {
     private MaterialButton btnManageEnrolledList;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
+    private Uri posterUri;
+
+    private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
+            new ActivityResultContracts.GetContent(),
+            uri -> {
+                if (uri != null) {
+                    posterUri = uri;
+                    Glide.with(this).load(posterUri).into(ivPoster);
+                    View placeholder = getView().findViewById(R.id.tv_poster_placeholder);
+                    if (placeholder != null) placeholder.setVisibility(View.GONE);
+                }
+            }
+    );
 
     /**
      * Called to have the fragment instantiate its user interface view.
@@ -150,6 +169,9 @@ public class CreateEventFragment extends Fragment {
             isPrivateEvent = !isPrivateEvent;
             updatePrivateEventUi(event);
         });
+
+        // Poster pencil icon opens image picker
+        view.findViewById(R.id.btn_edit_poster).setOnClickListener(v -> pickImageLauncher.launch("image/*"));
 
         // Pencil icons focus corresponding fields
         view.findViewById(R.id.btn_edit_name).setOnClickListener(v -> {
@@ -568,6 +590,33 @@ public class CreateEventFragment extends Fragment {
 
     private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
                                       @NonNull Runnable onSuccess) {
+        if (posterUri != null) {
+            StorageReference storageRef = FirebaseStorage.getInstance().getReference()
+                    .child("posters/" + event.getId() + ".jpg");
+            storageRef.putFile(posterUri)
+                    .addOnSuccessListener(taskSnapshot ->
+                            storageRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                                data.put("posterUrl", downloadUri.toString());
+                                writeEventToFirestore(event, data, currentUser, onSuccess);
+                            }).addOnFailureListener(e -> {
+                                Log.e("CreateEvent", "Failed to get download URL", e);
+                                writeEventToFirestore(event, data, currentUser, onSuccess);
+                            })
+                    )
+                    .addOnFailureListener(e -> {
+                        Log.e("CreateEvent", "Failed to upload poster", e);
+                        if (isAdded()) {
+                            Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                        }
+                        writeEventToFirestore(event, data, currentUser, onSuccess);
+                    });
+        } else {
+            writeEventToFirestore(event, data, currentUser, onSuccess);
+        }
+    }
+
+    private void writeEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
+                                       @NonNull Runnable onSuccess) {
         DocumentReference docRef = db.collection("events").document(event.getId());
         docRef.set(data)
                 .addOnSuccessListener(aVoid -> {

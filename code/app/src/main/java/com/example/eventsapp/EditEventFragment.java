@@ -26,12 +26,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -338,6 +334,11 @@ public class EditEventFragment extends Fragment {
 
     private void savePosterLocallyAndSave(Map<String, Object> data) {
         if (posterRemoved) {
+            // Delete the old poster from Firebase Storage
+            StorageReference oldRef = FirebaseStorage.getInstance().getReference()
+                    .child("posters/" + eventId + ".jpg");
+            oldRef.delete().addOnFailureListener(e ->
+                    Log.w(TAG, "No existing poster to delete or delete failed", e));
             data.put("posterUrl", "");
             performFirestoreUpdate(data);
             return;
@@ -348,23 +349,26 @@ public class EditEventFragment extends Fragment {
             return;
         }
 
-        try {
-            String fileName = "poster_" + eventId + ".jpg";
-            File file = new File(requireContext().getFilesDir(), fileName);
-            try (InputStream in = requireContext().getContentResolver().openInputStream(posterUri);
-                 OutputStream out = new FileOutputStream(file)) {
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
-                }
-            }
-            data.put("posterUrl", file.getAbsolutePath());
-            performFirestoreUpdate(data);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to save poster locally", e);
-            performFirestoreUpdate(data);
-        }
+        StorageReference storageRef = FirebaseStorage.getInstance().getReference()
+                .child("posters/" + eventId + ".jpg");
+        storageRef.putFile(posterUri)
+                .addOnSuccessListener(taskSnapshot ->
+                        storageRef.getDownloadUrl().addOnSuccessListener(downloadUri -> {
+                            data.put("posterUrl", downloadUri.toString());
+                            performFirestoreUpdate(data);
+                        }).addOnFailureListener(e -> {
+                            Log.e(TAG, "Failed to get download URL", e);
+                            Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                            performFirestoreUpdate(data);
+                        })
+                )
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to upload poster", e);
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                    }
+                    performFirestoreUpdate(data);
+                });
     }
 
     private void performFirestoreUpdate(Map<String, Object> data) {
