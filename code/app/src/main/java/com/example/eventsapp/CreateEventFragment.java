@@ -55,7 +55,8 @@ public class CreateEventFragment extends Fragment {
 
     private TextInputEditText editName;
     private TextInputEditText editDescription;
-    private TextInputEditText editCapacity;
+    private TextInputEditText editCapacity; // This may be obsolete
+    private TextInputEditText editEventCapacity;
     private TextInputEditText editSampleSize;
     private ImageView ivPoster;
     private ImageView ivQR;
@@ -135,7 +136,8 @@ public class CreateEventFragment extends Fragment {
 
         editName = view.findViewById(R.id.edit_name);
         editDescription = view.findViewById(R.id.edit_description);
-        editCapacity = view.findViewById(R.id.edit_capacity);
+        editCapacity = view.findViewById(R.id.edit_capacity); // This may be obsolete
+        editEventCapacity = view.findViewById(R.id.edit_event_capacity);
         editSampleSize = view.findViewById(R.id.edit_sample_size);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
@@ -327,6 +329,125 @@ public class CreateEventFragment extends Fragment {
      * @param event The event object being created and saved.
      */
     private void saveAndNavigateToWaitlist(Event event) {
+        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; // May be obsolete
+        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
+        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
+        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+                ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+
+        // may be obsolete
+        // if (capacityStr.isEmpty()) {
+        //    Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+        //    return;
+        //}
+        if (eventCapacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
+//        int capacity; may be obsolete
+        int eventCapacityVal;
+        int waitlistCapacityVal = 0;
+        int sampleSize;
+        try {
+            // May be obsolete
+            // capacity = Integer.parseInt(capacityStr);
+            // if (capacity <= 0) {
+            //    Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+            //    return;
+            // }
+            eventCapacityVal = Integer.parseInt(eventCapacityStr);
+                if (eventCapacityVal <= 0) {
+                    Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            // sampleSize = Integer.parseInt(sampleStr);
+            // if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!waitlistCapacityStr.isEmpty()) {
+            try {
+                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
+                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
+            } catch (NumberFormatException e) {
+                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        try {
+            sampleSize = Integer.parseInt(sampleStr);
+            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            sampleSize = 0;
+        }
+
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        event.setName(name);
+        event.setDescription(description);
+//        event.setAmount(capacity); may be obsolete
+        event.setAmount(eventCapacityVal);
+        event.setWaitlistCapacity(waitlistCapacityVal);
+        event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
+        if (!isPrivateEvent) {
+            updateQRCode(event);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("waitlistCapacity", event.getWaitlistCapacity());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+        data.put("isPrivate", isPrivateEvent);
+        data.put("coOrganizerIds", new ArrayList<String>());
+        data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
+
+        // Store who created this event for filtering on the Events page
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
         ensureDraftSaved(event, () -> {
             if (!isAdded()) {
                 return;
@@ -388,7 +509,9 @@ public class CreateEventFragment extends Fragment {
     private Map<String, Object> buildEventData(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; may be obsolete
+        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
+        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
                 ? editSampleSize.getText().toString().trim() : "0";
 
@@ -400,10 +523,16 @@ public class CreateEventFragment extends Fragment {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return null;
         }
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-            return null;
+        // May be obsolete
+//        if (capacityStr.isEmpty()) {
+//            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+        if (eventCapacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
+            return;
         }
+
         if (eventDate.isEmpty()) {
             editEventDate.setError("Event date required");
             return null;
@@ -417,17 +546,43 @@ public class CreateEventFragment extends Fragment {
             return null;
         }
 
-        int capacity;
+//        int capacity;
+        int eventCapacityVal;
+        int waitlistCapacityVal = 0;
         int sampleSize;
         try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return null;
+            // may be obsolete
+//            capacity = Integer.parseInt(capacityStr);
+//            if (capacity <= 0) {
+//                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+            eventCapacityVal = Integer.parseInt(eventCapacityStr);
+            if (eventCapacityVal <= 0) {
+                Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
             }
+//            sampleSize = Integer.parseInt(sampleStr);
+//            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!waitlistCapacityStr.isEmpty()) {
+            try {
+                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
+                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
+            } catch (NumberFormatException e) {
+                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        try {
             sampleSize = Integer.parseInt(sampleStr);
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
+            sampleSize = 0;
             Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
             return null;
         }
@@ -439,7 +594,9 @@ public class CreateEventFragment extends Fragment {
         event.setId(eventId);
         event.setName(name);
         event.setDescription(description);
-        event.setAmount(capacity);
+//        event.setAmount(capacity); may be obsolete
+        event.setAmount(eventCapacityVal);
+        event.setWaitlistCapacity(waitlistCapacityVal);
         event.setSampleSize(sampleSize);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
@@ -452,6 +609,7 @@ public class CreateEventFragment extends Fragment {
         data.put("id", event.getId());
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
+        data.put("waitlistCapacity", event.getWaitlistCapacity());
         data.put("description", event.getDescription());
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());

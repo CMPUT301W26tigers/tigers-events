@@ -80,6 +80,7 @@ public class EventDetailFragment extends Fragment {
     private boolean userIsOrganizer = false;
     private String currentEntrantDocId = null;
     private int waitlistCount = 0;
+    private int waitlistCapacity = 0;
     private int eventCapacity = 0;
     private String eventCreatorId = null;
     private boolean geolocationRequired = false;
@@ -289,6 +290,9 @@ public class EventDetailFragment extends Fragment {
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
                         tvCapacity.setText(String.valueOf(eventCapacity));
 
+                        Long waitlistCapLong = doc.getLong("waitlistCapacity");
+                        waitlistCapacity = (waitlistCapLong != null) ? waitlistCapLong.intValue() : 0;
+
                         String posterUrl = doc.getString("posterUrl");
                         if (posterUrl != null && !posterUrl.isEmpty()) {
                             Glide.with(this).load(posterUrl).into(ivPoster);
@@ -366,6 +370,10 @@ public class EventDetailFragment extends Fragment {
             return;
         }
 
+        if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity && !isOnWaitlist) {
+            Toast.makeText(requireContext(), "The waitlist for this event is full", Toast.LENGTH_SHORT).show();
+            return;
+        }
         btnWaitlist.setEnabled(false);
 
         if (!eventDetailsLoaded) {
@@ -740,6 +748,12 @@ public class EventDetailFragment extends Fragment {
             btnWaitlist.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(
                             getResources().getColor(R.color.colorDanger, null)));
+        } else if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity){
+            btnWaitlist.setText("Waitlist Full");
+            btnWaitlist.setEnabled(false);
+            btnWaitlist.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getResources().getColor(R.color.dark_grey, null)));
         } else {
             btnWaitlist.setText("Join Waitlist");
             btnWaitlist.setBackgroundTintList(
@@ -752,8 +766,14 @@ public class EventDetailFragment extends Fragment {
      * Updates the waitlist counter text view with current statistics.
      */
     private void updateWaitlistCounter() {
-        tvWaitlistCounter.setText(waitlistCount + "/" + eventCapacity + " on waitlist");
+//        tvWaitlistCounter.setText(waitlistCount + "/" + eventCapacity + " on waitlist"); may be obsolete
+        if (waitlistCapacity > 0) {
+                tvWaitlistCounter.setText(waitlistCount + "/" + waitlistCapacity + " on waitlist");
+            } else {
+                tvWaitlistCounter.setText(waitlistCount + " on waitlist");
+            }
     }
+
 
     /**
      * Helper method to get a string field from a {@link DocumentSnapshot} or a default value if missing.

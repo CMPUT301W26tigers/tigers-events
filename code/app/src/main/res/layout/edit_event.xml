@@ -314,12 +314,32 @@
                 app:iconTint="@android:color/white" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_event_capacity"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="Event Capacity"
+                app:boxBackgroundMode="none"
+                app:boxStrokeWidth="0dp"
+                app:boxStrokeWidthFocused="0dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_event_capacity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:textSize="14sp"/>
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_capacity"
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:hint="Waitlist Capacity"
+                android:hint="Waitlist Capacity (Leave blank for unlimited)"
                 app:boxBackgroundMode="none"
                 app:boxStrokeWidth="0dp"
                 app:boxStrokeWidthFocused="0dp">
