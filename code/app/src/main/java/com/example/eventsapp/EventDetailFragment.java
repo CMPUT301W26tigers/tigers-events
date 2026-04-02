@@ -176,6 +176,14 @@ public class EventDetailFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
 
+        view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(requireContext())
+                    .setTitle("How joining events work:")
+                    .setMessage("filler description")
+                    .setPositiveButton("OK", null)
+                    .show();
+        });
+
         // Initialize comments section
         rvComments = view.findViewById(R.id.rv_comments);
         etComment = view.findViewById(R.id.et_comment);

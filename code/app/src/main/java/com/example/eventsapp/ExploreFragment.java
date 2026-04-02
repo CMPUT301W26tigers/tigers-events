@@ -27,7 +27,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A fragment that allows users to explore and search for all available events.
@@ -211,9 +215,74 @@ public class ExploreFragment extends Fragment {
                         allEvents.add(e);
                     }
                 }
-                adapter.notifyDataSetChanged();
+                resolveHostNames(allEvents, () -> {
+                    adapter.notifyDataSetChanged();
+                });
             }
         });
+    }
+
+    /**
+     * Resolves display names for all unique host IDs in the given event list.
+     * Once all names are resolved, sets hostName on each event and runs the callback.
+     */
+    private void resolveHostNames(List<Event> events, Runnable onComplete) {
+        Set<String> hostIds = new HashSet<>();
+        for (Event e : events) {
+            if (e.getHostId() != null && !e.getHostId().isEmpty()) {
+                hostIds.add(e.getHostId());
+            }
+        }
+        if (hostIds.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        Map<String, String> nameMap = new HashMap<>();
+        final int[] remaining = {hostIds.size()};
+
+        for (String hostId : hostIds) {
+            FirebaseFirestore.getInstance().collection("users").document(hostId)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String first = doc.getString("firstName");
+                            String last = doc.getString("lastName");
+                            if (first == null || first.isEmpty()) {
+                                String fullName = doc.getString("name");
+                                if (fullName != null && !fullName.isEmpty()) {
+                                    String[] parts = fullName.trim().split("\\s+");
+                                    first = parts[0];
+                                    last = parts.length > 1 ? parts[parts.length - 1] : null;
+                                }
+                            }
+                            if (first != null && !first.isEmpty()) {
+                                String display = last != null && !last.isEmpty()
+                                        ? first + " " + last.charAt(0) + "."
+                                        : first;
+                                nameMap.put(hostId, display);
+                            }
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event e : events) {
+                                String resolved = nameMap.get(e.getHostId());
+                                e.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event ev : events) {
+                                String resolved = nameMap.get(ev.getHostId());
+                                ev.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    });
+        }
     }
 
     /**
@@ -256,22 +325,18 @@ public class ExploreFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
-            holder.tvEventHost.setText(event.getDescription());
+            holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
 
-            View avatarCircle = holder.itemView.findViewById(R.id.avatarCircle);
-            View cardThumb = holder.itemView.findViewById(R.id.cardThumb);
             if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
-                avatarCircle.setVisibility(View.GONE);
-                cardThumb.setVisibility(View.VISIBLE);
+                holder.ivThumb.setVisibility(View.VISIBLE);
             } else {
-                avatarCircle.setVisibility(View.VISIBLE);
-                cardThumb.setVisibility(View.GONE);
+                holder.ivThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
@@ -286,7 +351,7 @@ public class ExploreFragment extends Fragment {
          * ViewHolder for event card items in the Explore fragment.
          */
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime;
+            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate;
             ImageView ivThumb;
 
             /**
@@ -299,7 +364,6 @@ public class ExploreFragment extends Fragment {
                 tvEventHost = itemView.findViewById(R.id.tvEventHost);
                 tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
-                tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
             }
         }
