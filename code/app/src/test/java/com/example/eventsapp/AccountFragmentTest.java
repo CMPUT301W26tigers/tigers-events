@@ -126,10 +126,24 @@ public class AccountFragmentTest {
     public void testSignOutAndSessionClear() {
         // Ensure user is logged in
         assertTrue(UserManager.getInstance().isLoggedIn());
-        
+
         // Perform logout
         UserManager.getInstance().logout();
-        
+
+        // Verify session is cleared
+        assertNull(UserManager.getInstance().getCurrentUser());
+        assertFalse(UserManager.getInstance().isLoggedIn());
+    }
+
+    @Test
+    public void testDeleteAccountClearsSession() {
+        // Ensure user is logged in
+        assertTrue(UserManager.getInstance().isLoggedIn());
+        assertEquals("test_user_id", UserManager.getInstance().getCurrentUser().getId());
+
+        // Simulate what deleteAccount() does after Firestore deletion succeeds
+        UserManager.getInstance().setCurrentUser(null);
+
         // Verify session is cleared
         assertNull(UserManager.getInstance().getCurrentUser());
         assertFalse(UserManager.getInstance().isLoggedIn());

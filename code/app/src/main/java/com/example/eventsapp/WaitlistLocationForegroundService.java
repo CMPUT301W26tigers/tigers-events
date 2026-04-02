@@ -19,6 +19,8 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -116,7 +118,9 @@ public class WaitlistLocationForegroundService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        fused = LocationServices.getFusedLocationProviderClient(this);
+        if (isGooglePlayServicesLocationAvailable()) {
+            fused = LocationServices.getFusedLocationProviderClient(this);
+        }
         db = FirebaseFirestore.getInstance();
         workerThread = new HandlerThread("waitlist-loc-worker");
         workerThread.start();
@@ -154,8 +158,20 @@ public class WaitlistLocationForegroundService extends Service {
         Notification notification = buildNotification(eventName != null ? eventName : "");
         startForeground(NOTIFICATION_ID, notification);
 
+        if (fused == null || !isGooglePlayServicesLocationAvailable()) {
+            Log.w(TAG, "Fused location unavailable; stopping waitlist location service");
+            stopForeground(STOP_FOREGROUND_REMOVE);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         try {
-            fused.requestLocationUpdates(locationRequest, locationCallback, workerLooper);
+            fused.requestLocationUpdates(locationRequest, locationCallback, workerLooper)
+                    .addOnFailureListener(e -> {
+                        Log.w(TAG, "Failed to request fused location updates", e);
+                        stopForeground(STOP_FOREGROUND_REMOVE);
+                        stopSelf();
+                    });
         } catch (SecurityException e) {
             Log.e(TAG, "Missing location permission", e);
             stopForeground(STOP_FOREGROUND_REMOVE);
@@ -218,5 +234,10 @@ public class WaitlistLocationForegroundService extends Service {
                 .setOnlyAlertOnce(true)
                 .addAction(0, getString(R.string.notif_waitlist_location_stop), stopPi)
                 .build();
+    }
+
+    private boolean isGooglePlayServicesLocationAvailable() {
+        int status = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this);
+        return status == ConnectionResult.SUCCESS;
     }
 }

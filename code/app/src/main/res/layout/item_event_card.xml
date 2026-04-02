@@ -13,12 +13,14 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="14dp">
+        android:minHeight="100dp">
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/avatarCircle"
             android:layout_width="42dp"
             android:layout_height="42dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginTop="14dp"
             app:cardCornerRadius="21dp"
             app:cardElevation="0dp"
             app:cardBackgroundColor="@color/colorAvatarBackground"
@@ -49,8 +51,9 @@
             android:maxLines="2"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
+            android:layout_marginTop="14dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
-            app:layout_constraintTop_toTopOf="@id/avatarCircle"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toStartOf="@id/cardThumb" />
 
         <TextView
@@ -61,7 +64,7 @@
             android:textColor="@color/colorTextHint"
             android:textSize="12sp"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="1"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
@@ -77,30 +80,10 @@
             android:textSize="12sp"
             android:layout_marginStart="12dp"
             android:layout_marginTop="6dp"
+            android:layout_marginBottom="14dp"
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
-            app:layout_constraintTop_toBottomOf="@id/tvEventHost" />
-
-        <TextView
-            android:id="@+id/tvEventTimeSeparator"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text=" \u2022 "
-            android:textColor="@color/colorTextHint"
-            android:textSize="12sp"
-            app:layout_constraintStart_toEndOf="@id/tvEventDate"
-            app:layout_constraintTop_toTopOf="@id/tvEventDate"
-            app:layout_constraintBottom_toBottomOf="@id/tvEventDate" />
-
-        <TextView
-            android:id="@+id/tvEventTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="7:00 PM"
-            android:textColor="@color/colorTextSecondary"
-            android:textSize="12sp"
-            app:layout_constraintStart_toEndOf="@id/tvEventTimeSeparator"
-            app:layout_constraintTop_toTopOf="@id/tvEventDate"
-            app:layout_constraintBottom_toBottomOf="@id/tvEventDate" />
+            app:layout_constraintTop_toBottomOf="@id/tvEventHost"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <TextView
             android:id="@+id/tvEntrantStatus"
@@ -114,26 +97,35 @@
             app:layout_constraintStart_toEndOf="@id/avatarCircle"
             app:layout_constraintTop_toBottomOf="@id/tvEventDate" />
 
-        <com.google.android.material.card.MaterialCardView
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineHalf"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.45" />
+
+        <!-- Invisible spacer that matches poster width for text end-constraint -->
+        <View
             android:id="@+id/cardThumb"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            app:cardCornerRadius="10dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/colorCardBackground"
-            app:strokeWidth="0dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintStart_toEndOf="@id/guidelineHalf"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-            <ImageView
-                android:id="@+id/ivThumb"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="Event image"
-                android:scaleType="centerCrop"
-                app:srcCompat="@android:drawable/ic_menu_gallery" />
-        </com.google.android.material.card.MaterialCardView>
+        <!-- Poster image, directly in ConstraintLayout so the outer card clips the corners -->
+        <ImageView
+            android:id="@+id/ivThumb"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:contentDescription="Event image"
+            android:scaleType="centerCrop"
+            app:srcCompat="@android:drawable/ic_menu_gallery"
+            app:layout_constraintStart_toEndOf="@id/guidelineHalf"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

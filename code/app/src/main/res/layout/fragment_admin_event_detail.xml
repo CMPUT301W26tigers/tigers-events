@@ -17,7 +17,7 @@
         android:contentDescription="Go back"
         android:padding="10dp"
         android:scaleType="centerInside"
-        app:srcCompat="@android:drawable/ic_menu_revert"
+        app:srcCompat="@drawable/ic_arrow_back"
         app:tint="@color/colorTextPrimary"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
