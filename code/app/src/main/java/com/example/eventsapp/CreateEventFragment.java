@@ -530,7 +530,7 @@ public class CreateEventFragment extends Fragment {
 //        }
         if (eventCapacityStr.isEmpty()) {
             Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
 
         if (eventDate.isEmpty()) {
@@ -560,13 +560,13 @@ public class CreateEventFragment extends Fragment {
             eventCapacityVal = Integer.parseInt(eventCapacityStr);
             if (eventCapacityVal <= 0) {
                 Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return;
+                return null;
             }
 //            sampleSize = Integer.parseInt(sampleStr);
 //            if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
             Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
 
         if (!waitlistCapacityStr.isEmpty()) {
@@ -575,7 +575,7 @@ public class CreateEventFragment extends Fragment {
                 if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
             } catch (NumberFormatException e) {
                 Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
-                return;
+                return null;
             }
         }
         try {
