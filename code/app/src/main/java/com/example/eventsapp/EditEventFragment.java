@@ -159,7 +159,6 @@ public class EditEventFragment extends Fragment {
         });
 
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveEventChanges());
-        view.findViewById(R.id.btn_back).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
         if (btnTogglePrivateEvent != null) {
             btnTogglePrivateEvent.setVisibility(View.GONE);

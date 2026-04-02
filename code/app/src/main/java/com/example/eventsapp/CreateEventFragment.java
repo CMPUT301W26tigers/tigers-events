@@ -170,10 +170,6 @@ public class CreateEventFragment extends Fragment {
             if (tv != null) tv.setPaintFlags(tv.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
         }
 
-        MaterialButton btnBack = view.findViewById(R.id.btn_back);
-        btnBack.setOnClickListener(v ->
-                requireActivity().getOnBackPressedDispatcher().onBackPressed());
-
         // Create new event - generate unique ID and QR
         Event event = new Event(eventId, "", 1, "", "", "", "", "",  0);
         event.setId(eventId);
