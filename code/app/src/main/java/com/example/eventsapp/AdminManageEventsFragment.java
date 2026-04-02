@@ -24,7 +24,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class AdminManageEventsFragment extends Fragment {
 
@@ -142,11 +146,72 @@ public class AdminManageEventsFragment extends Fragment {
                         }
                     }
 
-                    EditText etSearch = getView() != null ? getView().findViewById(R.id.etSearchAdmin) : null;
-                    String query = (etSearch != null && etSearch.getText() != null)
-                            ? etSearch.getText().toString() : "";
-                    applyFilter(query);
+                    resolveHostNames(allEvents, () -> {
+                        EditText etSearch = getView() != null ? getView().findViewById(R.id.etSearchAdmin) : null;
+                        String query = (etSearch != null && etSearch.getText() != null)
+                                ? etSearch.getText().toString() : "";
+                        applyFilter(query);
+                    });
                 });
+    }
+
+    private void resolveHostNames(List<Event> events, Runnable onComplete) {
+        Set<String> hostIds = new HashSet<>();
+        for (Event e : events) {
+            if (e.getHostId() != null && !e.getHostId().isEmpty()) {
+                hostIds.add(e.getHostId());
+            }
+        }
+        if (hostIds.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        Map<String, String> nameMap = new HashMap<>();
+        final int[] remaining = {hostIds.size()};
+
+        for (String hostId : hostIds) {
+            FirebaseFirestore.getInstance().collection("users").document(hostId)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String first = doc.getString("firstName");
+                            String last = doc.getString("lastName");
+                            if (first == null || first.isEmpty()) {
+                                String fullName = doc.getString("name");
+                                if (fullName != null && !fullName.isEmpty()) {
+                                    String[] parts = fullName.trim().split("\\s+");
+                                    first = parts[0];
+                                    last = parts.length > 1 ? parts[parts.length - 1] : null;
+                                }
+                            }
+                            if (first != null && !first.isEmpty()) {
+                                String display = last != null && !last.isEmpty()
+                                        ? first + " " + last.charAt(0) + "."
+                                        : first;
+                                nameMap.put(hostId, display);
+                            }
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event e : events) {
+                                String resolved = nameMap.get(e.getHostId());
+                                e.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event ev : events) {
+                                String resolved = nameMap.get(ev.getHostId());
+                                ev.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    });
+        }
     }
 
     private Event parseEvent(QueryDocumentSnapshot snapshot) {
@@ -206,7 +271,7 @@ public class AdminManageEventsFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
-            holder.tvEventHost.setText(event.getDescription());
+            holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
@@ -217,11 +282,9 @@ public class AdminManageEventsFragment extends Fragment {
 
             if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
-                holder.avatarCircle.setVisibility(View.GONE);
-                holder.cardThumb.setVisibility(View.VISIBLE);
+                holder.ivThumb.setVisibility(View.VISIBLE);
             } else {
-                holder.avatarCircle.setVisibility(View.VISIBLE);
-                holder.cardThumb.setVisibility(View.GONE);
+                holder.ivThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
@@ -235,8 +298,6 @@ public class AdminManageEventsFragment extends Fragment {
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEntrantStatus;
             ImageView ivThumb;
-            View avatarCircle, cardThumb;
-
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvEventName = itemView.findViewById(R.id.tvEventName);
@@ -245,8 +306,6 @@ public class AdminManageEventsFragment extends Fragment {
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
                 tvEntrantStatus = itemView.findViewById(R.id.tvEntrantStatus);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
-                avatarCircle = itemView.findViewById(R.id.avatarCircle);
-                cardThumb = itemView.findViewById(R.id.cardThumb);
             }
         }
     }

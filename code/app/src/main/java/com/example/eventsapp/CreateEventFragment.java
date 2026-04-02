@@ -50,6 +50,8 @@ import java.util.Date;
 public class CreateEventFragment extends Fragment {
 
     private static final int QR_SIZE = 400;
+    private static final String STATE_EVENT_ID = "state_event_id";
+    private static final String STATE_DRAFT_SAVED = "state_draft_saved";
 
     private TextInputEditText editName;
     private TextInputEditText editDescription;
@@ -69,9 +71,13 @@ public class CreateEventFragment extends Fragment {
     private View shareQrImage;
     private View shareEventLink;
     private MaterialButton btnViewWaitlist;
+    private MaterialButton btnManageEnrolledList;
+    private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
     private Uri posterUri;
+    private String eventId;
+    private boolean draftSaved;
 
     private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
@@ -101,6 +107,18 @@ public class CreateEventFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.edit_event, container, false);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            eventId = savedInstanceState.getString(STATE_EVENT_ID);
+            draftSaved = savedInstanceState.getBoolean(STATE_DRAFT_SAVED, false);
+        }
+        if (eventId == null || eventId.trim().isEmpty()) {
+            eventId = java.util.UUID.randomUUID().toString();
+        }
     }
 
     /**
@@ -135,6 +153,8 @@ public class CreateEventFragment extends Fragment {
         shareQrImage = view.findViewById(R.id.iv_qr);
         shareEventLink = view.findViewById(R.id.tv_event_link);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
+        btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
 
@@ -152,13 +172,9 @@ public class CreateEventFragment extends Fragment {
             if (tv != null) tv.setPaintFlags(tv.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
         }
 
-        MaterialButton btnBack = view.findViewById(R.id.btn_back);
-        btnBack.setOnClickListener(v ->
-                requireActivity().getOnBackPressedDispatcher().onBackPressed());
-
         // Create new event - generate unique ID and QR
-        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
-        event.setId(java.util.UUID.randomUUID().toString());
+        Event event = new Event(eventId, "", 1, "", "", "", "", "",  0);
+        event.setId(eventId);
         updateQRCode(event);
 
         // Show the real deep link for this event
@@ -188,6 +204,17 @@ public class CreateEventFragment extends Fragment {
 
         // Save event and go to waitlist (chosen entrants)
         btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+        if (btnManageEnrolledList != null) {
+            btnManageEnrolledList.setOnClickListener(v -> saveAndNavigateToEnrolled(event));
+        }
+        if (btnInviteCoOrganizer != null) {
+            btnInviteCoOrganizer.setOnClickListener(v -> ensureDraftSaved(event, () -> {
+                if (!isAdded()) {
+                    return;
+                }
+                CoOrganizerInviteHelper.showInviteDialog(this, db, event.getId());
+            }));
+        }
 
         // Done: save and go back to Your Events
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
@@ -200,6 +227,13 @@ public class CreateEventFragment extends Fragment {
             shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, deepLink);
             startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
         });
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_EVENT_ID, eventId);
+        outState.putBoolean(STATE_DRAFT_SAVED, draftSaved);
     }
 
     /**
@@ -270,6 +304,9 @@ public class CreateEventFragment extends Fragment {
         shareEventLink.setVisibility(visibility);
         if (btnViewWaitlist != null) {
             btnViewWaitlist.setText("Manage Waitlist");
+        }
+        if (btnManageEnrolledList != null) {
+            btnManageEnrolledList.setText("Manage Enrolled");
         }
         if (btnTogglePrivateEvent != null) {
             btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
@@ -411,8 +448,7 @@ public class CreateEventFragment extends Fragment {
         if (currentUser != null && currentUser.getId() != null) {
             data.put("createdBy", currentUser.getId());
         }
-
-        saveEventToFirestore(event, data, currentUser, () -> {
+        ensureDraftSaved(event, () -> {
             if (!isAdded()) {
                 return;
             }
@@ -424,11 +460,53 @@ public class CreateEventFragment extends Fragment {
         });
     }
 
+    private void saveAndNavigateToEnrolled(Event event) {
+        ensureDraftSaved(event, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Bundle args = new Bundle();
+            args.putString("eventId", event.getId());
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.enrolledFragment, args);
+        });
+    }
+
     /**
      * Validates inputs, saves the event to Firestore, then returns to the previous screen.
      * This is used by the \"Done\" button for a natural completion flow.
      */
     private void saveAndGoBack(Event event) {
+        Map<String, Object> data = buildEventData(event);
+        if (data == null) {
+            return;
+        }
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        saveEventToFirestore(event, data, currentUser, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Navigation.findNavController(requireView()).popBackStack();
+        });
+    }
+
+    private void ensureDraftSaved(Event event, @NonNull Runnable onSuccess) {
+        if (draftSaved) {
+            onSuccess.run();
+            return;
+        }
+
+        Map<String, Object> data = buildEventData(event);
+        if (data == null) {
+            return;
+        }
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        saveEventToFirestore(event, data, currentUser, onSuccess);
+    }
+
+    @Nullable
+    private Map<String, Object> buildEventData(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
         // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; may be obsolete
@@ -443,7 +521,7 @@ public class CreateEventFragment extends Fragment {
 
         if (name.isEmpty()) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
         // May be obsolete
 //        if (capacityStr.isEmpty()) {
@@ -457,15 +535,15 @@ public class CreateEventFragment extends Fragment {
 
         if (eventDate.isEmpty()) {
             editEventDate.setError("Event date required");
-            return;
+            return null;
         }
         if (registrationStart.isEmpty()) {
             editRegistrationStart.setError("Registration start required");
-            return;
+            return null;
         }
         if (registrationEnd.isEmpty()) {
             editRegistrationEnd.setError("Registration end required");
-            return;
+            return null;
         }
 
 //        int capacity;
@@ -505,12 +583,15 @@ public class CreateEventFragment extends Fragment {
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
             sampleSize = 0;
+            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            return null;
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
-            return;
+            return null;
         }
 
+        event.setId(eventId);
         event.setName(name);
         event.setDescription(description);
 //        event.setAmount(capacity); may be obsolete
@@ -536,8 +617,10 @@ public class CreateEventFragment extends Fragment {
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
         data.put("isPrivate", isPrivateEvent);
-        data.put("coOrganizerIds", new ArrayList<String>());
-        data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        if (!draftSaved) {
+            data.put("coOrganizerIds", new ArrayList<String>());
+            data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        }
         data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
@@ -545,12 +628,7 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        saveEventToFirestore(event, data, currentUser, () -> {
-            if (!isAdded()) {
-                return;
-            }
-            Navigation.findNavController(requireView()).popBackStack();
-        });
+        return data;
     }
 
     private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
@@ -589,7 +667,8 @@ public class CreateEventFragment extends Fragment {
                         return;
                     }
                     Log.d("CreateEvent", "Event saved");
-                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    draftSaved = true;
+                    Toast.makeText(requireContext(), "Event saved", Toast.LENGTH_SHORT).show();
                     if (currentUser != null && currentUser.getId() != null) {
                         EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
                     }

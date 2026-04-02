@@ -96,9 +96,12 @@ public class AccountFragment extends Fragment {
         }
 
         if (deleteAccountButton != null) {
-            deleteAccountButton.setOnClickListener(v -> {
-                // Handle delete account button click
-            });
+            deleteAccountButton.setOnClickListener(v -> showDeleteConfirmation());
+        }
+
+        ImageButton btnDeleteIcon = view.findViewById(R.id.btnDeleteIcon);
+        if (btnDeleteIcon != null) {
+            btnDeleteIcon.setOnClickListener(v -> showDeleteConfirmation());
         }
 
         if (inboxIconButton != null) {
@@ -262,6 +265,36 @@ public class AccountFragment extends Fragment {
                 .addOnFailureListener(e -> {
                     Log.e("Firestore", "Error updating " + field, e);
                     Toast.makeText(getContext(), "Failed to update " + field, Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void showDeleteConfirmation() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Delete Account")
+                .setMessage("Are you sure you want to delete your account? This will also delete all events you created. This cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> deleteAccount())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteAccount() {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) return;
+
+        String userId = currentUser.getId();
+
+        db.collection("events")
+                .whereEqualTo("createdBy", userId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    for (com.google.firebase.firestore.QueryDocumentSnapshot doc : querySnapshot) {
+                        db.collection("events").document(doc.getId()).delete();
+                    }
+                    db.collection("users").document(userId).delete()
+                            .addOnSuccessListener(aVoid -> {
+                                UserManager.getInstance().setCurrentUser(null);
+                                Navigation.findNavController(requireView()).navigate(R.id.signInFragment);
+                            });
                 });
     }
 

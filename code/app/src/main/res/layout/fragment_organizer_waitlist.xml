@@ -76,6 +76,34 @@
             app:icon="@android:drawable/ic_input_add"
             app:iconPadding="6dp"
             app:iconTint="@android:color/white" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/waitlist_secondary_actions_row"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/waitlist_actions_row">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_view_map"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:text="Map View"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="24dp"
+            app:icon="@android:drawable/ic_dialog_map"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_run_lottery"
@@ -94,24 +122,6 @@
             app:iconTint="@android:color/white" />
     </LinearLayout>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_view_map"
-        android:layout_width="0dp"
-        android:layout_height="48dp"
-        android:layout_marginTop="10dp"
-        android:text="Map View"
-        android:textAllCaps="false"
-        android:textColor="@android:color/white"
-        android:textSize="12sp"
-        app:backgroundTint="@color/dark_grey"
-        app:cornerRadius="24dp"
-        app:icon="@android:drawable/ic_dialog_map"
-        app:iconPadding="6dp"
-        app:iconTint="@android:color/white"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/waitlist_actions_row" />
-
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_waitlist_entries"
         android:layout_width="0dp"
@@ -123,7 +133,7 @@
         app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btn_view_map">
+        app:layout_constraintTop_toBottomOf="@id/waitlist_secondary_actions_row">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_waitlist"
@@ -139,10 +149,10 @@
         android:id="@+id/tv_waitlist_stats"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:alpha="0.8"
         android:gravity="center"
-        android:text="Private invites and waitlisted entrants appear here."
+        android:text="Private invites, waitlisted, and invited entrants appear here."
         android:textColor="@color/colorTextSecondary"
         android:textSize="12sp"
         app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
@@ -155,22 +165,59 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="center"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:weightSum="3"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_export_csv"
-            android:layout_width="220dp"
+            android:id="@+id/btn_notify_waitlisted"
+            android:layout_width="0dp"
             android:layout_height="52dp"
-            android:text="Export as CSV"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:text="Waitlist"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
+            android:textSize="12sp"
             app:backgroundTint="@color/dark_grey"
             app:cornerRadius="26dp"
-            app:icon="@android:drawable/ic_menu_sort_by_size"
-            app:iconPadding="8dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notify_selected"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:layout_weight="1"
+            android:text="Selected"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notify_not_selected"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:text="Not Selected"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
             app:iconTint="@android:color/white" />
     </LinearLayout>
 
