@@ -155,8 +155,70 @@
         android:text="Private invites, waitlisted, and invited entrants appear here."
         android:textColor="@color/colorTextSecondary"
         android:textSize="12sp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/waitlist_footer_row"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:weightSum="3"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notify_waitlisted"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:text="Waitlist"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notify_selected"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="3dp"
+            android:layout_marginEnd="3dp"
+            android:layout_weight="1"
+            android:text="Selected"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_notify_not_selected"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:text="Not Selected"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            app:backgroundTint="@color/dark_grey"
+            app:cornerRadius="26dp"
+            app:icon="@android:drawable/ic_dialog_email"
+            app:iconPadding="6dp"
+            app:iconTint="@android:color/white" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
