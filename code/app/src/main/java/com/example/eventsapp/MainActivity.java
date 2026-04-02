@@ -127,15 +127,21 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         eventsRef.document(trimmedEventName).get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot.exists()) {
-                        snapshot.getReference().delete()
-                                .addOnFailureListener(e -> Log.e(TAG, "Failed to delete event " + trimmedEventName, e));
+                        String eventId = snapshot.getId();
+                        EventCleanupHelper.deleteEventCompletely(eventId,
+                                () -> Log.d(TAG, "Deleted event: " + trimmedEventName),
+                                e -> Log.e(TAG, "Failed to delete event " + trimmedEventName, e));
                         return;
                     }
 
                     eventsRef.whereEqualTo("name", trimmedEventName).get()
                             .addOnSuccessListener(querySnapshot -> {
                                 for (QueryDocumentSnapshot doc : querySnapshot) {
-                                    doc.getReference().delete();
+                                    String eventId = doc.getString("id");
+                                    if (eventId == null) eventId = doc.getId();
+                                    EventCleanupHelper.deleteEventCompletely(eventId,
+                                            () -> Log.d(TAG, "Deleted event: " + trimmedEventName),
+                                            e -> Log.e(TAG, "Failed to delete event " + trimmedEventName, e));
                                     return;
                                 }
                                 Log.w(TAG, "No event found to delete: " + trimmedEventName);

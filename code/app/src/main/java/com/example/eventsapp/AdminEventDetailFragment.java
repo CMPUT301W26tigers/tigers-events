@@ -143,16 +143,16 @@ public class AdminEventDetailFragment extends Fragment {
     }
 
     private void deleteEvent(View view, Event event) {
-        FirebaseFirestore.getInstance()
-                .collection("events")
-                .document(event.getId())
-                .delete()
-                .addOnSuccessListener(aVoid -> {
+        EventCleanupHelper.deleteEventCompletely(event.getId(),
+                () -> {
+                    if (!isAdded()) return;
                     Toast.makeText(requireContext(), "Event deleted", Toast.LENGTH_SHORT).show();
                     Navigation.findNavController(view).popBackStack();
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT).show()
-                );
+                },
+                e -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT).show();
+                }
+        );
     }
 }
