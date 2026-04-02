@@ -29,38 +29,70 @@ public class FirestoreNotificationHelper {
     }
 
     public void sendWaitlistedNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId,
+        sendOptionalNotification(userId, eventId,
                 "Event waitlisted",
                 "You are currently on the waitlist for this event.",
                 "waitlisted");
     }
 
     public void sendInvitationNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId,
+        sendCriticalNotification(userId, eventId,
                 "Event Invitation",
                 "You were selected from the waitlist for this event.",
                 "invitation");
     }
 
     public void sendPrivateWaitlistInvitationNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId,
+        sendCriticalNotification(userId, eventId,
                 "Private Event Invitation",
                 "You have been invited to join the waiting list for a private event.",
                 "private_waitlist_invitation");
     }
 
     public void sendCoOrganizerInvitationNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId,
+        sendCriticalNotification(userId, eventId,
                 "Co-organizer Invitation",
                 "You have been invited to help organize this event.",
                 "co_organizer_invitation");
     }
 
     public void sendNotSelectedNotification(String userId, String eventId) {
-        upsertNotification(userId, eventId,
+        sendOptionalNotification(userId, eventId,
                 "Removed from Event",
                 "You were not selected from the waitlist for this event.",
                 "not_selected");
+    }
+
+    private void sendOptionalNotification(String userId, String eventId,
+                                          String title, String message, String type) {
+        if (isBlank(userId) || isBlank(eventId)) {
+            return;
+        }
+
+        db.collection("users")
+                .document(userId)
+                .get()
+                .addOnSuccessListener(userDoc -> {
+                    Boolean enabled = userDoc.getBoolean("notificationsEnabled");
+
+                    // Missing field defaults to enabled
+                    if (enabled != null && !enabled) {
+                        return;
+                    }
+
+                    upsertNotification(userId, eventId, title, message, type);
+                })
+                .addOnFailureListener(e ->
+                        Log.w(TAG, "Failed to check notification preference", e));
+    }
+
+    private void sendCriticalNotification(String userId, String eventId,
+                                          String title, String message, String type) {
+        if (isBlank(userId) || isBlank(eventId)) {
+            return;
+        }
+
+        upsertNotification(userId, eventId, title, message, type);
     }
 
     private void upsertNotification(String userId, String eventId, String title, String message, String type) {
