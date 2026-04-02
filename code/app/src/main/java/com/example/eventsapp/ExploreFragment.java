@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -261,6 +262,16 @@ public class ExploreFragment extends Fragment {
             );
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
+
+            String posterUrl = event.getPosterUrl();
+            if (posterUrl != null && !posterUrl.isEmpty()) {
+                Glide.with(holder.itemView.getContext())
+                        .load(posterUrl)
+                        .centerCrop()
+                        .into(holder.ivThumb);
+            } else {
+                holder.ivThumb.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
