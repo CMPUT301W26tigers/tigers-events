@@ -395,11 +395,24 @@ public class InboxFragment extends Fragment {
                 .addOnSuccessListener(querySnapshot -> {
                     WriteBatch batch = db.batch();
                     if (!querySnapshot.isEmpty()) {
+                        DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
                         String status = accept ? "ACCEPTED" : "DECLINED";
                         int statusCode = accept ? 2 : 3;
-                        batch.update(querySnapshot.getDocuments().get(0).getReference(),
+                        batch.update(entrantDoc.getReference(),
                                 "status", status,
                                 "statusCode", statusCode);
+                        if (accept) {
+                            Map<String, Object> enrolledData = new HashMap<>();
+                            enrolledData.put("userId", currentUser.getId());
+                            enrolledData.put("name", entrantDoc.getString("name"));
+                            enrolledData.put("email", entrantDoc.getString("email"));
+                            enrolledData.put("status", "Accepted");
+                            batch.set(db.collection("events")
+                                            .document(notification.getEventId())
+                                            .collection("enrolled")
+                                            .document(entrantDoc.getId()),
+                                    enrolledData);
+                        }
                         // Update event history status
                         EventCleanupHelper.updateHistoryStatus(
                                 currentUser.getId(), notification.getEventId(), status);

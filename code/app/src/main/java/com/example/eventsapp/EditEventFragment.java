@@ -44,7 +44,7 @@ import java.util.Map;
  * A fragment that allows users to edit an existing event.
  * Handles user stories for event modification, including:
  * - Updating event details and poster.
- * - Toggling event privacy status.
+ * - Preserving event privacy status while editing other details.
  * - Managing co-organizers.
  */
 public class EditEventFragment extends Fragment {
@@ -163,10 +163,9 @@ public class EditEventFragment extends Fragment {
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveEventChanges());
         view.findViewById(R.id.btn_back).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-        btnTogglePrivateEvent.setOnClickListener(v -> {
-            isPrivateEvent = !isPrivateEvent;
-            updatePrivateUi();
-        });
+        if (btnTogglePrivateEvent != null) {
+            btnTogglePrivateEvent.setVisibility(View.GONE);
+        }
 
         if (btnViewWaitlist != null) {
             btnViewWaitlist.setOnClickListener(v -> openWaitlistManager());
@@ -235,8 +234,6 @@ public class EditEventFragment extends Fragment {
     }
 
     private void updatePrivateUi() {
-        btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
-        
         int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
         if (shareTitle != null) shareTitle.setVisibility(visibility);
         

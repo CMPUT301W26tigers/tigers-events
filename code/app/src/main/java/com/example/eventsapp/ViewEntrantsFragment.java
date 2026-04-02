@@ -40,7 +40,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Organizer view: waitlisted entrants (APPLIED) plus invited and accepted.
+ * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
+ * Accepted entrants belong on the enrolled screen.
  */
 public class ViewEntrantsFragment extends Fragment {
 
@@ -56,7 +57,6 @@ public class ViewEntrantsFragment extends Fragment {
     private MaterialToolbar toolbar;
     private MaterialButton btnAddApplicant;
     private MaterialButton btnRunLottery;
-    private MaterialButton btnExportCsv;
     private boolean isPrivateEvent;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
@@ -94,8 +94,6 @@ public class ViewEntrantsFragment extends Fragment {
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
         btnRunLottery = view.findViewById(R.id.btn_run_lottery);
-        btnExportCsv = view.findViewById(R.id.btn_export_csv);
-
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -118,9 +116,6 @@ public class ViewEntrantsFragment extends Fragment {
             showEntrantPickerDialog();
         });
         btnRunLottery.setOnClickListener(v -> runLottery());
-        btnExportCsv.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-
         loadEventConfiguration();
         View btnViewMap = view.findViewById(R.id.btn_view_map);
         if (btnViewMap != null) {
@@ -167,7 +162,7 @@ public class ViewEntrantsFragment extends Fragment {
         CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
         Query query = entrantsRef.whereIn("status",
-                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"));
+                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null || value == null || !isAdded()) {

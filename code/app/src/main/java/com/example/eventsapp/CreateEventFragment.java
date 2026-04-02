@@ -62,6 +62,7 @@ public class CreateEventFragment extends Fragment {
     private View shareQrImage;
     private View shareEventLink;
     private MaterialButton btnViewWaitlist;
+    private MaterialButton btnManageEnrolledList;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
 
@@ -114,6 +115,7 @@ public class CreateEventFragment extends Fragment {
         shareQrImage = view.findViewById(R.id.iv_qr);
         shareEventLink = view.findViewById(R.id.tv_event_link);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
+        btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
         switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
 
@@ -164,6 +166,9 @@ public class CreateEventFragment extends Fragment {
 
         // Save event and go to waitlist (chosen entrants)
         btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+        if (btnManageEnrolledList != null) {
+            btnManageEnrolledList.setOnClickListener(v -> saveAndNavigateToEnrolled(event));
+        }
 
         // Done: save and go back to Your Events
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveAndGoBack(event));
@@ -246,6 +251,9 @@ public class CreateEventFragment extends Fragment {
         shareEventLink.setVisibility(visibility);
         if (btnViewWaitlist != null) {
             btnViewWaitlist.setText("Manage Waitlist");
+        }
+        if (btnManageEnrolledList != null) {
+            btnManageEnrolledList.setText("Manage Enrolled");
         }
         if (btnTogglePrivateEvent != null) {
             btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
@@ -364,6 +372,103 @@ public class CreateEventFragment extends Fragment {
             args.putString("eventName", event.getName());
             Navigation.findNavController(requireView())
                     .navigate(R.id.viewEntrantsFragment, args);
+        });
+    }
+
+    private void saveAndNavigateToEnrolled(Event event) {
+        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+                ? editSampleSize.getText().toString().trim() : "0";
+
+        String eventDate = getText(editEventDate);
+        String registrationStart = getText(editRegistrationStart);
+        String registrationEnd = getText(editRegistrationEnd);
+
+        if (capacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (eventDate.isEmpty()) {
+            editEventDate.setError("Event date required");
+            return;
+        }
+
+        if (registrationStart.isEmpty()) {
+            editRegistrationStart.setError("Registration start required");
+            return;
+        }
+
+        if (registrationEnd.isEmpty()) {
+            editRegistrationEnd.setError("Registration end required");
+            return;
+        }
+
+        int capacity;
+        int sampleSize;
+        try {
+            capacity = Integer.parseInt(capacityStr);
+            if (capacity <= 0) {
+                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            sampleSize = Integer.parseInt(sampleStr);
+            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+            return;
+        }
+
+        if (name.isEmpty()) {
+            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        event.setName(name);
+        event.setDescription(description);
+        event.setAmount(capacity);
+        event.setSampleSize(sampleSize);
+        event.setEvent_date(eventDate);
+        event.setRegistration_start(registrationStart);
+        event.setRegistration_end(registrationEnd);
+        if (!isPrivateEvent) {
+            updateQRCode(event);
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", event.getId());
+        data.put("name", event.getName());
+        data.put("amount", event.getAmount());
+        data.put("description", event.getDescription());
+        data.put("posterUrl", event.getPosterUrl());
+        data.put("sampleSize", event.getSampleSize());
+        data.put("event_date", event.getEvent_date());
+        data.put("registration_start", event.getRegistration_start());
+        data.put("registration_end", event.getRegistration_end());
+        data.put("isPrivate", isPrivateEvent);
+        data.put("coOrganizerIds", new ArrayList<String>());
+        data.put("pendingCoOrganizerIds", new ArrayList<String>());
+        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getId() != null) {
+            data.put("createdBy", currentUser.getId());
+        }
+
+        saveEventToFirestore(event, data, currentUser, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Bundle args = new Bundle();
+            args.putString("eventId", event.getId());
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.enrolledFragment, args);
         });
     }
 
