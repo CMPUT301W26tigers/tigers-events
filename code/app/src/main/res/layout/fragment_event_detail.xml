@@ -259,8 +259,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Event info"
         android:padding="8dp"
-        app:srcCompat="@android:drawable/ic_menu_info_details"
-        app:tint="@color/colorTextPrimary"
+        app:srcCompat="@drawable/ic_info"
         app:layout_constraintBottom_toBottomOf="@id/btnWaitlist"
         app:layout_constraintTop_toTopOf="@id/btnWaitlist"
         app:layout_constraintEnd_toEndOf="parent"/>
