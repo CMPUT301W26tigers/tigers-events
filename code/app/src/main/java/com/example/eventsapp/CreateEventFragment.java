@@ -53,7 +53,8 @@ public class CreateEventFragment extends Fragment {
 
     private TextInputEditText editName;
     private TextInputEditText editDescription;
-    private TextInputEditText editCapacity;
+    private TextInputEditText editCapacity; // This may be obsolete
+    private TextInputEditText editEventCapacity;
     private TextInputEditText editSampleSize;
     private ImageView ivPoster;
     private ImageView ivQR;
@@ -117,7 +118,8 @@ public class CreateEventFragment extends Fragment {
 
         editName = view.findViewById(R.id.edit_name);
         editDescription = view.findViewById(R.id.edit_description);
-        editCapacity = view.findViewById(R.id.edit_capacity);
+        editCapacity = view.findViewById(R.id.edit_capacity); // This may be obsolete
+        editEventCapacity = view.findViewById(R.id.edit_event_capacity);
         editSampleSize = view.findViewById(R.id.edit_sample_size);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
@@ -292,7 +294,9 @@ public class CreateEventFragment extends Fragment {
     private void saveAndNavigateToWaitlist(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; // May be obsolete
+        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
+        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
                 ? editSampleSize.getText().toString().trim() : "0";
 
@@ -301,8 +305,13 @@ public class CreateEventFragment extends Fragment {
         String registrationEnd = getText(editRegistrationEnd);
 
 
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+        // may be obsolete
+        // if (capacityStr.isEmpty()) {
+        //    Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+        //    return;
+        //}
+        if (eventCapacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -321,19 +330,42 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
-        int capacity;
+//        int capacity; may be obsolete
+        int eventCapacityVal;
+        int waitlistCapacityVal = 0;
         int sampleSize;
         try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+            // May be obsolete
+            // capacity = Integer.parseInt(capacityStr);
+            // if (capacity <= 0) {
+            //    Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+            //    return;
+            // }
+            eventCapacityVal = Integer.parseInt(eventCapacityStr);
+                if (eventCapacityVal <= 0) {
+                    Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
                 return;
             }
+            // sampleSize = Integer.parseInt(sampleStr);
+            // if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!waitlistCapacityStr.isEmpty()) {
+            try {
+                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
+                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
+            } catch (NumberFormatException e) {
+                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        try {
             sampleSize = Integer.parseInt(sampleStr);
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
+            sampleSize = 0;
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
@@ -347,7 +379,9 @@ public class CreateEventFragment extends Fragment {
 
         event.setName(name);
         event.setDescription(description);
-        event.setAmount(capacity);
+//        event.setAmount(capacity); may be obsolete
+        event.setAmount(eventCapacityVal);
+        event.setWaitlistCapacity(waitlistCapacityVal);
         event.setSampleSize(sampleSize);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
@@ -360,6 +394,7 @@ public class CreateEventFragment extends Fragment {
         data.put("id", event.getId());
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
+        data.put("waitlistCapacity", event.getWaitlistCapacity());
         data.put("description", event.getDescription());
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
@@ -396,7 +431,9 @@ public class CreateEventFragment extends Fragment {
     private void saveAndGoBack(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
+        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; may be obsolete
+        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
+        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
                 ? editSampleSize.getText().toString().trim() : "0";
 
@@ -408,10 +445,16 @@ public class CreateEventFragment extends Fragment {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+        // May be obsolete
+//        if (capacityStr.isEmpty()) {
+//            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+        if (eventCapacityStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
             return;
         }
+
         if (eventDate.isEmpty()) {
             editEventDate.setError("Event date required");
             return;
@@ -425,19 +468,43 @@ public class CreateEventFragment extends Fragment {
             return;
         }
 
-        int capacity;
+//        int capacity;
+        int eventCapacityVal;
+        int waitlistCapacityVal = 0;
         int sampleSize;
         try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+            // may be obsolete
+//            capacity = Integer.parseInt(capacityStr);
+//            if (capacity <= 0) {
+//                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+            eventCapacityVal = Integer.parseInt(eventCapacityStr);
+            if (eventCapacityVal <= 0) {
+                Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
                 return;
             }
+//            sampleSize = Integer.parseInt(sampleStr);
+//            if (sampleSize < 0) sampleSize = 0;
+        } catch (NumberFormatException e) {
+            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (!waitlistCapacityStr.isEmpty()) {
+            try {
+                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
+                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
+            } catch (NumberFormatException e) {
+                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+        try {
             sampleSize = Integer.parseInt(sampleStr);
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
+            sampleSize = 0;
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
@@ -446,7 +513,9 @@ public class CreateEventFragment extends Fragment {
 
         event.setName(name);
         event.setDescription(description);
-        event.setAmount(capacity);
+//        event.setAmount(capacity); may be obsolete
+        event.setAmount(eventCapacityVal);
+        event.setWaitlistCapacity(waitlistCapacityVal);
         event.setSampleSize(sampleSize);
         event.setEvent_date(eventDate);
         event.setRegistration_start(registrationStart);
@@ -459,6 +528,7 @@ public class CreateEventFragment extends Fragment {
         data.put("id", event.getId());
         data.put("name", event.getName());
         data.put("amount", event.getAmount());
+        data.put("waitlistCapacity", event.getWaitlistCapacity());
         data.put("description", event.getDescription());
         data.put("posterUrl", event.getPosterUrl());
         data.put("sampleSize", event.getSampleSize());
