@@ -36,8 +36,8 @@
             android:layout_height="wrap_content"
             android:minWidth="0dp"
             android:text="@string/wait"
-            android:textColor="#4E4564"
-            app:backgroundTint="@color/notification_chip"
+            android:textColor="#183D23"
+            app:backgroundTint="@color/notification_green"
             app:cornerRadius="16dp"
             app:elevation="0dp" />
 

@@ -510,10 +510,6 @@ public class InboxFragment extends Fragment {
             return;
         }
 
-        if (!decline) {
-            return;
-        }
-
         if (currentUser.getId() != null
                 && notification.getNotificationId() != null
                 && notification.getEventId() != null
@@ -538,7 +534,7 @@ public class InboxFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     WriteBatch batch = db.batch();
-                    if (!querySnapshot.isEmpty()) {
+                    if (decline && !querySnapshot.isEmpty()) {
                         batch.delete(querySnapshot.getDocuments().get(0).getReference());
                     }
 
@@ -547,8 +543,16 @@ public class InboxFragment extends Fragment {
                             .collection("notifications")
                             .document(notification.getNotificationId()));
 
-                    batch.commit().addOnSuccessListener(unused ->
-                            currentUser.removeWaitlistedEvent(notification.getEventName()));
+                    batch.commit().addOnSuccessListener(unused -> {
+                        currentUser.removeNotification(notification);
+                        if (decline) {
+                            currentUser.removeWaitlistedEvent(notification.getEventName());
+                            EventCleanupHelper.deleteHistoryRecord(currentUser.getId(), notification.getEventId());
+                        }
+                        notifications.clear();
+                        notifications.addAll(currentUser.getNotifications());
+                        renderNotifications(notifications);
+                    });
                 });
     }
 
