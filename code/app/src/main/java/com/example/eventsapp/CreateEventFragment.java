@@ -50,6 +50,8 @@ import java.util.Date;
 public class CreateEventFragment extends Fragment {
 
     private static final int QR_SIZE = 400;
+    private static final String STATE_EVENT_ID = "state_event_id";
+    private static final String STATE_DRAFT_SAVED = "state_draft_saved";
 
     private TextInputEditText editName;
     private TextInputEditText editDescription;
@@ -72,6 +74,8 @@ public class CreateEventFragment extends Fragment {
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
     private Uri posterUri;
+    private String eventId;
+    private boolean draftSaved;
 
     private final ActivityResultLauncher<String> pickImageLauncher = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
@@ -101,6 +105,18 @@ public class CreateEventFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.edit_event, container, false);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState != null) {
+            eventId = savedInstanceState.getString(STATE_EVENT_ID);
+            draftSaved = savedInstanceState.getBoolean(STATE_DRAFT_SAVED, false);
+        }
+        if (eventId == null || eventId.trim().isEmpty()) {
+            eventId = java.util.UUID.randomUUID().toString();
+        }
     }
 
     /**
@@ -157,8 +173,8 @@ public class CreateEventFragment extends Fragment {
                 requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
         // Create new event - generate unique ID and QR
-        Event event = new Event(null, "", 1, "", "", "", "", "",  0);
-        event.setId(java.util.UUID.randomUUID().toString());
+        Event event = new Event(eventId, "", 1, "", "", "", "", "",  0);
+        event.setId(eventId);
         updateQRCode(event);
 
         // Show the real deep link for this event
@@ -203,6 +219,13 @@ public class CreateEventFragment extends Fragment {
             shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, deepLink);
             startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
         });
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(STATE_EVENT_ID, eventId);
+        outState.putBoolean(STATE_DRAFT_SAVED, draftSaved);
     }
 
     /**
@@ -298,94 +321,7 @@ public class CreateEventFragment extends Fragment {
      * @param event The event object being created and saved.
      */
     private void saveAndNavigateToWaitlist(Event event) {
-        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
-        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
-
-        String eventDate = getText(editEventDate);
-        String registrationStart = getText(editRegistrationStart);
-        String registrationEnd = getText(editRegistrationEnd);
-
-
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (eventDate.isEmpty()) {
-            editEventDate.setError("Event date required");
-            return;
-        }
-
-        if (registrationStart.isEmpty()) {
-            editRegistrationStart.setError("Registration start required");
-            return;
-        }
-
-        if (registrationEnd.isEmpty()) {
-            editRegistrationEnd.setError("Registration end required");
-            return;
-        }
-
-        int capacity;
-        int sampleSize;
-        try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            sampleSize = Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
-            return;
-        }
-
-        if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        event.setName(name);
-        event.setDescription(description);
-        event.setAmount(capacity);
-        event.setSampleSize(sampleSize);
-        event.setEvent_date(eventDate);
-        event.setRegistration_start(registrationStart);
-        event.setRegistration_end(registrationEnd);
-        if (!isPrivateEvent) {
-            updateQRCode(event);
-        }
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", event.getId());
-        data.put("name", event.getName());
-        data.put("amount", event.getAmount());
-        data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
-        data.put("sampleSize", event.getSampleSize());
-        data.put("event_date", event.getEvent_date());
-        data.put("registration_start", event.getRegistration_start());
-        data.put("registration_end", event.getRegistration_end());
-        data.put("isPrivate", isPrivateEvent);
-        data.put("coOrganizerIds", new ArrayList<String>());
-        data.put("pendingCoOrganizerIds", new ArrayList<String>());
-        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
-
-        // Store who created this event for filtering on the Events page
-        Users currentUser = UserManager.getInstance().getCurrentUser();
-        if (currentUser != null && currentUser.getId() != null) {
-            data.put("createdBy", currentUser.getId());
-        }
-
-        saveEventToFirestore(event, data, currentUser, () -> {
+        ensureDraftSaved(event, () -> {
             if (!isAdded()) {
                 return;
             }
@@ -398,92 +334,7 @@ public class CreateEventFragment extends Fragment {
     }
 
     private void saveAndNavigateToEnrolled(Event event) {
-        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
-        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
-
-        String eventDate = getText(editEventDate);
-        String registrationStart = getText(editRegistrationStart);
-        String registrationEnd = getText(editRegistrationEnd);
-
-        if (capacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (eventDate.isEmpty()) {
-            editEventDate.setError("Event date required");
-            return;
-        }
-
-        if (registrationStart.isEmpty()) {
-            editRegistrationStart.setError("Registration start required");
-            return;
-        }
-
-        if (registrationEnd.isEmpty()) {
-            editRegistrationEnd.setError("Registration end required");
-            return;
-        }
-
-        int capacity;
-        int sampleSize;
-        try {
-            capacity = Integer.parseInt(capacityStr);
-            if (capacity <= 0) {
-                Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            sampleSize = Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
-            return;
-        }
-
-        if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        event.setName(name);
-        event.setDescription(description);
-        event.setAmount(capacity);
-        event.setSampleSize(sampleSize);
-        event.setEvent_date(eventDate);
-        event.setRegistration_start(registrationStart);
-        event.setRegistration_end(registrationEnd);
-        if (!isPrivateEvent) {
-            updateQRCode(event);
-        }
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", event.getId());
-        data.put("name", event.getName());
-        data.put("amount", event.getAmount());
-        data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
-        data.put("sampleSize", event.getSampleSize());
-        data.put("event_date", event.getEvent_date());
-        data.put("registration_start", event.getRegistration_start());
-        data.put("registration_end", event.getRegistration_end());
-        data.put("isPrivate", isPrivateEvent);
-        data.put("coOrganizerIds", new ArrayList<String>());
-        data.put("pendingCoOrganizerIds", new ArrayList<String>());
-        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
-
-        Users currentUser = UserManager.getInstance().getCurrentUser();
-        if (currentUser != null && currentUser.getId() != null) {
-            data.put("createdBy", currentUser.getId());
-        }
-
-        saveEventToFirestore(event, data, currentUser, () -> {
+        ensureDraftSaved(event, () -> {
             if (!isAdded()) {
                 return;
             }
@@ -499,6 +350,36 @@ public class CreateEventFragment extends Fragment {
      * This is used by the \"Done\" button for a natural completion flow.
      */
     private void saveAndGoBack(Event event) {
+        Map<String, Object> data = buildEventData(event);
+        if (data == null) {
+            return;
+        }
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        saveEventToFirestore(event, data, currentUser, () -> {
+            if (!isAdded()) {
+                return;
+            }
+            Navigation.findNavController(requireView()).popBackStack();
+        });
+    }
+
+    private void ensureDraftSaved(Event event, @NonNull Runnable onSuccess) {
+        if (draftSaved) {
+            onSuccess.run();
+            return;
+        }
+
+        Map<String, Object> data = buildEventData(event);
+        if (data == null) {
+            return;
+        }
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        saveEventToFirestore(event, data, currentUser, onSuccess);
+    }
+
+    @Nullable
+    private Map<String, Object> buildEventData(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
         String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
         String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1";
@@ -511,23 +392,23 @@ public class CreateEventFragment extends Fragment {
 
         if (name.isEmpty()) {
             Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
         if (capacityStr.isEmpty()) {
             Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
         if (eventDate.isEmpty()) {
             editEventDate.setError("Event date required");
-            return;
+            return null;
         }
         if (registrationStart.isEmpty()) {
             editRegistrationStart.setError("Registration start required");
-            return;
+            return null;
         }
         if (registrationEnd.isEmpty()) {
             editRegistrationEnd.setError("Registration end required");
-            return;
+            return null;
         }
 
         int capacity;
@@ -536,19 +417,20 @@ public class CreateEventFragment extends Fragment {
             capacity = Integer.parseInt(capacityStr);
             if (capacity <= 0) {
                 Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-                return;
+                return null;
             }
             sampleSize = Integer.parseInt(sampleStr);
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
             Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
-            return;
+            return null;
         }
 
+        event.setId(eventId);
         event.setName(name);
         event.setDescription(description);
         event.setAmount(capacity);
@@ -580,12 +462,7 @@ public class CreateEventFragment extends Fragment {
             data.put("createdBy", currentUser.getId());
         }
 
-        saveEventToFirestore(event, data, currentUser, () -> {
-            if (!isAdded()) {
-                return;
-            }
-            Navigation.findNavController(requireView()).popBackStack();
-        });
+        return data;
     }
 
     private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
@@ -624,7 +501,8 @@ public class CreateEventFragment extends Fragment {
                         return;
                     }
                     Log.d("CreateEvent", "Event saved");
-                    Toast.makeText(requireContext(), "Event created", Toast.LENGTH_SHORT).show();
+                    draftSaved = true;
+                    Toast.makeText(requireContext(), "Event saved", Toast.LENGTH_SHORT).show();
                     if (currentUser != null && currentUser.getId() != null) {
                         EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
                     }

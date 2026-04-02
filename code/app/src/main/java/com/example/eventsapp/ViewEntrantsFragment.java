@@ -56,6 +56,7 @@ public class ViewEntrantsFragment extends Fragment {
     private FirebaseFirestore db;
     private MaterialToolbar toolbar;
     private MaterialButton btnAddApplicant;
+    private MaterialButton btnInviteCoOrganizer;
     private MaterialButton btnRunLottery;
     private boolean isPrivateEvent;
     private String createdByUserId = "";
@@ -93,6 +94,7 @@ public class ViewEntrantsFragment extends Fragment {
         etSearch = view.findViewById(R.id.et_search_waitlist);
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         btnRunLottery = view.findViewById(R.id.btn_run_lottery);
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
@@ -115,6 +117,7 @@ public class ViewEntrantsFragment extends Fragment {
         btnAddApplicant.setOnClickListener(v -> {
             showEntrantPickerDialog();
         });
+        btnInviteCoOrganizer.setOnClickListener(v -> showCoOrganizerPickerDialog());
         btnRunLottery.setOnClickListener(v -> runLottery());
         loadEventConfiguration();
         View btnViewMap = view.findViewById(R.id.btn_view_map);
@@ -156,6 +159,10 @@ public class ViewEntrantsFragment extends Fragment {
         toolbar.setTitle("Waitlist");
         btnAddApplicant.setVisibility(View.VISIBLE);
         btnAddApplicant.setText("Invite Entrant");
+        if (btnInviteCoOrganizer != null) {
+            btnInviteCoOrganizer.setVisibility(View.VISIBLE);
+            btnInviteCoOrganizer.setText("Invite Co-Organizer");
+        }
     }
 
     private void loadChosenEntrants() {
@@ -290,6 +297,45 @@ public class ViewEntrantsFragment extends Fragment {
                 });
 
         dialog.show();
+    }
+
+    private void showCoOrganizerPickerDialog() {
+        List<Entrant> eligibleEntrants = new ArrayList<>();
+        for (Entrant entrant : allEntrants) {
+            String userId = valueOrEmpty(entrant.getUserId());
+            if (userId.isEmpty()) {
+                continue;
+            }
+            if (entrant.getStatus() != Entrant.Status.APPLIED) {
+                continue;
+            }
+            if (isEventOrganizer(userId) || pendingCoOrganizerIds.contains(userId)) {
+                continue;
+            }
+            eligibleEntrants.add(entrant);
+        }
+
+        if (eligibleEntrants.isEmpty()) {
+            Toast.makeText(requireContext(), "No waitlisted entrants available for co-organizer invites", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] labels = new String[eligibleEntrants.size()];
+        for (int i = 0; i < eligibleEntrants.size(); i++) {
+            Entrant entrant = eligibleEntrants.get(i);
+            String name = valueOrEmpty(entrant.getName());
+            if (name.isEmpty()) {
+                name = "Unnamed User";
+            }
+            String email = valueOrEmpty(entrant.getEmail());
+            labels[i] = email.isEmpty() ? name : name + " - " + email;
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Invite Co-Organizer")
+                .setItems(labels, (dialog, which) -> inviteCoOrganizer(eligibleEntrants.get(which)))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void openMapOverview() {
@@ -531,6 +577,32 @@ public class ViewEntrantsFragment extends Fragment {
         String userId = user.getId();
         if (userId == null || userId.trim().isEmpty()) {
             Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User is already an organizer for this event", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (pendingCoOrganizerIds.contains(userId)) {
+            Toast.makeText(requireContext(), "User already has a pending co-organizer invite", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .update("pendingCoOrganizerIds", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
+                .addOnSuccessListener(unused -> {
+                    pendingCoOrganizerIds.add(userId);
+                    notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
+                    Toast.makeText(requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(unused ->
+                        Toast.makeText(requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show());
+    }
+
+    private void inviteCoOrganizer(Entrant entrant) {
+        String userId = valueOrEmpty(entrant.getUserId());
+        if (userId.isEmpty()) {
+            Toast.makeText(requireContext(), "Selected entrant is invalid", Toast.LENGTH_SHORT).show();
             return;
         }
         if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
