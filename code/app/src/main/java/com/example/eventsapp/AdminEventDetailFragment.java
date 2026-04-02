@@ -2,6 +2,7 @@ package com.example.eventsapp;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -12,8 +13,10 @@ import androidx.core.os.BundleCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
 
 public class AdminEventDetailFragment extends Fragment {
 
@@ -77,13 +80,18 @@ public class AdminEventDetailFragment extends Fragment {
             tvHost.setText("Hosted by: Unknown");
         }
 
-        // Delete poster button — show only if posterUrl is set
+        // Display poster if available
+        ImageView ivPoster = view.findViewById(R.id.ivAdminEventPoster);
+        View posterPlaceholder = view.findViewById(R.id.posterPlaceholder);
         MaterialButton btnDeletePoster = view.findViewById(R.id.btnDeletePoster);
         String posterUrl = event.getPosterUrl();
         if (posterUrl != null && !posterUrl.isEmpty()) {
+            Glide.with(this).load(posterUrl).into(ivPoster);
+            ivPoster.setVisibility(View.VISIBLE);
+            posterPlaceholder.setVisibility(View.GONE);
             btnDeletePoster.setVisibility(View.VISIBLE);
         }
-        btnDeletePoster.setOnClickListener(v -> showDeletePosterConfirmation(event, btnDeletePoster));
+        btnDeletePoster.setOnClickListener(v -> showDeletePosterConfirmation(event, btnDeletePoster, ivPoster, posterPlaceholder));
 
         // Delete event button
         view.findViewById(R.id.btnDeleteEvent).setOnClickListener(v ->
@@ -91,16 +99,24 @@ public class AdminEventDetailFragment extends Fragment {
         );
     }
 
-    private void showDeletePosterConfirmation(Event event, MaterialButton btnDeletePoster) {
+    private void showDeletePosterConfirmation(Event event, MaterialButton btnDeletePoster,
+                                               ImageView ivPoster, View posterPlaceholder) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Poster")
                 .setMessage("Are you sure you want to delete the poster for \"" + event.getName() + "\"?")
-                .setPositiveButton("Delete", (dialog, which) -> deletePoster(event, btnDeletePoster))
+                .setPositiveButton("Delete", (dialog, which) -> deletePoster(event, btnDeletePoster, ivPoster, posterPlaceholder))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void deletePoster(Event event, MaterialButton btnDeletePoster) {
+    private void deletePoster(Event event, MaterialButton btnDeletePoster,
+                              ImageView ivPoster, View posterPlaceholder) {
+        // Delete from Firebase Storage
+        FirebaseStorage.getInstance().getReference()
+                .child("posters/" + event.getId() + ".jpg")
+                .delete();
+
+        // Clear the URL in Firestore
         FirebaseFirestore.getInstance()
                 .collection("events")
                 .document(event.getId())
@@ -108,6 +124,8 @@ public class AdminEventDetailFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     event.setPosterUrl("");
                     btnDeletePoster.setVisibility(View.GONE);
+                    ivPoster.setVisibility(View.GONE);
+                    posterPlaceholder.setVisibility(View.VISIBLE);
                     Toast.makeText(requireContext(), "Poster deleted", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e ->
@@ -125,16 +143,16 @@ public class AdminEventDetailFragment extends Fragment {
     }
 
     private void deleteEvent(View view, Event event) {
-        FirebaseFirestore.getInstance()
-                .collection("events")
-                .document(event.getId())
-                .delete()
-                .addOnSuccessListener(aVoid -> {
+        EventCleanupHelper.deleteEventCompletely(event.getId(),
+                () -> {
+                    if (!isAdded()) return;
                     Toast.makeText(requireContext(), "Event deleted", Toast.LENGTH_SHORT).show();
                     Navigation.findNavController(view).popBackStack();
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT).show()
-                );
+                },
+                e -> {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT).show();
+                }
+        );
     }
 }

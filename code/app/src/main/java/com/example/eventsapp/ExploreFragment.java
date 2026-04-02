@@ -263,14 +263,15 @@ public class ExploreFragment extends Fragment {
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
 
-            String posterUrl = event.getPosterUrl();
-            if (posterUrl != null && !posterUrl.isEmpty()) {
-                Glide.with(holder.itemView.getContext())
-                        .load(posterUrl)
-                        .centerCrop()
-                        .into(holder.ivThumb);
+            View avatarCircle = holder.itemView.findViewById(R.id.avatarCircle);
+            View cardThumb = holder.itemView.findViewById(R.id.cardThumb);
+            if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
+                avatarCircle.setVisibility(View.GONE);
+                cardThumb.setVisibility(View.VISIBLE);
             } else {
-                holder.ivThumb.setImageResource(android.R.drawable.ic_menu_gallery);
+                avatarCircle.setVisibility(View.VISIBLE);
+                cardThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));

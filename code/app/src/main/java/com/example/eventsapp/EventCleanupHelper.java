@@ -2,16 +2,22 @@ package com.example.eventsapp;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.storage.FirebaseStorage;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Helper class that handles automatic cleanup of expired events.
@@ -187,5 +193,159 @@ public class EventCleanupHelper {
                 .collection("eventHistory").document(eventId)
                 .delete()
                 .addOnFailureListener(e -> Log.w(TAG, "Failed to delete history record", e));
+    }
+
+    /**
+     * Completely deletes an event and all its subcollections (entrants, comments)
+     * as well as the poster from Firebase Storage.
+     *
+     * @param eventId   The event's Firestore document ID.
+     * @param onSuccess Called after the batch commit succeeds.
+     * @param onFailure Called if the deletion fails.
+     */
+    public static void deleteEventCompletely(@NonNull String eventId,
+                                             @Nullable Runnable onSuccess,
+                                             @Nullable java.util.function.Consumer<Exception> onFailure) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Delete poster from Storage (fire-and-forget)
+        FirebaseStorage.getInstance().getReference()
+                .child("posters/" + eventId + ".jpg")
+                .delete()
+                .addOnFailureListener(e -> Log.d(TAG, "No poster to delete for event: " + eventId));
+
+        // Fetch entrants and comments, then batch-delete everything
+        db.collection("events").document(eventId).collection("entrants").get()
+                .addOnSuccessListener(entrantSnapshot -> {
+                    db.collection("events").document(eventId).collection("comments").get()
+                            .addOnSuccessListener(commentSnapshot -> {
+                                WriteBatch batch = db.batch();
+
+                                for (DocumentSnapshot doc : entrantSnapshot.getDocuments()) {
+                                    batch.delete(doc.getReference());
+                                }
+                                for (DocumentSnapshot doc : commentSnapshot.getDocuments()) {
+                                    batch.delete(doc.getReference());
+                                }
+                                batch.delete(db.collection("events").document(eventId));
+
+                                batch.commit()
+                                        .addOnSuccessListener(v -> {
+                                            Log.d(TAG, "Completely deleted event: " + eventId);
+                                            if (onSuccess != null) onSuccess.run();
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e(TAG, "Failed to delete event completely", e);
+                                            if (onFailure != null) onFailure.accept(e);
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Failed to fetch comments for deletion", e);
+                                if (onFailure != null) onFailure.accept(e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch entrants for deletion", e);
+                    if (onFailure != null) onFailure.accept(e);
+                });
+    }
+
+    /**
+     * Completely deletes a user, all their created events (with subcollections),
+     * and all user subcollections (notifications, eventHistory).
+     *
+     * @param userId    The user's Firestore document ID.
+     * @param onSuccess Called after all deletions succeed.
+     * @param onFailure Called if any deletion fails.
+     */
+    public static void deleteUserCompletely(@NonNull String userId,
+                                            @Nullable Runnable onSuccess,
+                                            @Nullable java.util.function.Consumer<Exception> onFailure) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Delete profile picture from Storage (fire-and-forget)
+        FirebaseStorage.getInstance().getReference()
+                .child("profile_pictures/" + userId + ".jpg")
+                .delete()
+                .addOnFailureListener(e -> Log.d(TAG, "No profile picture to delete for user: " + userId));
+
+        // Step 1: Delete all events created by this user (with subcollections)
+        db.collection("events")
+                .whereEqualTo("createdBy", userId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<QueryDocumentSnapshot> eventDocs = new java.util.ArrayList<>();
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        eventDocs.add(doc);
+                    }
+
+                    if (eventDocs.isEmpty()) {
+                        deleteUserDocAndSubcollections(db, userId, onSuccess, onFailure);
+                        return;
+                    }
+
+                    AtomicInteger remaining = new AtomicInteger(eventDocs.size());
+                    for (QueryDocumentSnapshot eventDoc : eventDocs) {
+                        String eventId = eventDoc.getString("id");
+                        if (eventId == null) eventId = eventDoc.getId();
+
+                        deleteEventCompletely(eventId, () -> {
+                            if (remaining.decrementAndGet() == 0) {
+                                deleteUserDocAndSubcollections(db, userId, onSuccess, onFailure);
+                            }
+                        }, e -> {
+                            Log.e(TAG, "Failed to delete user's event", e);
+                            if (remaining.decrementAndGet() == 0) {
+                                deleteUserDocAndSubcollections(db, userId, onSuccess, onFailure);
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to query user's events for deletion", e);
+                    if (onFailure != null) onFailure.accept(e);
+                });
+    }
+
+    /**
+     * Deletes a user document and all its subcollections (notifications, eventHistory).
+     */
+    private static void deleteUserDocAndSubcollections(FirebaseFirestore db, String userId,
+                                                        @Nullable Runnable onSuccess,
+                                                        @Nullable java.util.function.Consumer<Exception> onFailure) {
+        // Fetch notifications and eventHistory subcollections
+        db.collection("users").document(userId).collection("notifications").get()
+                .addOnSuccessListener(notifSnapshot -> {
+                    db.collection("users").document(userId).collection("eventHistory").get()
+                            .addOnSuccessListener(historySnapshot -> {
+                                WriteBatch batch = db.batch();
+
+                                for (DocumentSnapshot doc : notifSnapshot.getDocuments()) {
+                                    batch.delete(doc.getReference());
+                                }
+                                for (DocumentSnapshot doc : historySnapshot.getDocuments()) {
+                                    batch.delete(doc.getReference());
+                                }
+                                batch.delete(db.collection("users").document(userId));
+
+                                batch.commit()
+                                        .addOnSuccessListener(v -> {
+                                            Log.d(TAG, "Completely deleted user: " + userId);
+                                            if (onSuccess != null) onSuccess.run();
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e(TAG, "Failed to delete user completely", e);
+                                            if (onFailure != null) onFailure.accept(e);
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Failed to fetch eventHistory for deletion", e);
+                                if (onFailure != null) onFailure.accept(e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch notifications for deletion", e);
+                    if (onFailure != null) onFailure.accept(e);
+                });
     }
 }

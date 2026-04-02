@@ -72,15 +72,19 @@
                 app:srcCompat="@android:drawable/ic_menu_sort_by_size"
                 app:tint="@color/colorTextSecondary" />
 
-            <TextView
-                android:id="@+id/tvSearchHintAdmin"
+            <EditText
+                android:id="@+id/etSearchAdmin"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Search for an event"
-                android:textColor="@color/colorTextHint"
+                android:hint="Search for an event"
+                android:textColor="@color/colorTextPrimary"
+                android:textColorHint="@color/colorTextHint"
                 android:textSize="15sp"
                 android:paddingStart="12dp"
                 android:paddingEnd="12dp"
+                android:background="@android:color/transparent"
+                android:inputType="text"
+                android:maxLines="1"
                 app:layout_constraintStart_toEndOf="@id/ivMenuAdmin"
                 app:layout_constraintEnd_toStartOf="@id/ivSearchAdmin"
                 app:layout_constraintTop_toTopOf="parent"
