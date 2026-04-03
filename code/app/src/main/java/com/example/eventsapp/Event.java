@@ -22,6 +22,7 @@ public class Event implements Serializable {
     private String posterUrl;
     private int sampleSize;  // US 02.05.02: number of attendees to sample/invite
     private int waitlistCapacity; // 0 represents unlimited. US 02.03.01 (added by O'Mario)
+    private String location;
     private String hostId;   // ID of the user who created this event
     private boolean geolocationRequired;
     private transient String hostName;      //resolved display name of the host
@@ -182,6 +183,22 @@ public class Event implements Serializable {
      */
     public void setPosterUrl(String posterUrl) {
         this.posterUrl = posterUrl != null ? posterUrl : "";
+    }
+
+    /**
+     * Gets the event location/venue.
+     * @return The location string.
+     */
+    public String getLocation() {
+        return location;
+    }
+
+    /**
+     * Sets the event location/venue.
+     * @param location The location to set.
+     */
+    public void setLocation(String location) {
+        this.location = location != null ? location : "";
     }
 
     /**
