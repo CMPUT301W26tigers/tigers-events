@@ -58,6 +58,7 @@ public class CreateEventFragment extends Fragment {
     private TextInputEditText editCapacity; // This may be obsolete
     private TextInputEditText editEventCapacity;
     private TextInputEditText editSampleSize;
+    private TextInputEditText editLocation;
     private ImageView ivPoster;
     private ImageView ivQR;
     private FirebaseFirestore db;
@@ -139,6 +140,7 @@ public class CreateEventFragment extends Fragment {
         editCapacity = view.findViewById(R.id.edit_capacity); // This may be obsolete
         editEventCapacity = view.findViewById(R.id.edit_event_capacity);
         editSampleSize = view.findViewById(R.id.edit_sample_size);
+        editLocation = view.findViewById(R.id.edit_location);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
         editEventDate = view.findViewById(R.id.edit_event_date);
@@ -605,6 +607,9 @@ public class CreateEventFragment extends Fragment {
             updateQRCode(event);
         }
 
+        String location = editLocation != null && editLocation.getText() != null
+                ? editLocation.getText().toString().trim() : "";
+
         Map<String, Object> data = new HashMap<>();
         data.put("id", event.getId());
         data.put("name", event.getName());
@@ -616,6 +621,7 @@ public class CreateEventFragment extends Fragment {
         data.put("event_date", event.getEvent_date());
         data.put("registration_start", event.getRegistration_start());
         data.put("registration_end", event.getRegistration_end());
+        data.put("location", location);
         data.put("isPrivate", isPrivateEvent);
         if (!draftSaved) {
             data.put("coOrganizerIds", new ArrayList<String>());
