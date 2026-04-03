@@ -22,14 +22,19 @@ import androidx.navigation.Navigation;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,6 +52,10 @@ public class ExploreFragment extends Fragment {
     private RecyclerView rvSearchResults;
     private ConstraintLayout normalContainer;
     private ConstraintLayout searchContainer;
+    private ChipGroup chipGroupFilters;
+    private boolean filterAvailableOnly = false;
+    private String filterDateFrom = null;
+    private String filterDateTo = null;
 
     /**
      * Default constructor for ExploreFragment.
@@ -73,6 +82,7 @@ public class ExploreFragment extends Fragment {
         rvSearchResults = view.findViewById(R.id.rvSearchResults);
         normalContainer = view.findViewById(R.id.normalContainer);
         searchContainer = view.findViewById(R.id.searchContainer);
+        chipGroupFilters = view.findViewById(R.id.chipGroupFilters);
 
         // Main event list adapter
         adapter = new ExploreEventAdapter(allEvents, event -> navigateToDetail(view, event));
@@ -95,6 +105,9 @@ public class ExploreFragment extends Fragment {
         // Back button exits search mode
         view.findViewById(R.id.btnBack).setOnClickListener(v -> hideSearchMode());
 
+        // Filter button opens the filter bottom sheet
+        view.findViewById(R.id.ivMenu).setOnClickListener(v -> openFilterBottomSheet());
+
         // Search text filtering
         EditText etSearch = view.findViewById(R.id.etSearch);
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -103,7 +116,7 @@ public class ExploreFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterEvents(s.toString());
+                applyFilters();
             }
 
             @Override
@@ -136,39 +149,111 @@ public class ExploreFragment extends Fragment {
     private void showSearchMode() {
         normalContainer.setVisibility(View.GONE);
         searchContainer.setVisibility(View.VISIBLE);
-        filteredEvents.clear();
-        filteredEvents.addAll(allEvents);
-        searchAdapter.notifyDataSetChanged();
+        applyFilters();
     }
 
     /**
      * Exits search mode, showing the normal list and clearing the search input.
+     * Resets all filters.
      */
     private void hideSearchMode() {
         searchContainer.setVisibility(View.GONE);
         normalContainer.setVisibility(View.VISIBLE);
+        filterAvailableOnly = false;
+        filterDateFrom = null;
+        filterDateTo = null;
+        chipGroupFilters.removeAllViews();
+        chipGroupFilters.setVisibility(View.GONE);
         EditText etSearch = requireView().findViewById(R.id.etSearch);
         etSearch.setText("");
     }
 
     /**
-     * Filters the list of all events based on the provided query string and updates the search adapter.
-     *
-     * @param query The search query.
+     * Opens the filter bottom sheet with the current filter state.
      */
-    private void filterEvents(String query) {
+    private void openFilterBottomSheet() {
+        ExploreFilterBottomSheet sheet = ExploreFilterBottomSheet.newInstance(
+                filterAvailableOnly, filterDateFrom, filterDateTo);
+        sheet.setOnFilterAppliedListener((availableOnly, dateFrom, dateTo) -> {
+            filterAvailableOnly = availableOnly;
+            filterDateFrom = dateFrom;
+            filterDateTo = dateTo;
+            applyFilters();
+        });
+        sheet.show(getChildFragmentManager(), "filter_sheet");
+    }
+
+    /**
+     * Applies all active filters (text search, available only, date range) and updates the search results.
+     */
+    private void applyFilters() {
+        EditText etSearch = requireView().findViewById(R.id.etSearch);
+        String query = etSearch.getText().toString();
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
+
         filteredEvents.clear();
-        if (query.isEmpty()) {
-            filteredEvents.addAll(allEvents);
-        } else {
-            String lowerQuery = query.toLowerCase();
-            for (Event event : allEvents) {
-                if (event.getName().toLowerCase().contains(lowerQuery)) {
-                    filteredEvents.add(event);
-                }
-            }
-        }
+        filteredEvents.addAll(ExploreFilterHelper.applyAllFilters(
+                allEvents, query, filterAvailableOnly, filterDateFrom, filterDateTo, today));
         searchAdapter.notifyDataSetChanged();
+        updateFilterChips();
+    }
+
+    /**
+     * Updates the filter chip indicators below the search bar.
+     */
+    private void updateFilterChips() {
+        chipGroupFilters.removeAllViews();
+
+        if (filterAvailableOnly) {
+            Chip chip = new Chip(requireContext());
+            chip.setText("Available Only");
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> {
+                filterAvailableOnly = false;
+                applyFilters();
+            });
+            chipGroupFilters.addView(chip);
+        }
+
+        boolean hasFrom = filterDateFrom != null && !filterDateFrom.isEmpty();
+        boolean hasTo = filterDateTo != null && !filterDateTo.isEmpty();
+        if (hasFrom || hasTo) {
+            Chip chip = new Chip(requireContext());
+            String label = formatDateChipLabel(filterDateFrom, filterDateTo);
+            chip.setText(label);
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> {
+                filterDateFrom = null;
+                filterDateTo = null;
+                applyFilters();
+            });
+            chipGroupFilters.addView(chip);
+        }
+
+        chipGroupFilters.setVisibility(chipGroupFilters.getChildCount() > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private String formatDateChipLabel(String from, String to) {
+        boolean hasFrom = from != null && !from.isEmpty();
+        boolean hasTo = to != null && !to.isEmpty();
+        if (hasFrom && hasTo) {
+            return formatShortDate(from) + " – " + formatShortDate(to);
+        } else if (hasFrom) {
+            return "From " + formatShortDate(from);
+        } else {
+            return "Until " + formatShortDate(to);
+        }
+    }
+
+    private String formatShortDate(String dateStr) {
+        try {
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+            SimpleDateFormat output = new SimpleDateFormat("MMM d", Locale.CANADA);
+            Date date = input.parse(dateStr);
+            return date != null ? output.format(date) : dateStr;
+        } catch (Exception e) {
+            return dateStr;
+        }
     }
 
     /**
