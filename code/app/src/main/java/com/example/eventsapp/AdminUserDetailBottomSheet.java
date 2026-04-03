@@ -81,22 +81,33 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
         // Avatar: show profile picture if available, otherwise show initial
         TextView tvAvatarLetter = view.findViewById(R.id.tvDetailAvatarLetter);
         ImageView ivDetailAvatarImage = view.findViewById(R.id.ivDetailAvatarImage);
-        String picUrl = user.getProfilePictureUrl();
-        if (picUrl != null && !picUrl.isEmpty()) {
-            ivDetailAvatarImage.setVisibility(View.VISIBLE);
-            tvAvatarLetter.setVisibility(View.GONE);
-            Glide.with(this).load(picUrl).circleCrop().into(ivDetailAvatarImage);
-        } else {
-            ivDetailAvatarImage.setVisibility(View.GONE);
-            tvAvatarLetter.setVisibility(View.VISIBLE);
-            tvAvatarLetter.setText(displayName.substring(0, 1).toUpperCase());
-        }
+        ImageView ivDeleteProfilePic = view.findViewById(R.id.ivDeleteProfilePic);
+        final String initial = displayName.substring(0, 1).toUpperCase();
 
-        // Avatar tap → delete profile picture
+        Runnable refreshAvatar = () -> {
+            String url = user.getProfilePictureUrl();
+            if (url != null && !url.isEmpty()) {
+                ivDetailAvatarImage.setVisibility(View.VISIBLE);
+                tvAvatarLetter.setVisibility(View.GONE);
+                ivDeleteProfilePic.setVisibility(View.VISIBLE);
+                Glide.with(this).load(url).circleCrop().into(ivDetailAvatarImage);
+            } else {
+                ivDetailAvatarImage.setVisibility(View.GONE);
+                tvAvatarLetter.setVisibility(View.VISIBLE);
+                tvAvatarLetter.setText(initial);
+                ivDeleteProfilePic.setVisibility(View.GONE);
+            }
+        };
+
+        refreshAvatar.run();
+
+        // Avatar tap → delete profile picture (only if one is set)
         final String finalDisplayName = displayName;
-        view.findViewById(R.id.avatarContainer).setOnClickListener(v ->
-                showDeleteProfilePicConfirmation(user, finalDisplayName)
-        );
+        view.findViewById(R.id.avatarContainer).setOnClickListener(v -> {
+            if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
+                showDeleteProfilePicConfirmation(user, finalDisplayName, refreshAvatar);
+            }
+        });
 
         // Name
         ((TextView) view.findViewById(R.id.tvDetailName)).setText(displayName);
@@ -185,23 +196,29 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
         btnDelete.setOnClickListener(v -> showDeleteConfirmation(user));
     }
 
-    private void showDeleteProfilePicConfirmation(Users user, String displayName) {
+    private void showDeleteProfilePicConfirmation(Users user, String displayName, Runnable onDeleted) {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Profile Picture")
                 .setMessage("Remove the profile picture for " + displayName + "? Their avatar will show their initial instead.")
-                .setPositiveButton("Delete", (dialog, which) -> deleteProfilePicture(user))
+                .setPositiveButton("Delete", (dialog, which) -> deleteProfilePicture(user, onDeleted))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void deleteProfilePicture(Users user) {
+    private void deleteProfilePicture(Users user, Runnable onDeleted) {
         FirebaseFirestore.getInstance()
                 .collection("users")
                 .document(user.getId())
                 .update("profilePictureUrl", "")
-                .addOnSuccessListener(aVoid ->
-                        Toast.makeText(requireContext(), "Profile picture removed", Toast.LENGTH_SHORT).show()
-                )
+                .addOnSuccessListener(aVoid -> {
+                    user.setProfilePictureUrl("");
+                    Users currentUser = UserManager.getInstance().getCurrentUser();
+                    if (currentUser != null && user.getId().equals(currentUser.getId())) {
+                        currentUser.setProfilePictureUrl("");
+                    }
+                    onDeleted.run();
+                    Toast.makeText(requireContext(), "Profile picture removed", Toast.LENGTH_SHORT).show();
+                })
                 .addOnFailureListener(e ->
                         Toast.makeText(requireContext(), "Failed to remove profile picture", Toast.LENGTH_SHORT).show()
                 );

@@ -71,6 +71,12 @@ public class AccountFragment extends Fragment {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        displayUserData();
+    }
+
+    @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         pickImageLauncher = registerForActivityResult(
