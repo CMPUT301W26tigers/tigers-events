@@ -4,8 +4,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.bumptech.glide.Glide;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -75,9 +78,19 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
         }
         if (displayName.isEmpty()) displayName = "Unknown";
 
-        // Avatar initial
+        // Avatar: show profile picture if available, otherwise show initial
         TextView tvAvatarLetter = view.findViewById(R.id.tvDetailAvatarLetter);
-        tvAvatarLetter.setText(displayName.substring(0, 1).toUpperCase());
+        ImageView ivDetailAvatarImage = view.findViewById(R.id.ivDetailAvatarImage);
+        String picUrl = user.getProfilePictureUrl();
+        if (picUrl != null && !picUrl.isEmpty()) {
+            ivDetailAvatarImage.setVisibility(View.VISIBLE);
+            tvAvatarLetter.setVisibility(View.GONE);
+            Glide.with(this).load(picUrl).circleCrop().into(ivDetailAvatarImage);
+        } else {
+            ivDetailAvatarImage.setVisibility(View.GONE);
+            tvAvatarLetter.setVisibility(View.VISIBLE);
+            tvAvatarLetter.setText(displayName.substring(0, 1).toUpperCase());
+        }
 
         // Avatar tap → delete profile picture
         final String finalDisplayName = displayName;

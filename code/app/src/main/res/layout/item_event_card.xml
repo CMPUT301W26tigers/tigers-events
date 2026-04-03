@@ -37,6 +37,14 @@
                 android:textStyle="bold"
                 android:textColor="@color/colorPrimaryPurpleDark"
                 android:textSize="16sp" />
+
+            <ImageView
+                android:id="@+id/ivAvatarImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="Host profile picture"/>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
