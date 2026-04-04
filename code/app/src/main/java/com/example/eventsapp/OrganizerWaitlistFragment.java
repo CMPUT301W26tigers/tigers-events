@@ -45,14 +45,37 @@ public class OrganizerWaitlistFragment extends Fragment {
     public OrganizerWaitlistFragment() {
         super(R.layout.fragment_organizer_waitlist);
     }
-
-    public static OrganizerWaitlistFragment newInstance(String eventId) {
-        OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
-        Bundle args = new Bundle();
-        args.putString("eventId", eventId);
-        fragment.setArguments(args);
-        return fragment;
-    }
+// No usages? May be obsolete
+//    public static OrganizerWaitlistFragment newInstance(String eventId) {
+//        OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
+//        Bundle args = new Bundle();
+//        args.putString("eventId", eventId);
+//        fragment.setArguments(args);
+//        return fragment;
+//    }
+// Obsolete
+//    private final ActivityResultLauncher<String> csvExportLauncher = registerForActivityResult(
+//            new ActivityResultContracts.CreateDocument("text/csv"),
+//            uri -> {
+//                if (uri != null) {
+//                    String[] headers = {"Name", "Status"};
+//
+//                    boolean success = CSVExporter.exportToCsv(requireContext(), uri, headers, allEntrants,
+//                            entrant -> {
+//                                String name = entrant.getName() != null ? entrant.getName() : "Unknown";
+//
+//                                String status = entrant.getStatus() != null ? entrant.getStatus().name() : "UNKNOWN";
+//
+//                                return new String[]{ name, status };
+//                            });
+//
+//                    if (success) {
+//                        Toast.makeText(requireContext(), "Waitlist exported successfully!", Toast.LENGTH_LONG).show();
+//                    } else {
+//                        Toast.makeText(requireContext(), "Failed to export waitlist.", Toast.LENGTH_SHORT).show();
+//                    }
+//                }
+//            });
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -111,6 +134,16 @@ public class OrganizerWaitlistFragment extends Fragment {
             public void afterTextChanged(Editable s) {}
         });
 
+//        MaterialButton btnExportCsv = view.findViewById(R.id.btn_export_csv);
+//        btnExportCsv.setOnClickListener(v -> {
+//            if (allEntrants.isEmpty()) {
+//                Toast.makeText(requireContext(), "No entrants to export", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+//            // Launches the file picker asking where to save "Waitlist_Export.csv"
+//            csvExportLauncher.launch("Waitlist_Export.csv");
+//        });
+
         loadWaitlistData();
     }
 
@@ -122,7 +155,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .whereIn("statusCode", Arrays.asList(0, 1, 2))
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
-                        Toast.makeText(requireContext(), "Error loading waitlist", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "Error loading waitlist", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -170,7 +203,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     notificationHelper.sendNotSelectedNotification(entrantToRemove.getUserId(), eventId);
                     EventCleanupHelper.updateHistoryStatus(entrantToRemove.getUserId(), eventId, "CANCELLED");
-                    Toast.makeText(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT);
                 });
     }
 
@@ -194,7 +227,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (queryDocumentSnapshots.isEmpty()) {
-                        Toast.makeText(requireContext(), "No more applicants left in the pool.", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "No more applicants left in the pool.", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -208,7 +241,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 String replacementUserId = selectedApplicant.getString("userId");
                                 notificationHelper.sendInvitationNotification(replacementUserId, eventId);
                                 EventCleanupHelper.updateHistoryStatus(replacementUserId, eventId, "INVITED");
-                                Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
+                                TigerToast.show(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT);
                             });
                 });
     }
@@ -224,7 +257,7 @@ public class OrganizerWaitlistFragment extends Fragment {
             NotificationAction action
     ) {
         if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "No event selected", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -235,7 +268,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot.isEmpty()) {
-                        Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), emptyMessage, Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -263,10 +296,10 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 + " entrants, skipped " + skippedCount;
                     }
 
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), message, Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), failureMessage, Toast.LENGTH_SHORT).show()
+                        TigerToast.show(requireContext(), failureMessage, Toast.LENGTH_SHORT)
                 );
     }
 

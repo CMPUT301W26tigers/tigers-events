@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/splashBackground">
+
+    <!-- Logo: starts invisible, animates in -->
+    <ImageView
+        android:id="@+id/iv_splash_logo"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="60dp"
+        android:alpha="0"
+        android:contentDescription="Tiger Events logo"
+        android:scaleX="0.3"
+        android:scaleY="0.3"
+        android:src="@drawable/tiger_logo" />
+
+    <!-- App name: slides up + fades in after logo lands -->
+    <TextView
+        android:id="@+id/tv_splash_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="180dp"
+        android:alpha="0"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.08"
+        android:text="TIGERS EVENTS"
+        android:textColor="@color/tigerBlack"
+        android:textSize="26sp"
+        android:translationY="40dp" />
+
+    <!-- Tagline: fades in last -->
+    <TextView
+        android:id="@+id/tv_splash_tagline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="148dp"
+        android:alpha="0"
+        android:fontFamily="sans-serif-medium"
+        android:text="Events. Simplified."
+        android:textColor="@color/tigerOrange"
+        android:textSize="14sp" />
+
+</FrameLayout>

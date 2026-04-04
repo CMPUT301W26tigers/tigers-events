@@ -293,7 +293,7 @@ public class AccountFragment extends Fragment {
     private void updateUserField(String field, Object newValue) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
-            Toast.makeText(getContext(), "Error: User ID not found", Toast.LENGTH_SHORT).show();
+            TigerToast.show(getContext(), "Error: User ID not found", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -314,11 +314,11 @@ public class AccountFragment extends Fragment {
                         currentUser.setNotificationsEnabled((Boolean) newValue);
                     }
                     displayUserData();
-                    Toast.makeText(getContext(), field + " updated", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(getContext(), field + " updated", Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e -> {
                     Log.e("Firestore", "Error updating " + field, e);
-                    Toast.makeText(getContext(), "Failed to update " + field, Toast.LENGTH_SHORT).show();
+                    TigerToast.show(getContext(), "Failed to update " + field, Toast.LENGTH_SHORT);
                 });
     }
 
