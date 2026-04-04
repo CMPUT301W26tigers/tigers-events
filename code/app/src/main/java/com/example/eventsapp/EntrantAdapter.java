@@ -30,13 +30,26 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         void onViewLocation(Entrant entrant);
     }
 
+    /**
+     +     * Triggers when the organizer cancels an invited entrant.
+     +     */
+    public interface OnCancelEntrantListener {
+        void onCancel(Entrant entrant);
+    }
+
     private final List<Entrant> entrants;
     private OnViewLocationListener onViewLocationListener;
+    private OnCancelEntrantListener onCancelEntrantListener;
     private Set<String> tempSelectedIds = new HashSet<>(); // Tracks local drafted lottery selections
 
     public void setOnViewLocationListener(OnViewLocationListener listener) {
         this.onViewLocationListener = listener;
     }
+
+    public void setOnCancelEntrantListener(OnCancelEntrantListener listener) {
+        this.onCancelEntrantListener = listener;
+    }
+
 
     private static String statusLabel(Entrant.Status status) {
         if (status == Entrant.Status.ACCEPTED) return "Accepted";
@@ -119,6 +132,19 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
             } else {
                 holder.ivMailIcon.setVisibility(View.GONE);
             }
+
+            // Show cancel icon only if formally invited and not drafted
+            if (e.getStatus() == Entrant.Status.INVITED) {
+                holder.ivCancel.setVisibility(View.VISIBLE);
+                holder.ivCancel.setOnClickListener(v -> {
+                    if (onCancelEntrantListener != null) {
+                        onCancelEntrantListener.onCancel(e);
+                    }
+                });
+            } else {
+                holder.ivCancel.setVisibility(View.GONE);
+                holder.ivCancel.setOnClickListener(null);
+            }
         }
 
         if (e.hasLocation()) {
@@ -177,6 +203,7 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         TextView tvActionSub;
         ImageView ivPin;
         ImageView ivMailIcon;
+        ImageView ivCancel;
         ColorStateList defaultActionTextColor;
 
         ViewHolder(View itemView) {
@@ -187,6 +214,7 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
             tvActionSub = itemView.findViewById(R.id.tv_action_sub);
             ivPin = itemView.findViewById(R.id.iv_pin);
             ivMailIcon = itemView.findViewById(R.id.iv_mail_icon);
+            ivCancel = itemView.findViewById(R.id.iv_cancel_entrant);
             defaultActionTextColor = tvAction.getTextColors();
         }
     }

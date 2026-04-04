@@ -113,6 +113,7 @@ public class OrganizerWaitlistFragment extends Fragment {
 
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
+        adapter.setOnCancelEntrantListener(this::confirmCancelEntrant);
         rvWaitlist.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvWaitlist.setAdapter(adapter);
 
@@ -736,6 +737,53 @@ public class OrganizerWaitlistFragment extends Fragment {
                 userId -> notificationHelper.sendNotSelectedNotification(userId, eventId)
         );
     }
+
+    private void confirmCancelEntrant(Entrant entrant) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Cancel Entrant")
+                .setMessage("Are you sure you want to cancel the invitation for " + entrant.getName() + "?\nThey will be removed from the waitlist.")
+                .setPositiveButton("Remove", (dialog, which) -> cancelEntrant(entrant))
+                .setNegativeButton("Keep", null)
+                .show();
+    }
+
+    private void cancelEntrant(Entrant entrant) {
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .document(entrant.getId())
+                .update("status", Entrant.Status.CANCELLED.name())
+                .addOnSuccessListener(aVoid -> {
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), entrant.getName() + " was removed", Toast.LENGTH_SHORT).show();
+                    }
+                    // Remove the invitation notification from the user's inbox
+                    String userId = entrant.getUserId();
+                    if (userId != null && !userId.trim().isEmpty()) {
+                        db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .whereEqualTo("eventId", eventId)
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots -> {
+                                    WriteBatch batch = db.batch();
+                                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                                        String type = doc.getString("type");
+                                        if ("invitation".equalsIgnoreCase(type)) {
+                                            batch.delete(doc.getReference());
+                                        }
+                                    }
+                                    batch.commit();
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), "Failed to remove entrant", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
 
     @Override
     public void onDestroyView() {

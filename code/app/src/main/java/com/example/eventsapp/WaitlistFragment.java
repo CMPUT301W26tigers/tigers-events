@@ -230,13 +230,13 @@
 //    }
 //
 //    /**
-//     * Navigates to the {@link CancelledFragment} to view cancelled entrants.
+//     * Navigates to the {@link OrganizerCancelledFragment} to view cancelled entrants.
 //     */
 //    private void openCancelledFragment() {
 //        requireActivity()
 //                .getSupportFragmentManager()
 //                .beginTransaction()
-//                .replace(R.id.nav_host_fragment, new CancelledFragment())
+//                .replace(R.id.nav_host_fragment, new OrganizerCancelledFragment())
 //                .addToBackStack(null)
 //                .commit();
 //    }

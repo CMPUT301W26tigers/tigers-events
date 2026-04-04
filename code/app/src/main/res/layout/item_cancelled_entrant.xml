@@ -2,7 +2,6 @@
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/item_waitlist_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
@@ -17,10 +16,10 @@
         android:paddingVertical="14dp">
 
         <ImageView
-            android:id="@+id/iv_pin"
+            android:id="@+id/iv_enrolled_marker"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:contentDescription="Entrant"
+            android:contentDescription="Enrolled entrant"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:srcCompat="@android:drawable/ic_menu_mylocation"
@@ -36,45 +35,12 @@
             android:textColor="@color/colorTextPrimary"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintStart_toEndOf="@id/iv_pin"
-            app:layout_constraintTop_toTopOf="@id/iv_pin" />
-
-        <ImageView
-            android:id="@+id/iv_mail_icon"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:layout_marginEnd="4dp"
-            android:visibility="gone"
-            app:srcCompat="@android:drawable/ic_dialog_email"
-            app:tint="@color/colorTextSecondary"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintTop_toTopOf="@id/tv_action"
-            app:layout_constraintBottom_toBottomOf="@id/tv_action" />
-        <ImageView
-            android:id="@+id/iv_cancel_entrant"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:visibility="gone"
-            app:srcCompat="@android:drawable/ic_menu_delete"
-            app:tint="@android:color/holo_red_dark"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintEnd_toStartOf="@id/tv_status"
+            app:layout_constraintStart_toEndOf="@id/iv_enrolled_marker"
+            app:layout_constraintTop_toTopOf="@id/iv_enrolled_marker" />
 
         <TextView
-            android:id="@+id/tv_action"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Invited"
-            android:textColor="@color/colorTextSecondary"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toStartOf="@id/iv_cancel_entrant"
-            app:layout_constraintTop_toTopOf="@id/tv_name" />
-
-        <TextView
-            android:id="@+id/tv_action_sub"
+            android:id="@+id/tv_email"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
@@ -83,10 +49,22 @@
             android:text="email@example.com"
             android:textColor="@color/colorTextSecondary"
             android:textSize="12sp"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintStart_toEndOf="@id/iv_pin"
+            app:layout_constraintEnd_toStartOf="@id/tv_status"
+            app:layout_constraintStart_toEndOf="@id/iv_enrolled_marker"
             app:layout_constraintTop_toBottomOf="@id/tv_name" />
+
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enrolled"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tv_name" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>
+

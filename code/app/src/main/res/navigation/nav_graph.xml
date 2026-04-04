@@ -99,18 +99,26 @@
 
     <fragment
         android:id="@+id/enrolledFragment"
-        android:name="com.example.eventsapp.EnrolledFragment"
+        android:name="com.example.eventsapp.OrganizerEnrolledFragment"
         android:label="Enrolled">
         <argument
             android:name="eventId"
             app:argType="string"
             app:nullable="false" />
+        <action
+            android:id="@+id/action_enrolledFragment_to_cancelledFragment"
+            app:destination="@id/cancelledFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/cancelledFragment"
-        android:name="com.example.eventsapp.CancelledFragment"
-        android:label="Cancelled" />
+        android:name="com.example.eventsapp.OrganizerCancelledFragment"
+        android:label="Cancelled">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+    </fragment>
 
     <fragment
         android:id="@+id/eventDetailFragment"
