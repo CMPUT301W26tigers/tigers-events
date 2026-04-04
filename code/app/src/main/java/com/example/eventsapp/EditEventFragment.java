@@ -179,6 +179,7 @@ public class EditEventFragment extends Fragment {
 
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
         view.findViewById(R.id.btn_share_link).setOnClickListener(v -> shareLink());
+        view.findViewById(R.id.btn_delete_event).setOnClickListener(v -> confirmDeleteEvent());
     }
 
     private void setupToolbar(View view) {
@@ -419,5 +420,32 @@ public class EditEventFragment extends Fragment {
 
     private String getText(TextInputEditText et) {
         return et.getText() != null ? et.getText().toString().trim() : "";
+    }
+
+    private void confirmDeleteEvent() {
+        new android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Delete Event")
+                .setMessage("Are you sure you want to delete this event? This cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> deleteEvent())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteEvent() {
+        StorageReference posterRef = FirebaseStorage.getInstance().getReference()
+                .child("posters/" + eventId + ".jpg");
+        posterRef.delete().addOnCompleteListener(task -> {
+            // Proceed with Firestore deletion whether or not the poster existed
+            db.collection("events").document(eventId).delete()
+                    .addOnSuccessListener(aVoid -> {
+                        if (!isAdded()) return;
+                        TigerToast.show(requireContext(), "Event deleted", Toast.LENGTH_SHORT);
+                        Navigation.findNavController(requireView()).popBackStack();
+                    })
+                    .addOnFailureListener(e -> {
+                        if (!isAdded()) return;
+                        TigerToast.show(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT);
+                    });
+        });
     }
 }

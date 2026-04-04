@@ -530,6 +530,28 @@
                 android:textColor="@color/dark_grey"
                 android:textAllCaps="false"/>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_delete_event"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:text="Delete Event"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                android:textColor="#D32F2F"
+                android:paddingStart="56dp"
+                android:paddingEnd="56dp"
+                app:cornerRadius="26dp"
+                app:strokeColor="#D32F2F"
+                app:strokeWidth="1dp"
+                app:iconTint="#D32F2F"
+                app:icon="@drawable/delete_24px"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp"/>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
