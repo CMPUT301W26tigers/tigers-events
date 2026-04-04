@@ -59,8 +59,7 @@
                     android:layout_height="wrap_content"
                     android:adjustViewBounds="true"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Event poster"
-                    android:src="@android:color/darker_gray"/>
+                    android:contentDescription="Event poster"/>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Event Name -->
@@ -98,7 +97,16 @@
                         android:gravity="center"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="@color/colorPrimaryPurple"/>
+                        android:textColor="@color/colorPrimary"
+                        android:visibility="gone"/>
+
+                    <ImageView
+                        android:id="@+id/iv_host_picture"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone"
+                        android:contentDescription="Host profile picture"/>
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
@@ -174,7 +182,7 @@
                     android:layout_marginStart="4dp"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    android:textColor="@color/colorPrimaryPurple"/>
+                    android:textColor="@color/colorPrimary"/>
 
                 <!-- Capacity -->
                 <ImageView
@@ -191,7 +199,7 @@
                     android:layout_marginStart="4dp"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    android:textColor="@color/colorPrimaryPurple"/>
+                    android:textColor="@color/colorPrimary"/>
             </LinearLayout>
 
             <!-- Divider -->
@@ -233,7 +241,7 @@
                     android:layout_height="20dp"
                     android:contentDescription="Location"
                     app:srcCompat="@drawable/ic_location"
-                    app:tint="@color/colorPrimaryPurple"/>
+                    app:tint="@color/colorPrimary"/>
 
                 <TextView
                     android:id="@+id/tv_location"
@@ -311,7 +319,7 @@
         android:text="Join Waitlist"
         android:textSize="16sp"
         app:cornerRadius="8dp"
-        app:backgroundTint="@color/colorPrimaryPurple"
+        app:backgroundTint="@color/colorPrimary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/btnInfo"/>

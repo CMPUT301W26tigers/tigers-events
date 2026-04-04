@@ -149,7 +149,7 @@ public class ViewEntrantsFragment extends Fragment {
                     isPrivateEvent = Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate"));
                     createdByUserId = valueOrEmpty(eventDoc.getString("createdBy"));
 
-                    // Gettubg values to compute capacity and lottery sizes real-time
+                    // Gettingg values to compute capacity and lottery sizes real-time
                     Long cap = eventDoc.getLong("amount");
                     eventCapacity = cap != null ? cap.intValue() : 0;
                     Long ss = eventDoc.getLong("sampleSize");
@@ -374,7 +374,7 @@ public class ViewEntrantsFragment extends Fragment {
             String phoneFilter = valueOrEmpty(editPhone.getText() != null ? editPhone.getText().toString() : "");
 
             if (nameFilter.isEmpty() && emailFilter.isEmpty() && phoneFilter.isEmpty()) {
-                Toast.makeText(requireContext(), "Enter at least one search field", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Enter at least one search field", Toast.LENGTH_SHORT);
                 return;
             }
 
@@ -438,7 +438,7 @@ public class ViewEntrantsFragment extends Fragment {
                     }
 
                     if (matches.isEmpty()) {
-                        Toast.makeText(requireContext(), "No matching users found", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "No matching users found", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -446,7 +446,7 @@ public class ViewEntrantsFragment extends Fragment {
                     showUserSelectionDialog(matches, coOrganizerInvite);
                 })
                 .addOnFailureListener(unused ->
-                        Toast.makeText(requireContext(), "Failed to search users", Toast.LENGTH_SHORT).show());
+                        TigerToast.show(requireContext(), "Failed to search users", Toast.LENGTH_SHORT));
     }
 
     private boolean matchesSearch(Users user, String nameFilter, String emailFilter, String phoneFilter) {
@@ -501,11 +501,11 @@ public class ViewEntrantsFragment extends Fragment {
     private void inviteEntrant(Users user) {
         String userId = user.getId();
         if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT);
             return;
         }
         if (isEventOrganizer(userId)) {
-            Toast.makeText(requireContext(), "Organizers cannot join the entrant pool", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Organizers cannot join the entrant pool", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -528,7 +528,7 @@ public class ViewEntrantsFragment extends Fragment {
                             || "APPLIED".equals(existingStatus)
                             || "INVITED".equals(existingStatus)
                             || "ACCEPTED".equals(existingStatus)) {
-                        Toast.makeText(requireContext(), "User is already linked to this event", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "User is already linked to this event", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -545,10 +545,10 @@ public class ViewEntrantsFragment extends Fragment {
                     entrantRef.set(data, SetOptions.merge())
                             .addOnSuccessListener(unused -> {
                                 notificationHelper.sendPrivateWaitlistInvitationNotification(userId, eventId);
-                                Toast.makeText(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT).show();
+                                TigerToast.show(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT);
                             })
                             .addOnFailureListener(unused ->
-                                    Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
+                                    TigerToast.show(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT));
                 });
     }
 
@@ -576,7 +576,7 @@ public class ViewEntrantsFragment extends Fragment {
         int available = targetCapacity - occupied;
 
         if (available <= 0) {
-            Toast.makeText(requireContext(), "No more event space to run a lottery.", Toast.LENGTH_LONG).show();
+            TigerToast.show(requireContext(), "No more event space to run a lottery.", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -597,7 +597,7 @@ public class ViewEntrantsFragment extends Fragment {
 
         // Apply draft highlights to EntrantAdapter
         adapter.setTempSelectedIds(tempSelectedIds);
-        Toast.makeText(requireContext(), "Lottery pulled " + draftCount + " entrant(s)! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
+        TigerToast.show(requireContext(), "Lottery pulled " + draftCount + " entrant(s)! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
     }
 
     private interface NotificationAction {void send(String userId);}

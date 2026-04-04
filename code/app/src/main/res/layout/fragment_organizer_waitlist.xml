@@ -127,7 +127,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        app:cardBackgroundColor="@android:color/white"
+        app:cardBackgroundColor="@color/colorCardBackground"
         app:cardCornerRadius="24dp"
         app:cardElevation="0dp"
         app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"

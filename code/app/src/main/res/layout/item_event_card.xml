@@ -7,7 +7,7 @@
     android:layout_marginBottom="10dp"
     app:cardCornerRadius="14dp"
     app:cardElevation="1dp"
-    app:cardBackgroundColor="@android:color/white"
+    app:cardBackgroundColor="@color/colorCardBackground"
     app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -35,8 +35,16 @@
                 android:gravity="center"
                 android:text="A"
                 android:textStyle="bold"
-                android:textColor="@color/colorPrimaryPurpleDark"
+                android:textColor="@color/colorPrimaryFixed"
                 android:textSize="16sp" />
+
+            <ImageView
+                android:id="@+id/ivAvatarImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="Host profile picture"/>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView

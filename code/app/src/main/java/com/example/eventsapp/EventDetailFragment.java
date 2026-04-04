@@ -65,7 +65,7 @@ public class EventDetailFragment extends Fragment {
 
     private TextView tvName, tvDescription, tvEventDate, tvRegistrationRange,
             tvCapacity, tvWaitlistCounter, tvExpiredBanner, tvHostName, tvHostAvatar, tvLocation;
-    private ImageView ivPoster;
+    private ImageView ivPoster, ivHostPicture;
     private MaterialButton btnWaitlist;
 
     // Comment views
@@ -75,6 +75,8 @@ public class EventDetailFragment extends Fragment {
     private TextInputEditText etComment;
     private MaterialButton btnPostComment;
 
+    private String preloadPosterUrl = null;
+    private String preloadHostPicUrl = null;
     private boolean isOnWaitlist = false;
     private boolean isPrivateEvent = false;
     private boolean userIsOrganizer = false;
@@ -111,26 +113,19 @@ public class EventDetailFragment extends Fragment {
                         btnWaitlist.setEnabled(true);
                         return;
                     }
-                    if (geolocationRequired) {
-                        if (granted) {
-                            fetchLocationAndCompleteJoin(true);
-                        } else {
-                            btnWaitlist.setEnabled(true);
-                            Toast.makeText(requireContext(),
-                                    "Location permission is required to join this event",
-                                    Toast.LENGTH_LONG).show();
-                        }
+                    // This callback is only launched when geolocationRequired=true.
+                    if (granted) {
+                        fetchLocationAndCompleteJoin(true);
                     } else {
-                        if (granted) {
-                            fetchLocationAndCompleteJoin(false);
-                        } else {
-                            writeEntrantToFirestore(u, 0.0, 0.0, null);
-                        }
+                        btnWaitlist.setEnabled(true);
+                        TigerToast.show(requireContext(), "Location permission is required to join this event", Toast.LENGTH_LONG);
                     }
                 });
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId", "");
             fromHistory = getArguments().getBoolean("fromHistory", false);
+            preloadPosterUrl = getArguments().getString("posterUrl");
+            preloadHostPicUrl = getArguments().getString("hostProfilePictureUrl");
         } else {
             eventId = "";
         }
@@ -177,7 +172,16 @@ public class EventDetailFragment extends Fragment {
         tvHostAvatar = view.findViewById(R.id.tv_host_avatar);
         tvLocation = view.findViewById(R.id.tv_location);
         ivPoster = view.findViewById(R.id.iv_poster);
+        ivHostPicture = view.findViewById(R.id.iv_host_picture);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
+
+        if (preloadPosterUrl != null) {
+            Glide.with(this).load(preloadPosterUrl).into(ivPoster);
+        }
+        if (preloadHostPicUrl != null) {
+            ivHostPicture.setVisibility(View.VISIBLE);
+            Glide.with(this).load(preloadHostPicUrl).circleCrop().into(ivHostPicture);
+        }
 
         view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
@@ -377,16 +381,16 @@ public class EventDetailFragment extends Fragment {
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT);
             return;
         }
         if (currentUser.getId() == null || currentUser.getId().isEmpty()) {
-            Toast.makeText(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT);
             return;
         }
 
         if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity && !isOnWaitlist) {
-            Toast.makeText(requireContext(), "The waitlist for this event is full", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "The waitlist for this event is full", Toast.LENGTH_SHORT);
             return;
         }
         btnWaitlist.setEnabled(false);
@@ -409,7 +413,7 @@ public class EventDetailFragment extends Fragment {
                     if (!isAdded()) return;
                     if (doc == null || !doc.exists()) {
                         btnWaitlist.setEnabled(true);
-                        Toast.makeText(requireContext(), "Could not load event", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                         return;
                     }
                     applyGeolocationRequiredFromEvent(doc);
@@ -419,7 +423,7 @@ public class EventDetailFragment extends Fragment {
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     btnWaitlist.setEnabled(true);
-                    Toast.makeText(requireContext(), "Could not load event", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                     Log.e(TAG, "join: failed to load event settings", e);
                 });
     }
@@ -448,17 +452,15 @@ public class EventDetailFragment extends Fragment {
 
     private void continueJoinWithResolvedGeoSetting(@NonNull Users currentUser) {
         if (geolocationRequired) {
+            // Organizer requires location: ask for permission, then capture GPS.
             if (!hasLocationPermission()) {
                 requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION);
                 return;
             }
             fetchLocationAndCompleteJoin(true);
         } else {
-            if (hasLocationPermission()) {
-                fetchLocationAndCompleteJoin(false);
-            } else {
-                requestLocationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION);
-            }
+            // Location is NOT required: join immediately — no permission dialog, no GPS capture.
+            writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
         }
     }
 
@@ -489,7 +491,7 @@ public class EventDetailFragment extends Fragment {
             onNoLocation(required, currentUser);
             return;
         }
-        Toast.makeText(requireContext(), "Getting your location…", Toast.LENGTH_SHORT).show();
+        TigerToast.show(requireContext(), "Getting your location…", Toast.LENGTH_SHORT);
 
         LocationRequest freshRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY, 2_000L)
@@ -566,9 +568,7 @@ public class EventDetailFragment extends Fragment {
     private void onNoLocation(boolean required, @NonNull Users currentUser) {
         if (required) {
             btnWaitlist.setEnabled(true);
-            Toast.makeText(requireContext(),
-                    "Could not read your location. Check Google Play services or try again.",
-                    Toast.LENGTH_LONG).show();
+            TigerToast.show(requireContext(), "Could not read your location. Check Google Play services or try again.", Toast.LENGTH_LONG);
         } else {
             writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
         }
@@ -612,14 +612,14 @@ public class EventDetailFragment extends Fragment {
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
-                    Toast.makeText(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT);
                     writeEventHistoryForCurrentUser(currentUser.getId());
                     startWaitlistLocationSharingIfNeeded();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     btnWaitlist.setEnabled(true);
-                    Toast.makeText(requireContext(), "Failed to join waitlist", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Failed to join waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error joining waitlist", e);
                 });
     }
@@ -644,7 +644,7 @@ public class EventDetailFragment extends Fragment {
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
                     btnWaitlist.setEnabled(true);
-                    Toast.makeText(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT);
                     // Delete history record since user voluntarily left
                     Users user = UserManager.getInstance().getCurrentUser();
                     if (user != null && user.getId() != null) {
@@ -654,7 +654,7 @@ public class EventDetailFragment extends Fragment {
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     btnWaitlist.setEnabled(true);
-                    Toast.makeText(requireContext(), "Failed to leave waitlist", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Failed to leave waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error leaving waitlist", e);
                 });
     }
@@ -696,7 +696,7 @@ public class EventDetailFragment extends Fragment {
 
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "Please sign in to post a comment", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Please sign in to post a comment", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -711,7 +711,7 @@ public class EventDetailFragment extends Fragment {
                 .add(comment)
                 .addOnSuccessListener(documentReference -> {
                     etComment.setText("");
-                    Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(getContext(), "Comment posted", Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error posting comment", e));
     }
@@ -727,10 +727,10 @@ public class EventDetailFragment extends Fragment {
                 .collection("comments").document(comment.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Comment deleted", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(getContext(), "Comment deleted", Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Error deleting comment", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(getContext(), "Error deleting comment", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error deleting comment", e);
                 });
     }
@@ -773,7 +773,7 @@ public class EventDetailFragment extends Fragment {
             btnWaitlist.setText("Join Waitlist");
             btnWaitlist.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(
-                    getResources().getColor(R.color.colorPrimaryPurple, null)));
+                    getResources().getColor(R.color.colorPrimary, null)));
         }
     }
 
@@ -817,7 +817,17 @@ public class EventDetailFragment extends Fragment {
                                 ? first + " " + last.charAt(0) + "."
                                 : first;
                         tvHostName.setText(display);
-                        tvHostAvatar.setText(String.valueOf(first.charAt(0)).toUpperCase());
+
+                        String picUrl = doc.getString("profilePictureUrl");
+                        if (picUrl != null && !picUrl.isEmpty()) {
+                            ivHostPicture.setVisibility(View.VISIBLE);
+                            tvHostAvatar.setVisibility(View.GONE);
+                            Glide.with(this).load(picUrl).circleCrop().into(ivHostPicture);
+                        } else {
+                            ivHostPicture.setVisibility(View.GONE);
+                            tvHostAvatar.setVisibility(View.VISIBLE);
+                            tvHostAvatar.setText(String.valueOf(first.charAt(0)).toUpperCase());
+                        }
                     }
                 });
     }

@@ -537,7 +537,7 @@
                 android:paddingStart="56dp"
                 android:paddingEnd="56dp"
                 app:cornerRadius="26dp"
-                app:backgroundTint="@color/colorPrimaryPurple"/>
+                app:backgroundTint="@color/colorPrimary"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_back"

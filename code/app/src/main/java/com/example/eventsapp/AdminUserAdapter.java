@@ -3,10 +3,13 @@ package com.example.eventsapp;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
 
 import java.util.List;
 
@@ -47,10 +50,17 @@ public class AdminUserAdapter extends RecyclerView.Adapter<AdminUserAdapter.View
         holder.tvUserName.setText(displayName);
         holder.tvUserRole.setText(user.getAccountType() != null ? user.getAccountType() : "User");
 
-        String initial = displayName.substring(0, 1).toUpperCase();
-        holder.tvAvatarLetter.setText(initial);
+        String picUrl = user.getProfilePictureUrl();
+        if (picUrl != null && !picUrl.isEmpty()) {
+            holder.ivAvatarImage.setVisibility(View.VISIBLE);
+            holder.tvAvatarLetter.setVisibility(View.GONE);
+            Glide.with(holder.itemView.getContext()).load(picUrl).circleCrop().into(holder.ivAvatarImage);
+        } else {
+            holder.ivAvatarImage.setVisibility(View.GONE);
+            holder.tvAvatarLetter.setVisibility(View.VISIBLE);
+            holder.tvAvatarLetter.setText(displayName.substring(0, 1).toUpperCase());
+        }
 
-        final String finalName = displayName;
         holder.itemView.setOnClickListener(v -> listener.onUserClick(user));
     }
 
@@ -61,12 +71,14 @@ public class AdminUserAdapter extends RecyclerView.Adapter<AdminUserAdapter.View
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvUserName, tvUserRole, tvAvatarLetter;
+        ImageView ivAvatarImage;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvUserName = itemView.findViewById(R.id.tvUserName);
             tvUserRole = itemView.findViewById(R.id.tvUserRole);
             tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
+            ivAvatarImage = itemView.findViewById(R.id.ivAvatarImage);
         }
     }
 }

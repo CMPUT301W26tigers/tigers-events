@@ -57,7 +57,7 @@
             android:id="@+id/btnEditAvatar"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:background="@color/colorPrimaryPurple"
+            android:background="@color/colorPrimary"
             android:contentDescription="Change profile picture"
             android:padding="6dp"
             android:scaleType="centerInside"
@@ -159,7 +159,7 @@
                         android:contentDescription="Edit name"
                         android:padding="8dp"
                         app:srcCompat="@android:drawable/ic_menu_edit"
-                        app:tint="@color/colorPrimaryPurple"
+                        app:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent" />
@@ -212,7 +212,7 @@
                         android:contentDescription="Edit email"
                         android:padding="8dp"
                         app:srcCompat="@android:drawable/ic_menu_edit"
-                        app:tint="@color/colorPrimaryPurple"
+                        app:tint="@color/colorPrimary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent" />

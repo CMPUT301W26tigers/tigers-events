@@ -1,6 +1,48 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.EventsApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@color/colorOnPrimary</item>
+        <item name="colorPrimaryContainer">@color/colorPrimaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/colorOnPrimaryContainer</item>
+
+        <!-- Secondary (used by bottom nav indicator, chips, etc.) -->
+        <item name="colorSecondaryContainer">@color/colorSecondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/colorOnSecondaryContainer</item>
+
+        <!-- Surface -->
+        <item name="colorSurface">@color/colorSurface</item>
+        <item name="colorOnSurface">@color/colorOnSurface</item>
+        <item name="colorSurfaceVariant">@color/colorSurfaceContainerLow</item>
+        <item name="colorOnSurfaceVariant">@color/colorOnSurface</item>
+
+        <!-- Background -->
+        <item name="android:colorBackground">@color/colorSurface</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/colorDivider</item>
     </style>
 
     <style name="Theme.EventsApp" parent="Base.Theme.EventsApp" />
+
+    <style name="BottomNavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/colorSecondaryContainer</item>
+        <item name="shapeAppearance">@style/BottomNavIndicatorShape</item>
+    </style>
+    <style name="BottomNavIndicatorShape">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.FullRound" parent="ShapeAppearance.Material3.Corner.Full">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="Theme.EventsApp.Splash" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_window_bg</item>
+        <item name="android:statusBarColor">#FFF8F0</item>
+        <item name="android:navigationBarColor">#FFF8F0</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

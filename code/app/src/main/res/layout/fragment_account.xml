@@ -5,53 +5,126 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@android:color/white">
+    android:background="@color/colorSurface">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="24dp">
+        android:paddingBottom="32dp">
 
+        <!-- Inbox button (top-right) -->
         <ImageButton
             android:id="@+id/btnTopIcon"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/bg_orange_circle"
             android:contentDescription="Open inbox"
-            android:padding="8dp"
-            app:srcCompat="@drawable/ic_inbox"
+            android:padding="6dp"
+            android:src="@drawable/inbox_24px"
+            app:tint="@android:color/white"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:layout_marginTop="24dp"
             android:layout_marginEnd="16dp"/>
 
+        <!-- Profile Picture Avatar -->
+        <FrameLayout
+            android:id="@+id/avatarContainer"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:layout_marginTop="24dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:cardCornerRadius="55dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorPrimary"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/ivProfilePicture"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone"
+                    android:contentDescription="Profile picture"/>
+
+                <TextView
+                    android:id="@+id/tvAvatarInitial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textSize="40sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Edit badge (bottom-right) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="bottom|end"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorPrimaryFixed"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="Edit profile picture"
+                    app:srcCompat="@drawable/ic_edit_photo"
+                    app:tint="@android:color/white"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Upload progress spinner -->
+            <ProgressBar
+                android:id="@+id/progressAvatar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:elevation="4dp"
+                android:indeterminateTint="@android:color/white"/>
+
+        </FrameLayout>
+
+        <!-- Greeting -->
         <TextView
             android:id="@+id/tvGreeting"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:text="Hi, Your Name"
-            android:textSize="28sp"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginTop="24dp"
-            app:layout_constraintTop_toTopOf="parent"
+            android:textColor="@color/colorTextPrimary"
+            android:gravity="center"
+            android:layout_marginTop="14dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            app:layout_constraintTop_toBottomOf="@id/avatarContainer"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnTopIcon"/>
+            app:layout_constraintEnd_toEndOf="parent"/>
 
-
+        <!-- ========== ACCOUNT INFORMATION CARD ========== -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardProfile"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            app:cardCornerRadius="6dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            app:cardCornerRadius="20dp"
             app:cardElevation="0dp"
-            app:cardUseCompatPadding="false"
+            app:cardBackgroundColor="@color/colorCardBackground"
+            app:strokeWidth="0dp"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -60,13 +133,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="18dp"
-                android:background="#F3EAF7">
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:paddingTop="20dp"
+                android:paddingBottom="8dp">
 
+                <!-- Section Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ACCOUNT INFORMATION"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorTextPrimary"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Full Name -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingVertical="10dp">
+                    android:paddingVertical="12dp">
 
                     <LinearLayout
                         android:id="@+id/nameTextWrap"
@@ -81,37 +168,40 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Name"
-                            android:textSize="12sp"
-                            android:textColor="#333333"/>
+                            android:text="FULL NAME"
+                            android:textSize="11sp"
+                            android:textColor="@color/colorTextHint"
+                            android:letterSpacing="0.05"/>
 
                         <TextView
                             android:id="@+id/tvNameValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Your name"
-                            android:textSize="14sp"
-                            android:textColor="#666666"/>
+                            android:textSize="16sp"
+                            android:textColor="@color/colorTextPrimary"
+                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
                     <ImageButton
                         android:id="@+id/btnEditName"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_edit_button_circle"
                         android:contentDescription="Edit name"
                         android:padding="8dp"
-                        app:srcCompat="@android:drawable/ic_menu_edit"
+                        android:src="@drawable/edit_24px"
+                        app:tint="@color/colorPrimaryFixed"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent"/>
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-
+                <!-- Email Address -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingVertical="10dp">
+                    android:paddingVertical="12dp">
 
                     <LinearLayout
                         android:id="@+id/emailTextWrap"
@@ -126,199 +216,288 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Email"
-                            android:textSize="12sp"
-                            android:textColor="#333333"/>
+                            android:text="EMAIL ADDRESS"
+                            android:textSize="11sp"
+                            android:textColor="@color/colorTextHint"
+                            android:letterSpacing="0.05"/>
 
                         <TextView
                             android:id="@+id/tvEmailValue"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="youremail@email.com"
-                            android:textSize="14sp"
-                            android:textColor="#666666"/>
+                            android:textSize="16sp"
+                            android:textColor="@color/colorTextPrimary"
+                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
                     <ImageButton
                         android:id="@+id/btnEditEmail"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_edit_button_circle"
                         android:contentDescription="Edit email"
                         android:padding="8dp"
-                        app:srcCompat="@android:drawable/ic_menu_edit"
+                        android:src="@drawable/edit_24px"
+                        app:tint="@color/colorPrimaryFixed"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintBottom_toBottomOf="parent"/>
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <!-- Location (hidden, ID kept for Java compatibility) -->
+                <TextView
+                    android:id="@+id/tvLocationValue"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingVertical="10dp">
+                    android:visibility="gone"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Location"
-                        android:textSize="12sp"
-                        android:textColor="#333333"/>
-
-                    <TextView
-                        android:id="@+id/tvLocationValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Edmonton, AB"
-                        android:textSize="14sp"
-                        android:textColor="#666666"/>
-                </LinearLayout>
-
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingVertical="10dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Account Type"
-                        android:textSize="12sp"
-                        android:textColor="#333333"/>
-
-                    <TextView
-                        android:id="@+id/tvAccountTypeValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Participant"
-                        android:textSize="14sp"
-                        android:textColor="#666666"/>
-                </LinearLayout>
-
-
+                <!-- Account Type -->
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingVertical="14dp">
+                    android:paddingVertical="12dp">
 
-                    <TextView
-                        android:id="@+id/btnDeleteAccount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Delete Account"
-                        android:textColor="#D32F2F"
-                        android:textSize="14sp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
-
-                    <ImageButton
-                        android:id="@+id/btnDeleteIcon"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Delete account"
-                        android:padding="8dp"
-                        app:srcCompat="@android:drawable/ic_menu_delete"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="6dp">
-
-                    <TextView
-                        android:id="@+id/tvNotifLabel"
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Allow Notifications from Users"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/black"
+                        android:orientation="vertical"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/cbNotifications"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
-
-                    <com.google.android.material.checkbox.MaterialCheckBox
-                        android:id="@+id/cbNotifications"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        app:layout_constraintBottom_toBottomOf="parent">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="10dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ACCOUNT TYPE"
+                            android:textSize="11sp"
+                            android:textColor="@color/colorTextHint"
+                            android:letterSpacing="0.05"/>
 
-                    <TextView
-                        android:id="@+id/tvRememberDeviceLabel"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:text="Remember this device"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/black"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/cbRememberDevice"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="2dp">
 
-                    <com.google.android.material.checkbox.MaterialCheckBox
-                        android:id="@+id/cbRememberDevice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"/>
+                            <View
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/circle_orange_dot"/>
+
+                            <TextView
+                                android:id="@+id/tvAccountTypeValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Participant"
+                                android:textSize="16sp"
+                                android:textColor="@color/colorTextPrimary"
+                                android:layout_marginStart="8dp"/>
+                        </LinearLayout>
+                    </LinearLayout>
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- ========== DELETE ACCOUNT ROW ========== -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardDeleteAccount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/colorCardBackground"
+            app:strokeWidth="0dp"
+            app:layout_constraintTop_toBottomOf="@id/cardProfile"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="16dp">
+
+                <!-- btnDeleteIcon kept hidden for Java compatibility -->
+                <ImageButton
+                    android:id="@+id/btnDeleteIcon"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone"
+                    android:background="@null"
+                    android:contentDescription="Delete"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+
+                <TextView
+                    android:id="@+id/btnDeleteAccount"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="Delete Account"
+                    android:textColor="@color/colorDanger"
+                    android:textSize="15sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/ivDeleteIcon"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+
+                <ImageButton
+                    android:id="@+id/ivDeleteIcon"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Delete account"
+                    android:padding="4dp"
+                    android:src="@drawable/delete_24px"
+                    app:tint="@color/colorPrimaryFixed"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ========== NOTIFICATIONS SECTION ========== -->
+        <LinearLayout
+            android:id="@+id/sectionNotifications"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp"
+            app:layout_constraintTop_toBottomOf="@id/cardDeleteAccount"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Allow Notifications -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/cbNotifications"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginEnd="12dp">
+
+                    <TextView
+                        android:id="@+id/tvNotifLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Allow Notifications from Users"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorTextPrimary"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Stay updated on community interactions"
+                        android:textSize="13sp"
+                        android:textColor="@color/colorTextHint"
+                        android:layout_marginTop="2dp"/>
+                </LinearLayout>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbNotifications"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Remember Device -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="12dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/cbRememberDevice"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginEnd="12dp">
+
+                    <TextView
+                        android:id="@+id/tvRememberDeviceLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Remember this device"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorTextPrimary"/>
+                </LinearLayout>
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbRememberDevice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </LinearLayout>
+
+        <!-- ========== BUTTONS ========== -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnManagementTools"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="12dp"
-            android:layout_marginEnd="24dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="20dp"
             android:text="Management Tools"
             android:textAllCaps="false"
+            android:textSize="15sp"
             android:textColor="@android:color/white"
             android:visibility="gone"
             app:backgroundTint="@color/dark_grey"
-            app:cornerRadius="16dp"
+            app:cornerRadius="28dp"
             app:icon="@android:drawable/ic_menu_manage"
             app:iconGravity="textStart"
             app:iconPadding="10dp"
             app:iconTint="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/cardProfile" />
+            app:layout_constraintTop_toBottomOf="@id/sectionNotifications" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSignOut"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="20dp"
             android:layout_marginTop="12dp"
-            android:layout_marginEnd="24dp"
+            android:layout_marginEnd="20dp"
             android:text="Sign Out"
             android:textAllCaps="false"
+            android:textSize="15sp"
             android:textColor="@android:color/white"
-            app:backgroundTint="#D32F2F"
-            app:cornerRadius="16dp"
+            app:backgroundTint="@color/colorPrimaryFixed"
+            app:cornerRadius="28dp"
+            app:icon="@android:drawable/ic_menu_revert"
+            app:iconGravity="textStart"
+            app:iconPadding="10dp"
+            app:iconTint="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/btnManagementTools" />

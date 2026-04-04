@@ -27,7 +27,7 @@
         android:id="@+id/tvManageEventsTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Manage\nEvents"
+        android:text="Manage Events"
         android:textColor="@color/colorTextPrimary"
         android:textSize="28sp"
         android:textStyle="bold"

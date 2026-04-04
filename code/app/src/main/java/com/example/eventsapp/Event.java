@@ -25,7 +25,8 @@ public class Event implements Serializable {
     private String location;
     private String hostId;   // ID of the user who created this event
     private boolean geolocationRequired;
-    private transient String hostName;      //resolved display name of the host
+    private transient String hostName;             //resolved display name of the host
+    private transient String hostProfilePictureUrl; //resolved profile picture URL of the host
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
@@ -268,6 +269,14 @@ public class Event implements Serializable {
      */
     public void setHostName(String hostName) {
         this.hostName = hostName;
+    }
+
+    public String getHostProfilePictureUrl() {
+        return hostProfilePictureUrl;
+    }
+
+    public void setHostProfilePictureUrl(String hostProfilePictureUrl) {
+        this.hostProfilePictureUrl = hostProfilePictureUrl;
     }
 
     /**

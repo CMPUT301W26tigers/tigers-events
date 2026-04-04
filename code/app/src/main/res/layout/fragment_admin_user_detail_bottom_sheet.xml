@@ -56,8 +56,16 @@
                         android:gravity="center"
                         android:text="A"
                         android:textStyle="bold"
-                        android:textColor="@color/colorPrimaryPurpleDark"
+                        android:textColor="@color/colorPrimaryFixed"
                         android:textSize="24sp" />
+
+                    <ImageView
+                        android:id="@+id/ivDetailAvatarImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone"
+                        android:contentDescription="Profile picture"/>
                 </com.google.android.material.card.MaterialCardView>
 
                 <!-- Trash icon indicator -->
@@ -95,7 +103,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Account Type"
-                    android:textColor="@color/colorPrimaryPurple"
+                    android:textColor="@color/colorPrimary"
                     android:textSize="13sp"
                     android:layout_marginTop="2dp" />
             </LinearLayout>

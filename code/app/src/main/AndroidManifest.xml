@@ -19,13 +19,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.EventsApp">
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.EventsApp.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
             <!-- Deep link for QR code: tigers-events://event/{eventId} -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
