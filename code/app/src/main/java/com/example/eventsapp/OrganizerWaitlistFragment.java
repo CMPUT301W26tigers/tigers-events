@@ -728,10 +728,33 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .document(entrant.getId())
                 .update("status", Entrant.Status.CANCELLED.name())
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(requireContext(), entrant.getName() + " was removed", Toast.LENGTH_SHORT).show();
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), entrant.getName() + " was removed", Toast.LENGTH_SHORT).show();
+                    }
+                    // Remove the invitation notification from the user's inbox
+                    String userId = entrant.getUserId();
+                    if (userId != null && !userId.trim().isEmpty()) {
+                        db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .whereEqualTo("eventId", eventId)
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots -> {
+                                    WriteBatch batch = db.batch();
+                                    for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                                        String type = doc.getString("type");
+                                        if ("invitation".equalsIgnoreCase(type)) {
+                                            batch.delete(doc.getReference());
+                                        }
+                                    }
+                                    batch.commit();
+                                });
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(requireContext(), "Failed to remove entrant", Toast.LENGTH_SHORT).show();
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), "Failed to remove entrant", Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
 
