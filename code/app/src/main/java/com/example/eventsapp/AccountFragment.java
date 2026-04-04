@@ -2,25 +2,34 @@ package com.example.eventsapp;
 
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +54,12 @@ public class AccountFragment extends Fragment {
     private TextView tvLocationValue;
     private TextView tvAccountTypeValue;
 
+    private FrameLayout avatarContainer;
+    private ImageView ivProfilePicture;
+    private TextView tvAvatarInitial;
+    private ProgressBar progressAvatar;
+    private ActivityResultLauncher<String> pickImageLauncher;
+
     private FirebaseFirestore db;
 
     /**
@@ -53,6 +68,22 @@ public class AccountFragment extends Fragment {
      */
     public AccountFragment() {
         super(R.layout.fragment_account);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        displayUserData();
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        pickImageLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) uploadProfilePicture(uri);
+                });
     }
 
     /**
@@ -82,6 +113,13 @@ public class AccountFragment extends Fragment {
         tvEmailValue = view.findViewById(R.id.tvEmailValue);
         tvLocationValue = view.findViewById(R.id.tvLocationValue);
         tvAccountTypeValue = view.findViewById(R.id.tvAccountTypeValue);
+
+        avatarContainer = view.findViewById(R.id.avatarContainer);
+        ivProfilePicture = view.findViewById(R.id.ivProfilePicture);
+        tvAvatarInitial = view.findViewById(R.id.tvAvatarInitial);
+        progressAvatar = view.findViewById(R.id.progressAvatar);
+
+        avatarContainer.setOnClickListener(v -> showAvatarOptions());
 
         // Populate user data
         displayUserData();
@@ -187,6 +225,22 @@ public class AccountFragment extends Fragment {
             }
             if (notificationsCheckbox != null) {
                 notificationsCheckbox.setChecked(currentUser.isNotificationsEnabled());
+            }
+
+            // Avatar
+            if (ivProfilePicture != null && tvAvatarInitial != null) {
+                String url = currentUser.getProfilePictureUrl();
+                if (url != null && !url.isEmpty()) {
+                    ivProfilePicture.setVisibility(View.VISIBLE);
+                    tvAvatarInitial.setVisibility(View.GONE);
+                    Glide.with(this).load(url).circleCrop().into(ivProfilePicture);
+                } else {
+                    ivProfilePicture.setVisibility(View.GONE);
+                    tvAvatarInitial.setVisibility(View.VISIBLE);
+                    String name = currentUser.getName();
+                    tvAvatarInitial.setText(name != null && !name.isEmpty()
+                            ? String.valueOf(name.charAt(0)).toUpperCase() : "?");
+                }
             }
         } else {
             if (tvGreeting != null) {
@@ -295,6 +349,101 @@ public class AccountFragment extends Fragment {
                                 UserManager.getInstance().setCurrentUser(null);
                                 Navigation.findNavController(requireView()).navigate(R.id.signInFragment);
                             });
+                });
+    }
+
+    private void showAvatarOptions() {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null) return;
+
+        String url = currentUser.getProfilePictureUrl();
+        boolean hasPhoto = url != null && !url.isEmpty();
+
+        String[] options = hasPhoto
+                ? new String[]{"Change Photo", "Remove Photo", "Cancel"}
+                : new String[]{"Upload Photo", "Cancel"};
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Profile Picture")
+                .setItems(options, (dialog, which) -> {
+                    if (hasPhoto) {
+                        if (which == 0) pickImageLauncher.launch("image/*");
+                        else if (which == 1) removeProfilePicture();
+                    } else {
+                        if (which == 0) pickImageLauncher.launch("image/*");
+                    }
+                })
+                .show();
+    }
+
+    private void uploadProfilePicture(Uri uri) {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) return;
+
+        progressAvatar.setVisibility(View.VISIBLE);
+        avatarContainer.setEnabled(false);
+
+        StorageReference ref = FirebaseStorage.getInstance().getReference()
+                .child("profile_pictures/" + currentUser.getId() + ".jpg");
+
+        ref.putFile(uri)
+                .addOnSuccessListener(taskSnapshot -> ref.getDownloadUrl()
+                        .addOnSuccessListener(downloadUri -> {
+                            String downloadUrl = downloadUri.toString();
+                            db.collection("users").document(currentUser.getId())
+                                    .update("profilePictureUrl", downloadUrl)
+                                    .addOnSuccessListener(aVoid -> {
+                                        currentUser.setProfilePictureUrl(downloadUrl);
+                                        progressAvatar.setVisibility(View.GONE);
+                                        avatarContainer.setEnabled(true);
+                                        if (isAdded()) {
+                                            displayUserData();
+                                            Toast.makeText(requireContext(), "Photo updated", Toast.LENGTH_SHORT).show();
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("AccountFragment", "Firestore update failed", e);
+                                        progressAvatar.setVisibility(View.GONE);
+                                        avatarContainer.setEnabled(true);
+                                        if (isAdded()) Toast.makeText(requireContext(), "Failed to save photo", Toast.LENGTH_SHORT).show();
+                                    });
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("AccountFragment", "getDownloadUrl failed", e);
+                            progressAvatar.setVisibility(View.GONE);
+                            avatarContainer.setEnabled(true);
+                            if (isAdded()) Toast.makeText(requireContext(), "Failed to get photo URL", Toast.LENGTH_SHORT).show();
+                        }))
+                .addOnFailureListener(e -> {
+                    Log.e("AccountFragment", "Storage putFile failed", e);
+                    progressAvatar.setVisibility(View.GONE);
+                    avatarContainer.setEnabled(true);
+                    if (isAdded()) Toast.makeText(requireContext(), "Failed to upload photo", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void removeProfilePicture() {
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null) return;
+
+        progressAvatar.setVisibility(View.VISIBLE);
+        avatarContainer.setEnabled(false);
+
+        db.collection("users").document(currentUser.getId())
+                .update("profilePictureUrl", "")
+                .addOnSuccessListener(aVoid -> {
+                    currentUser.setProfilePictureUrl("");
+                    progressAvatar.setVisibility(View.GONE);
+                    avatarContainer.setEnabled(true);
+                    if (isAdded()) {
+                        displayUserData();
+                        Toast.makeText(requireContext(), "Photo removed", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    progressAvatar.setVisibility(View.GONE);
+                    avatarContainer.setEnabled(true);
+                    if (isAdded()) Toast.makeText(requireContext(), "Failed to remove photo", Toast.LENGTH_SHORT).show();
                 });
     }
 

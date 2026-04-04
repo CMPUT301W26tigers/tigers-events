@@ -324,6 +324,7 @@ public class ExploreFragment extends Fragment {
         }
 
         Map<String, String> nameMap = new HashMap<>();
+        Map<String, String> urlMap = new HashMap<>();
         final int[] remaining = {hostIds.size()};
 
         for (String hostId : hostIds) {
@@ -347,12 +348,17 @@ public class ExploreFragment extends Fragment {
                                         : first;
                                 nameMap.put(hostId, display);
                             }
+                            String picUrl = doc.getString("profilePictureUrl");
+                            if (picUrl != null && !picUrl.isEmpty()) {
+                                urlMap.put(hostId, picUrl);
+                            }
                         }
                         remaining[0]--;
                         if (remaining[0] == 0) {
                             for (Event e : events) {
                                 String resolved = nameMap.get(e.getHostId());
                                 e.setHostName(resolved != null ? resolved : "");
+                                e.setHostProfilePictureUrl(urlMap.get(e.getHostId()));
                             }
                             onComplete.run();
                         }
@@ -363,6 +369,7 @@ public class ExploreFragment extends Fragment {
                             for (Event ev : events) {
                                 String resolved = nameMap.get(ev.getHostId());
                                 ev.setHostName(resolved != null ? resolved : "");
+                                ev.setHostProfilePictureUrl(urlMap.get(ev.getHostId()));
                             }
                             onComplete.run();
                         }
@@ -411,9 +418,19 @@ public class ExploreFragment extends Fragment {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
             holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
-            holder.tvAvatarLetter.setText(
-                    event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
-            );
+
+            String hostPicUrl = event.getHostProfilePictureUrl();
+            if (hostPicUrl != null && !hostPicUrl.isEmpty()) {
+                holder.ivAvatarImage.setVisibility(View.VISIBLE);
+                holder.tvAvatarLetter.setVisibility(View.GONE);
+                Glide.with(holder.itemView.getContext()).load(hostPicUrl).circleCrop().into(holder.ivAvatarImage);
+            } else {
+                holder.ivAvatarImage.setVisibility(View.GONE);
+                holder.tvAvatarLetter.setVisibility(View.VISIBLE);
+                String hostName = event.getHostName();
+                holder.tvAvatarLetter.setText(hostName != null && !hostName.isEmpty()
+                        ? String.valueOf(hostName.charAt(0)).toUpperCase() : "?");
+            }
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
 
@@ -437,7 +454,7 @@ public class ExploreFragment extends Fragment {
          */
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate;
-            ImageView ivThumb;
+            ImageView ivThumb, ivAvatarImage;
 
             /**
              * Constructs a ViewHolder and binds UI components.
@@ -450,6 +467,7 @@ public class ExploreFragment extends Fragment {
                 tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
+                ivAvatarImage = itemView.findViewById(R.id.ivAvatarImage);
             }
         }
     }

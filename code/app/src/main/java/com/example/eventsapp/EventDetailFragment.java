@@ -65,7 +65,7 @@ public class EventDetailFragment extends Fragment {
 
     private TextView tvName, tvDescription, tvEventDate, tvRegistrationRange,
             tvCapacity, tvWaitlistCounter, tvExpiredBanner, tvHostName, tvHostAvatar, tvLocation;
-    private ImageView ivPoster;
+    private ImageView ivPoster, ivHostPicture;
     private MaterialButton btnWaitlist;
 
     // Comment views
@@ -168,6 +168,7 @@ public class EventDetailFragment extends Fragment {
         tvHostAvatar = view.findViewById(R.id.tv_host_avatar);
         tvLocation = view.findViewById(R.id.tv_location);
         ivPoster = view.findViewById(R.id.iv_poster);
+        ivHostPicture = view.findViewById(R.id.iv_host_picture);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
 
         view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
@@ -804,7 +805,17 @@ public class EventDetailFragment extends Fragment {
                                 ? first + " " + last.charAt(0) + "."
                                 : first;
                         tvHostName.setText(display);
-                        tvHostAvatar.setText(String.valueOf(first.charAt(0)).toUpperCase());
+
+                        String picUrl = doc.getString("profilePictureUrl");
+                        if (picUrl != null && !picUrl.isEmpty()) {
+                            ivHostPicture.setVisibility(View.VISIBLE);
+                            tvHostAvatar.setVisibility(View.GONE);
+                            Glide.with(this).load(picUrl).circleCrop().into(ivHostPicture);
+                        } else {
+                            ivHostPicture.setVisibility(View.GONE);
+                            tvHostAvatar.setVisibility(View.VISIBLE);
+                            tvHostAvatar.setText(String.valueOf(first.charAt(0)).toUpperCase());
+                        }
                     }
                 });
     }

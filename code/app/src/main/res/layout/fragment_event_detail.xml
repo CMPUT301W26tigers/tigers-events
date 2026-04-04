@@ -99,6 +99,14 @@
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="@color/colorPrimaryPurple"/>
+
+                    <ImageView
+                        android:id="@+id/iv_host_picture"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone"
+                        android:contentDescription="Host profile picture"/>
                 </com.google.android.material.card.MaterialCardView>
 
                 <TextView
