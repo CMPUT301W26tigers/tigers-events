@@ -206,6 +206,8 @@ public class OrganizerEnrolledFragment extends Fragment {
     }
 
     private void openCancelledFragment() {
-        Navigation.findNavController(requireView()).navigate(R.id.cancelledFragment);
+        Bundle bundle = new Bundle();
+        bundle.putString("eventId", eventId);
+        Navigation.findNavController(requireView()).navigate(R.id.action_enrolledFragment_to_cancelledFragment, bundle);
     }
 }

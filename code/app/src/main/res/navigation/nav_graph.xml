@@ -105,12 +105,20 @@
             android:name="eventId"
             app:argType="string"
             app:nullable="false" />
+        <action
+            android:id="@+id/action_enrolledFragment_to_cancelledFragment"
+            app:destination="@id/cancelledFragment" />
     </fragment>
 
     <fragment
         android:id="@+id/cancelledFragment"
         android:name="com.example.eventsapp.OrganizerCancelledFragment"
-        android:label="Cancelled" />
+        android:label="Cancelled">
+        <argument
+            android:name="eventId"
+            app:argType="string"
+            app:nullable="false" />
+    </fragment>
 
     <fragment
         android:id="@+id/eventDetailFragment"
