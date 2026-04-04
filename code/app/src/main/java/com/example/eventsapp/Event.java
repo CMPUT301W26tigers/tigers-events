@@ -29,6 +29,10 @@ public class Event implements Serializable {
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
+    public Event() {
+    }
+
+
     /**
      * Constructs an Event with basic information.
      * @param name The name of the event.

@@ -21,9 +21,12 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * A Fragment representing the organizer's view of an event's waitlist.
@@ -35,47 +38,19 @@ public class OrganizerWaitlistFragment extends Fragment {
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private FirebaseFirestore db;
     private String eventId;
+
+    private Event currentEvent; // Keeps track of event details (amount, sampleSize)
     private RecyclerView rvWaitlist;
     private TextInputEditText etSearchWaitlist;
     private TextView tvWaitlistStats;
     private OrganizerEntrantAdapter adapter;
     private final List<Entrant> allEntrants = new ArrayList<>();
     private final List<Entrant> filteredEntrants = new ArrayList<>();
+    private Set<String> tempSelectedIds = new HashSet<>(); // For drafted list of entrants
 
     public OrganizerWaitlistFragment() {
         super(R.layout.fragment_organizer_waitlist);
     }
-// No usages? May be obsolete
-//    public static OrganizerWaitlistFragment newInstance(String eventId) {
-//        OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
-//        Bundle args = new Bundle();
-//        args.putString("eventId", eventId);
-//        fragment.setArguments(args);
-//        return fragment;
-//    }
-// Obsolete
-//    private final ActivityResultLauncher<String> csvExportLauncher = registerForActivityResult(
-//            new ActivityResultContracts.CreateDocument("text/csv"),
-//            uri -> {
-//                if (uri != null) {
-//                    String[] headers = {"Name", "Status"};
-//
-//                    boolean success = CSVExporter.exportToCsv(requireContext(), uri, headers, allEntrants,
-//                            entrant -> {
-//                                String name = entrant.getName() != null ? entrant.getName() : "Unknown";
-//
-//                                String status = entrant.getStatus() != null ? entrant.getStatus().name() : "UNKNOWN";
-//
-//                                return new String[]{ name, status };
-//                            });
-//
-//                    if (success) {
-//                        Toast.makeText(requireContext(), "Waitlist exported successfully!", Toast.LENGTH_LONG).show();
-//                    } else {
-//                        Toast.makeText(requireContext(), "Failed to export waitlist.", Toast.LENGTH_SHORT).show();
-//                    }
-//                }
-//            });
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -101,10 +76,12 @@ public class OrganizerWaitlistFragment extends Fragment {
         MaterialButton btnNotifyWaitlisted = view.findViewById(R.id.btn_notify_waitlisted);
         MaterialButton btnNotifySelected = view.findViewById(R.id.btn_notify_selected);
         MaterialButton btnNotifyNotSelected = view.findViewById(R.id.btn_notify_not_selected);
+        MaterialButton btnRunLottery = view.findViewById(R.id.btn_run_lottery);
 
         btnNotifyWaitlisted.setOnClickListener(v -> notifyWaitlistedEntrants());
         btnNotifySelected.setOnClickListener(v -> notifySelectedEntrants());
         btnNotifyNotSelected.setOnClickListener(v -> notifyNotSelectedEntrants());
+        btnRunLottery.setOnClickListener(v -> runLottery());
 
         adapter = new OrganizerEntrantAdapter(filteredEntrants, new OrganizerEntrantAdapter.OnEntrantActionListener() {
             @Override
@@ -134,21 +111,20 @@ public class OrganizerWaitlistFragment extends Fragment {
             public void afterTextChanged(Editable s) {}
         });
 
-//        MaterialButton btnExportCsv = view.findViewById(R.id.btn_export_csv);
-//        btnExportCsv.setOnClickListener(v -> {
-//            if (allEntrants.isEmpty()) {
-//                Toast.makeText(requireContext(), "No entrants to export", Toast.LENGTH_SHORT).show();
-//                return;
-//            }
-//            // Launches the file picker asking where to save "Waitlist_Export.csv"
-//            csvExportLauncher.launch("Waitlist_Export.csv");
-//        });
 
         loadWaitlistData();
     }
 
     private void loadWaitlistData() {
         if (eventId == null || eventId.isEmpty()) return;
+
+        // Fetch current event to resolve capacities real-time
+        db.collection("events").document(eventId).addSnapshotListener((value, error) -> {
+            if (error == null && value != null && value.exists()) {
+                currentEvent = value.toObject(Event.class);
+                if (currentEvent != null) currentEvent.setId(value.getId());
+            }
+        });
 
         db.collection("events").document(eventId)
                 .collection("entrants")
@@ -165,6 +141,9 @@ public class OrganizerWaitlistFragment extends Fragment {
                             Entrant entrant = doc.toObject(Entrant.class);
                             if (entrant != null) {
                                 entrant.setId(doc.getId());
+
+                                // Suggested by Gemini on pass through of function, protects against corrupted state
+                                if(entrant.getStatus() == null) entrant.setStatus(Entrant.Status.APPLIED);
                                 allEntrants.add(entrant);
                             }
                         }
@@ -192,6 +171,56 @@ public class OrganizerWaitlistFragment extends Fragment {
         tvWaitlistStats.setText(normalizedQuery.isEmpty()
                 ? "Total Entrants: " + allEntrants.size()
                 : "Showing " + filteredEntrants.size() + " of " + allEntrants.size());
+    }
+
+    private void runLottery() {
+        if (currentEvent == null) {
+            Toast.makeText(requireContext(), "Event data not fully loaded. Try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Logic uses sampleSize unless zero, then it falls back to max event capacity
+        int capacity = currentEvent.getSampleSize() > 0 ? currentEvent.getSampleSize() : currentEvent.getAmount();
+
+        int occupied = 0;
+        List<Entrant> candidates = new ArrayList<>();
+
+        // Group status
+        for (Entrant e : allEntrants) {
+            if (e.getStatus() == Entrant.Status.INVITED ||
+                    e.getStatus() == Entrant.Status.ACCEPTED ||
+                    e.getStatus() == Entrant.Status.PRIVATE_INVITED) {
+                occupied++;
+            } else if (e.getStatus() == Entrant.Status.APPLIED) {
+                candidates.add(e);
+            }
+        }
+
+        int available = capacity - occupied;
+
+        if (available <= 0) {
+            Toast.makeText(requireContext(), "No more event space to run a lottery.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (candidates.isEmpty()) {
+            Toast.makeText(requireContext(), "No uninvited waitlisted entrants available to sample.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Wipe previous lottery drafts locally if they click again
+        tempSelectedIds.clear();
+
+        // Perform equally likely sample logic
+        Collections.shuffle(candidates);
+        int draftCount = Math.min(available, candidates.size());
+
+        for (int i = 0; i < draftCount; i++) {
+            tempSelectedIds.add(candidates.get(i).getId());
+        }
+
+        adapter.setTempSelectedIds(tempSelectedIds);
+        Toast.makeText(requireContext(), "Lottery pulled " + draftCount + " entrant(s)! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
     }
 
     private void removeEntrant(Entrant entrantToRemove) {
@@ -312,12 +341,52 @@ public class OrganizerWaitlistFragment extends Fragment {
         );
     }
     private void notifySelectedEntrants() {
-        notifyEntrantsByStatusCode(
-                1,
-                "No selected entrants to notify",
-                "Failed to notify selected entrants",
-                userId -> notificationHelper.sendInvitationNotification(userId, eventId)
-        );
+        if (!tempSelectedIds.isEmpty()) {
+            if (currentEvent == null) return;
+            LotteryNotificationController notificationController = new LotteryNotificationController();
+
+            for (String entrantId : tempSelectedIds) {
+                String userId = null;
+                // Grab the user ID
+                for (Entrant e : allEntrants) {
+                    if (e.getId().equals(entrantId)) {
+                        userId = e.getUserId();
+                        break;
+                    }
+                }
+
+                // Update both Enum String & statusCode for legacy compatibility
+                db.collection("events").document(eventId)
+                        .collection("entrants").document(entrantId)
+                        .update("status", Entrant.Status.INVITED.name(), "statusCode", 1);
+
+                // Use the required Lottery Notification Controller to mutate User doc directly
+                if (userId != null && !userId.isEmpty()) {
+                    db.collection("users").document(userId).get().addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            Users user = doc.toObject(Users.class);
+                            if (user != null) {
+                                notificationController.notifyChosenFromWaitlist(user, currentEvent.getName());
+                                // Overwrite updated user doc resolving lottery invitation
+                                db.collection("users").document(doc.getId()).set(user);
+                            }
+                        }
+                    });
+                }
+            }
+
+            Toast.makeText(requireContext(), "Lottery finalized! Sent out invitations.", Toast.LENGTH_SHORT).show();
+            tempSelectedIds.clear();
+            adapter.setTempSelectedIds(tempSelectedIds);
+        } else {
+            // Re-pinging originally invited folks (fallback if nothing currently drafted)
+            notifyEntrantsByStatusCode(
+                    1,
+                    "No selected entrants to notify",
+                    "Failed to notify selected entrants",
+                    userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+            );
+        }
     }
     private void notifyNotSelectedEntrants() {
         notifyEntrantsByStatusCode(

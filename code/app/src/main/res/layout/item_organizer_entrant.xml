@@ -40,7 +40,7 @@
 
         <TextView
             android:id="@+id/tv_entrant_status"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginTop="4dp"
@@ -51,6 +51,18 @@
             app:layout_constraintEnd_toStartOf="@id/entrant_action_row"
             app:layout_constraintStart_toEndOf="@id/iv_entrant_marker"
             app:layout_constraintTop_toBottomOf="@id/tv_entrant_name" />
+
+        <ImageView
+            android:id="@+id/iv_mail_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="6dp"
+            android:visibility="gone"
+            app:srcCompat="@android:drawable/ic_dialog_email"
+            app:tint="@color/colorTextSecondary"
+            app:layout_constraintStart_toEndOf="@id/tv_entrant_status"
+            app:layout_constraintTop_toTopOf="@id/tv_entrant_status"
+            app:layout_constraintBottom_toBottomOf="@id/tv_entrant_status" />
 
         <LinearLayout
             android:id="@+id/entrant_action_row"

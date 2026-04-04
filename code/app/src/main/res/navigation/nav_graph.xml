@@ -54,7 +54,7 @@
 
     <fragment
         android:id="@+id/viewEntrantsFragment"
-        android:name="com.example.eventsapp.ViewEntrantsFragment"
+        android:name="com.example.eventsapp.OrganizerWaitlistFragment"
         android:label="Event entrants">
         <argument
             android:name="eventId"

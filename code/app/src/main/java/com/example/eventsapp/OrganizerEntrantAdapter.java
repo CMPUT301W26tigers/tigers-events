@@ -1,13 +1,19 @@
 package com.example.eventsapp;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Adapter class for managing and displaying the list of entrants in the organizer's waitlist view.
@@ -18,6 +24,7 @@ public class OrganizerEntrantAdapter extends RecyclerView.Adapter<OrganizerEntra
 
     private final List<Entrant> entrants;
     private final OnEntrantActionListener listener;
+    private Set<String> tempSelectedIds = new HashSet<>(); // Tracks local drafted lottery selections
 
     /**
      * Interface definition for callbacks to be invoked when an action is taken on an entrant.
@@ -49,6 +56,11 @@ public class OrganizerEntrantAdapter extends RecyclerView.Adapter<OrganizerEntra
         this.listener = listener;
     }
 
+    public void setTempSelectedIds(Set<String> tempSelectedIds) {
+        this.tempSelectedIds = tempSelectedIds;
+        notifyDataSetChanged();
+    }
+
     /**
      * Called when RecyclerView needs a new {@link ViewHolder} of the given type to represent an item.
      *
@@ -76,16 +88,50 @@ public class OrganizerEntrantAdapter extends RecyclerView.Adapter<OrganizerEntra
         Entrant e = entrants.get(position);
         holder.tvName.setText(e.getName() != null && !e.getName().isEmpty() ? e.getName() : "Unknown");
 
+        // Getting status based on enum variable
+        Entrant.Status status = e.getStatus();
+        if (status == null) status = Entrant.Status.APPLIED;
+
+
+        // Making statusCode obsolete
         // Map statusCode to readable text
+//        String statusText;
+//        switch (e.getStatusCode()) {
+//            case 0: statusText = "In Pool (Uninvited)"; break;
+//            case 1: statusText = "Invited (Unseen)"; break;
+//            case 2: statusText = "Accepted"; break;
+//            case 3: statusText = "Rejected/Cancelled"; break;
+//            default: statusText = "Unknown"; break;
+//        }
+
         String statusText;
-        switch (e.getStatusCode()) {
-            case 0: statusText = "In Pool (Uninvited)"; break;
-            case 1: statusText = "Invited (Unseen)"; break;
-            case 2: statusText = "Accepted"; break;
-            case 3: statusText = "Rejected/Cancelled"; break;
+        switch (status) {
+            case APPLIED: statusText = "In Pool (Uninvited)"; break;
+            case INVITED: statusText = "Invited"; break;
+            case ACCEPTED: statusText = "Accepted"; break;
+            case DECLINED: statusText = "Declined"; break;
+            case CANCELLED: statusText = "Rejected/Cancelled"; break;
+            case PRIVATE_INVITED: statusText = "Private Invited"; break;
             default: statusText = "Unknown"; break;
         }
+
+        // Highlighting drafted entrants
+        if (tempSelectedIds.contains(e.getId())) {
+            statusText = "SELECTED (Draft)";
+            holder.cardView.setStrokeColor(Color.parseColor("#4CAF50")); // Green highlight
+            holder.cardView.setStrokeWidth(4);
+        } else {
+            holder.cardView.setStrokeWidth(0); // Reset for normals
+        }
+
         holder.tvStatus.setText("Status: " + statusText);
+
+        // Mail icon if notification IS sent.
+        if (status == Entrant.Status.INVITED) {
+            holder.ivMailIcon.setVisibility(View.VISIBLE);
+        } else {
+            holder.ivMailIcon.setVisibility(View.GONE);
+        }
 
         holder.btnRemove.setOnClickListener(v -> listener.onRemove(e));
         holder.btnReplace.setOnClickListener(v -> listener.onReplace(e));
@@ -107,7 +153,9 @@ public class OrganizerEntrantAdapter extends RecyclerView.Adapter<OrganizerEntra
      */
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvStatus;
+        ImageView ivMailIcon;
         MaterialButton btnRemove, btnReplace;
+        MaterialCardView cardView;
 
         /**
          * Constructs a new ViewHolder.
@@ -118,8 +166,10 @@ public class OrganizerEntrantAdapter extends RecyclerView.Adapter<OrganizerEntra
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_entrant_name);
             tvStatus = itemView.findViewById(R.id.tv_entrant_status);
+            ivMailIcon = itemView.findViewById(R.id.iv_mail_icon);
             btnRemove = itemView.findViewById(R.id.btn_remove);
             btnReplace = itemView.findViewById(R.id.btn_replace);
+            cardView = (MaterialCardView) itemView;
         }
     }
 }

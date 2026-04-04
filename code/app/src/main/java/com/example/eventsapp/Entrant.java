@@ -32,9 +32,13 @@ public class Entrant implements Serializable {
     private String email;
     private String userId;
     private Status status;
-//    private int statusCode; obsolete in favour of Status enum
+    private int statusCode;
     private double latitude = Double.NaN;
     private double longitude = Double.NaN;
+
+    public Entrant() {
+    }
+
 
     /**
      * Constructs a new Entrant.
@@ -132,13 +136,13 @@ public class Entrant implements Serializable {
         return status == Status.INVITED || status == Status.ACCEPTED;
     }
 
-//    public int getStatusCode() {
-//        return statusCode;
-//    }
+    public int getStatusCode() {
+        return statusCode;
+    }
 
-//    public void setStatusCode(int statusCode) {
-//        this.statusCode = statusCode;
-//    }
+    public void setStatusCode(int statusCode) {
+        this.statusCode = statusCode;
+    }
 
     public double getLatitude() {
         return latitude;
