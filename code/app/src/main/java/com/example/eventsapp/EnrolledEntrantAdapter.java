@@ -14,11 +14,11 @@ import java.util.ArrayList;
 /**
  * RecyclerView adapter used to display enrolled entrants
  *
- * The adapter binds EnrolledEntrant objects to the enrolled_entrant.xml
+ * The adapter binds EnrolledEntrant objects to the item_enrolled_entrant.xml
  *
  * Displays: participant name, participant email, enrollment status
  *
- * Used by EnrolledFragment to render the list of confirmed participants
+ * Used by OrganizerEnrolledFragment to render the list of confirmed participants
  */
 public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrantAdapter.EnrolledViewHolder> {
 
@@ -47,7 +47,7 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
      */
     @Override
     public EnrolledViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.enrolled_entrant, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_enrolled_entrant, parent, false);
         return new EnrolledViewHolder(view);
     }
 

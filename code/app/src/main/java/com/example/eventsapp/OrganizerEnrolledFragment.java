@@ -1,12 +1,8 @@
 package com.example.eventsapp;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,20 +18,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.SetOptions;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * Fragment that displays the final list of entrants enrolled in an event.
@@ -43,7 +31,7 @@ import java.util.Map;
  * Fulfills US 02.06.03 - As an organizer I want to see a final list of entrants
  * who enrolled for the event.
  */
-public class EnrolledFragment extends Fragment {
+public class OrganizerEnrolledFragment extends Fragment {
 
     private static final String ARG_EVENT_ID = "eventId";
 
@@ -63,12 +51,12 @@ public class EnrolledFragment extends Fragment {
 
     private String eventId;
 
-    public EnrolledFragment() {
+    public OrganizerEnrolledFragment() {
         super(R.layout.fragment_organizer_enrolled);
     }
 
-    public static EnrolledFragment newInstance(String eventId) {
-        EnrolledFragment fragment = new EnrolledFragment();
+    public static OrganizerEnrolledFragment newInstance(String eventId) {
+        OrganizerEnrolledFragment fragment = new OrganizerEnrolledFragment();
         Bundle args = new Bundle();
         args.putString(ARG_EVENT_ID, eventId);
         fragment.setArguments(args);
@@ -218,6 +206,8 @@ public class EnrolledFragment extends Fragment {
     }
 
     private void openCancelledFragment() {
-        Navigation.findNavController(requireView()).navigate(R.id.cancelledFragment);
+        Bundle bundle = new Bundle();
+        bundle.putString("eventId", eventId);
+        Navigation.findNavController(requireView()).navigate(R.id.action_enrolledFragment_to_cancelledFragment, bundle);
     }
 }
