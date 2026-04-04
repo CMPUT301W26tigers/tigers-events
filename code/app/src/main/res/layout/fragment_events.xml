@@ -27,10 +27,11 @@
         android:layout_height="40dp"
         android:layout_marginTop="24dp"
         android:layout_marginEnd="16dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:background="@drawable/bg_orange_circle"
         android:contentDescription="Open inbox"
-        android:padding="8dp"
-        app:srcCompat="@drawable/ic_inbox"
+        android:padding="6dp"
+        android:src="@drawable/inbox_24px"
+        app:tint="@android:color/white"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -43,7 +44,7 @@
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_event_toggle_outline"
         android:clipToOutline="true"
-        android:padding="1dp"
+        android:padding="3dp"
         app:singleSelection="true"
         app:selectionRequired="true"
         app:checkedButton="@id/btnRegistered"
@@ -53,27 +54,40 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRegistered"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button"
             android:layout_width="0dp"
             android:layout_height="44dp"
             android:layout_weight="1"
+            android:layout_marginEnd="3dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:text="Registered"
             android:textSize="14sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
+            android:textColor="@color/toggle_button_text"
+            app:backgroundTint="@color/toggle_button_bg"
             app:cornerRadius="22dp"
-            app:strokeWidth="0dp" />
+            app:strokeWidth="0dp"
+            app:elevation="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnCreated"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button"
             android:layout_width="0dp"
             android:layout_height="44dp"
             android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:text="Created"
             android:textSize="14sp"
+            android:textStyle="bold"
             android:textAllCaps="false"
+            android:textColor="@color/toggle_button_text"
+            app:backgroundTint="@color/toggle_button_bg"
             app:cornerRadius="22dp"
-            app:strokeWidth="0dp" />
+            app:strokeWidth="0dp"
+            app:elevation="0dp" />
 
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -154,7 +168,7 @@
         android:paddingEnd="28dp"
         android:visibility="gone"
         app:cornerRadius="26dp"
-        app:backgroundTint="@color/colorPrimaryPurple"
+        app:backgroundTint="@color/colorPrimary"
         android:layout_marginBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

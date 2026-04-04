@@ -1,4 +1,10 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Base.Theme.EventsApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimaryFixed</item>
+        <item name="colorOnPrimary">@color/colorOnPrimaryContainer</item>
+        <item name="colorPrimaryContainer">@color/colorPrimary</item>
+        <item name="colorOnPrimaryContainer">@color/colorPrimaryFixed</item>
+        <item name="colorSecondaryContainer">@color/colorPrimary</item>
+        <item name="colorOnSecondaryContainer">@color/colorPrimaryFixed</item>
     </style>
 </resources>

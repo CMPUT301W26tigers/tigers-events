@@ -774,7 +774,7 @@ public class EventDetailFragment extends Fragment {
             btnWaitlist.setText("Join Waitlist");
             btnWaitlist.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(
-                    getResources().getColor(R.color.colorPrimaryPurple, null)));
+                    getResources().getColor(R.color.colorPrimary, null)));
         }
     }
 

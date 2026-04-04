@@ -4,22 +4,34 @@
     <color name="white">#FFFFFFFF</color>
     <color name="dark_grey">#FF424242</color>
 
-    <color name="colorSurface">#F6F2F8</color>
-    <color name="colorCardBackground">#F3EAF7</color>
-    <color name="colorAvatarBackground">#E9D9F4</color>
-    <color name="colorSearchBar">#EADDEE</color>
-    <color name="colorPrimaryPurple">#7B5EA7</color>
-    <color name="colorPrimaryPurpleDark">#5B3D87</color>
+    <color name="colorSurface">#f6f6f6</color>
+    <color name="colorCardBackground">#ffffff</color>
+    <color name="colorAvatarBackground">#f0f1f1</color>
+    <color name="colorSearchBar">#dfe0e0</color>
+    <color name="colorPrimary">#994100</color>
+    <color name="colorPrimaryFixed">#ff7a23</color>
 
-    <color name="colorTextPrimary">#333333</color>
+    <color name="colorSurfaceContainerLow">#f0f1f1</color>
+    <color name="colorSurfaceContainer">#e7e8e8</color>
+    <color name="colorSurfaceContainerHigh">#dfe0e0</color>
+    <color name="colorPrimaryContainer">#ff7a23</color>
+    <color name="colorOnPrimaryContainer">#3f1700</color>
+    <color name="colorOnSurface">#2d2f2f</color>
+    <color name="colorTertiaryContainer">#febb28</color>
+    <color name="colorSecondaryContainer">#ffddb8</color>
+    <color name="colorOnSecondaryContainer">#994100</color>
+    <color name="colorWarmCardBackground">#fff3e6</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+
+    <color name="colorTextPrimary">#2d2f2f</color>
     <color name="colorTextSecondary">#666666</color>
     <color name="colorTextHint">#777777</color>
 
     <color name="colorDanger">#D32F2F</color>
-    <color name="colorDivider">#E0D6E8</color>
+    <color name="colorDivider">#d4d5d5</color>
 
     <color name="notification_green">#9BDCAD</color>
     <color name="notification_red">#E8A1A1</color>
     <color name="notification_grey">#D9D9D9</color>
-    <color name="notification_chip">#F6EEF9</color>
+    <color name="notification_chip">#febb28</color>
 </resources>

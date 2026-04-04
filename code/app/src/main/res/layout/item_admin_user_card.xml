@@ -26,7 +26,7 @@
             android:gravity="center"
             android:text="A"
             android:textStyle="bold"
-            android:textColor="@color/colorPrimaryPurpleDark"
+            android:textColor="@color/colorPrimaryFixed"
             android:textSize="24sp" />
 
         <ImageView
