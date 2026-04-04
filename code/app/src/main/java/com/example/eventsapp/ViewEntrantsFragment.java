@@ -35,9 +35,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
@@ -61,6 +63,12 @@ public class ViewEntrantsFragment extends Fragment {
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
     private final List<String> pendingCoOrganizerIds = new ArrayList<>();
+
+    private int eventCapacity = 0;
+    private int eventSampleSize = 0;
+    private String eventName = "Event";
+    private Set<String> tempSelectedIds = new HashSet<>();
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -140,6 +148,15 @@ public class ViewEntrantsFragment extends Fragment {
                 .addOnSuccessListener(eventDoc -> {
                     isPrivateEvent = Boolean.TRUE.equals(eventDoc.getBoolean("isPrivate"));
                     createdByUserId = valueOrEmpty(eventDoc.getString("createdBy"));
+
+                    // Gettingg values to compute capacity and lottery sizes real-time
+                    Long cap = eventDoc.getLong("amount");
+                    eventCapacity = cap != null ? cap.intValue() : 0;
+                    Long ss = eventDoc.getLong("sampleSize");
+                    eventSampleSize = ss != null ? ss.intValue() : 0;
+
+                    String name = eventDoc.getString("name");
+                    if (name != null) eventName = name;
 
                     coOrganizerIds.clear();
                     coOrganizerIds.addAll(FirestoreDataUtils.getStringList(eventDoc, "coOrganizerIds"));
@@ -540,52 +557,47 @@ public class ViewEntrantsFragment extends Fragment {
     }
 
     private void runLottery() {
-        db.collection("events").document(eventId)
-                .get()
-                .addOnSuccessListener(eventDoc -> {
-                    Long sampleSizeLong = eventDoc != null ? eventDoc.getLong("sampleSize") : null;
-                    int sampleSize = sampleSizeLong != null ? sampleSizeLong.intValue() : 0;
-                    if (sampleSize <= 0) {
-                        TigerToast.show(requireContext(), "Set sample size in event first", Toast.LENGTH_SHORT);
-                        return;
-                    }
+        int targetCapacity = eventSampleSize > 0 ? eventSampleSize : eventCapacity;
 
-                    CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
-                    entrantsRef.whereEqualTo("status", "APPLIED")
-                            .get()
-                            .addOnSuccessListener(appliedQuery -> {
-                                List<QueryDocumentSnapshot> applicants = new ArrayList<>();
-                                for (QueryDocumentSnapshot d : appliedQuery) applicants.add(d);
-                                if (applicants.isEmpty()) {
-                                    TigerToast.show(requireContext(), "No applicants to sample", Toast.LENGTH_SHORT);
-                                    return;
-                                }
-                                Collections.shuffle(applicants);
-                                int toInvite = Math.min(sampleSize, applicants.size());
-                                WriteBatch batch = db.batch();
-                                List<String> invitedUserIds = new ArrayList<>();
-                                for (int i = 0; i < toInvite; i++) {
-                                    DocumentReference ref = applicants.get(i).getReference();
-                                    batch.update(ref, "status", "INVITED", "statusCode", 1);
-                                    String invitedUserId = applicants.get(i).getString("userId");
-                                    if (invitedUserId != null && !invitedUserId.trim().isEmpty()) {
-                                        invitedUserIds.add(invitedUserId);
-                                    }
-                                }
-                                batch.commit()
-                                        .addOnSuccessListener(v -> {
-                                            for (String invitedUserId : invitedUserIds) {
-                                                notificationHelper.sendInvitationNotification(invitedUserId, eventId);
-                                                EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
-                                            }
-                                            TigerToast.show(requireContext(),
-                                                    "Lottery run for " + toInvite + " applicants", Toast.LENGTH_SHORT);
-                                        })
-                                        .addOnFailureListener(e -> TigerToast.show(requireContext(),
-                                                "Lottery failed", Toast.LENGTH_SHORT));
-                            });
-                })
-                .addOnFailureListener(e -> TigerToast.show(requireContext(), "Failed to load event", Toast.LENGTH_SHORT));
+        int occupied = 0;
+        List<Entrant> candidates = new ArrayList<>();
+
+        for (Entrant e : allEntrants) {
+            Entrant.Status status = e.getStatus();
+            if (status == Entrant.Status.INVITED ||
+                    status == Entrant.Status.ACCEPTED ||
+                    status == Entrant.Status.PRIVATE_INVITED) {
+                occupied++;
+            } else if (status == Entrant.Status.APPLIED) {
+                candidates.add(e);
+            }
+        }
+
+        int available = targetCapacity - occupied;
+
+        if (available <= 0) {
+            TigerToast.show(requireContext(), "No more event space to run a lottery.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (candidates.isEmpty()) {
+            Toast.makeText(requireContext(), "No uninvited waitlisted entrants available to sample.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Wipe previous lottery drafts locally if they click again
+        tempSelectedIds.clear();
+
+        Collections.shuffle(candidates);
+        int draftCount = Math.min(available, candidates.size());
+
+        for (int i = 0; i < draftCount; i++) {
+            tempSelectedIds.add(candidates.get(i).getId());
+        }
+
+        // Apply draft highlights to EntrantAdapter
+        adapter.setTempSelectedIds(tempSelectedIds);
+        TigerToast.show(requireContext(), "Lottery pulled " + draftCount + " entrant(s)! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
     }
 
     private interface NotificationAction {void send(String userId);}
@@ -651,12 +663,44 @@ public class ViewEntrantsFragment extends Fragment {
         );
     }
     private void notifySelectedEntrants() {
-        notifyEntrantsByStatusCode(
-                1,
-                "No selected entrants to notify",
-                "Failed to notify selected entrants",
-                userId -> notificationHelper.sendInvitationNotification(userId, eventId)
-        );
+        if (!tempSelectedIds.isEmpty()) {
+            WriteBatch batch = db.batch();
+
+            // Update all drafted entrants to INVITED (statusCode = 1)
+            for (String entrantId : tempSelectedIds) {
+                DocumentReference entrantRef = db.collection("events")
+                        .document(eventId)
+                        .collection("entrants")
+                        .document(entrantId);
+                batch.update(entrantRef, "status", Entrant.Status.INVITED.name(), "statusCode", 1);
+            }
+
+            // Commit the batch updates
+            batch.commit().addOnSuccessListener(v -> {
+                Toast.makeText(requireContext(), "Lottery finalized! Sent out invitations.", Toast.LENGTH_SHORT).show();
+                tempSelectedIds.clear();
+                adapter.setTempSelectedIds(tempSelectedIds); // Clear drafts in UI
+
+                // Now that the database is updated, notify everyone with statusCode = 1
+                notifyEntrantsByStatusCode(
+                        1,
+                        "No selected entrants to notify",
+                        "Failed to notify selected entrants",
+                        userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+                );
+            }).addOnFailureListener(e -> {
+                Toast.makeText(requireContext(), "Failed to finalize lottery.", Toast.LENGTH_SHORT).show();
+            });
+
+        } else {
+            // Re-pinging originally invited folks (fallback if nothing currently drafted)
+            notifyEntrantsByStatusCode(
+                    1,
+                    "No selected entrants to notify",
+                    "Failed to notify selected entrants",
+                    userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+            );
+        }
     }
     private void notifyNotSelectedEntrants() {
         notifyEntrantsByStatusCode(

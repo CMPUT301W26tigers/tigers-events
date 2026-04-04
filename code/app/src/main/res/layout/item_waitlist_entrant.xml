@@ -40,6 +40,18 @@
             app:layout_constraintStart_toEndOf="@id/iv_pin"
             app:layout_constraintTop_toTopOf="@id/iv_pin" />
 
+        <ImageView
+            android:id="@+id/iv_mail_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="4dp"
+            android:visibility="gone"
+            app:srcCompat="@android:drawable/ic_dialog_email"
+            app:tint="@color/colorTextSecondary"
+            app:layout_constraintEnd_toStartOf="@id/tv_action"
+            app:layout_constraintTop_toTopOf="@id/tv_action"
+            app:layout_constraintBottom_toBottomOf="@id/tv_action" />
+
         <TextView
             android:id="@+id/tv_action"
             android:layout_width="wrap_content"

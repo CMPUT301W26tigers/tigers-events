@@ -36,6 +36,10 @@ public class Entrant implements Serializable {
     private double latitude = Double.NaN;
     private double longitude = Double.NaN;
 
+    public Entrant() {
+    }
+
+
     /**
      * Constructs a new Entrant.
      * @param id The unique ID of the entrant. If null, a random UUID is generated.
