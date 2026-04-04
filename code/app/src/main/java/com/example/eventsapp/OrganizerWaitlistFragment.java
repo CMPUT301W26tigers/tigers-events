@@ -45,14 +45,37 @@ public class OrganizerWaitlistFragment extends Fragment {
     public OrganizerWaitlistFragment() {
         super(R.layout.fragment_organizer_waitlist);
     }
-
-    public static OrganizerWaitlistFragment newInstance(String eventId) {
-        OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
-        Bundle args = new Bundle();
-        args.putString("eventId", eventId);
-        fragment.setArguments(args);
-        return fragment;
-    }
+// No usages? May be obsolete
+//    public static OrganizerWaitlistFragment newInstance(String eventId) {
+//        OrganizerWaitlistFragment fragment = new OrganizerWaitlistFragment();
+//        Bundle args = new Bundle();
+//        args.putString("eventId", eventId);
+//        fragment.setArguments(args);
+//        return fragment;
+//    }
+// Obsolete
+//    private final ActivityResultLauncher<String> csvExportLauncher = registerForActivityResult(
+//            new ActivityResultContracts.CreateDocument("text/csv"),
+//            uri -> {
+//                if (uri != null) {
+//                    String[] headers = {"Name", "Status"};
+//
+//                    boolean success = CSVExporter.exportToCsv(requireContext(), uri, headers, allEntrants,
+//                            entrant -> {
+//                                String name = entrant.getName() != null ? entrant.getName() : "Unknown";
+//
+//                                String status = entrant.getStatus() != null ? entrant.getStatus().name() : "UNKNOWN";
+//
+//                                return new String[]{ name, status };
+//                            });
+//
+//                    if (success) {
+//                        Toast.makeText(requireContext(), "Waitlist exported successfully!", Toast.LENGTH_LONG).show();
+//                    } else {
+//                        Toast.makeText(requireContext(), "Failed to export waitlist.", Toast.LENGTH_SHORT).show();
+//                    }
+//                }
+//            });
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -110,6 +133,16 @@ public class OrganizerWaitlistFragment extends Fragment {
             @Override
             public void afterTextChanged(Editable s) {}
         });
+
+//        MaterialButton btnExportCsv = view.findViewById(R.id.btn_export_csv);
+//        btnExportCsv.setOnClickListener(v -> {
+//            if (allEntrants.isEmpty()) {
+//                Toast.makeText(requireContext(), "No entrants to export", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+//            // Launches the file picker asking where to save "Waitlist_Export.csv"
+//            csvExportLauncher.launch("Waitlist_Export.csv");
+//        });
 
         loadWaitlistData();
     }
