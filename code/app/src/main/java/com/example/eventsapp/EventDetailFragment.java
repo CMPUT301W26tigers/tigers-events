@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,6 +16,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,10 +43,12 @@ import android.location.Location;
 import android.os.Looper;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * A fragment that displays the full details of a specific event.
@@ -66,7 +70,7 @@ public class EventDetailFragment extends Fragment {
     private TextView tvName, tvDescription, tvEventDate, tvRegistrationRange,
             tvCapacity, tvWaitlistCounter, tvExpiredBanner, tvHostName, tvHostAvatar, tvLocation;
     private ImageView ivPoster, ivHostPicture;
-    private MaterialButton btnWaitlist;
+    private MaterialButton btnWaitlist, btnWaitlist2;
 
     // Comment views
     private RecyclerView rvComments;
@@ -110,14 +114,14 @@ public class EventDetailFragment extends Fragment {
                     if (!isAdded()) return;
                     Users u = UserManager.getInstance().getCurrentUser();
                     if (u == null || u.getId() == null) {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         return;
                     }
                     // This callback is only launched when geolocationRequired=true.
                     if (granted) {
                         fetchLocationAndCompleteJoin(true);
                     } else {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         TigerToast.show(requireContext(), "Location permission is required to join this event", Toast.LENGTH_LONG);
                     }
                 });
@@ -174,6 +178,7 @@ public class EventDetailFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         ivHostPicture = view.findViewById(R.id.iv_host_picture);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
+        btnWaitlist2 = view.findViewById(R.id.btnWaitlist2);
 
         if (preloadPosterUrl != null) {
             Glide.with(this).load(preloadPosterUrl).into(ivPoster);
@@ -212,13 +217,13 @@ public class EventDetailFragment extends Fragment {
 
         if (eventId.isEmpty()) {
             tvName.setText("Event not found");
-            btnWaitlist.setVisibility(View.GONE);
+            setWaitlistButtonsVisibility(View.GONE);
             return;
         }
 
         if (fromHistory) {
             // Load from user's personal history instead of global events
-            btnWaitlist.setVisibility(View.GONE);
+            setWaitlistButtonsVisibility(View.GONE);
             tvWaitlistCounter.setVisibility(View.GONE);
             if (tvExpiredBanner != null) {
                 tvExpiredBanner.setVisibility(View.VISIBLE);
@@ -235,10 +240,28 @@ public class EventDetailFragment extends Fragment {
                     joinWaitlist();
                 }
             });
+
+            btnWaitlist2.setOnClickListener(v -> {
+                if (isOnWaitlist) {
+                    leaveWaitlist();
+                } else {
+                    joinWaitlistWithGroup();
+                }
+            });
         }
 
         loadComments();
         btnPostComment.setOnClickListener(v -> postComment());
+    }
+
+    private void setWaitlistButtonsEnabled(boolean enabled) {
+        if (btnWaitlist != null) btnWaitlist.setEnabled(enabled);
+        if (btnWaitlist2 != null) btnWaitlist2.setEnabled(enabled);
+    }
+
+    private void setWaitlistButtonsVisibility(int visibility) {
+        if (btnWaitlist != null) btnWaitlist.setVisibility(visibility);
+        if (btnWaitlist2 != null) btnWaitlist2.setVisibility(visibility);
     }
 
     @Override
@@ -326,13 +349,13 @@ public class EventDetailFragment extends Fragment {
                         refreshWaitlistButtonState();
                     } else {
                         tvName.setText("Event not found");
-                        btnWaitlist.setVisibility(View.GONE);
+                        setWaitlistButtonsVisibility(View.GONE);
                     }
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     tvName.setText("Failed to load event");
-                    btnWaitlist.setVisibility(View.GONE);
+                    setWaitlistButtonsVisibility(View.GONE);
                 });
     }
 
@@ -344,11 +367,12 @@ public class EventDetailFragment extends Fragment {
         db.collection("events").document(eventId)
                 .collection("entrants")
                 .whereEqualTo("status", "APPLIED")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addSnapshotListener((value, error) -> {
                     if (!isAdded()) return;
-                    waitlistCount = querySnapshot.size();
-                    updateWaitlistCounter();
+                    if (value != null) {
+                        waitlistCount = value.size();
+                        updateWaitlistCounter();
+                    }
                 });
 
         // Check if current user is already on the waitlist
@@ -358,14 +382,18 @@ public class EventDetailFragment extends Fragment {
                     .collection("entrants")
                     .whereEqualTo("userId", currentUser.getId())
                     .whereEqualTo("status", "APPLIED")
-                    .get()
-                    .addOnSuccessListener(querySnapshot -> {
+                    .addSnapshotListener((value, error) -> {
                         if (!isAdded()) return;
-                        if (!querySnapshot.isEmpty()) {
+                        if (value != null && !value.isEmpty()) {
                             isOnWaitlist = true;
-                            currentEntrantDocId = querySnapshot.getDocuments().get(0).getId();
+                            currentEntrantDocId = value.getDocuments().get(0).getId();
                             refreshWaitlistButtonState();
                             startWaitlistLocationSharingIfNeeded();
+                        } else {
+                            isOnWaitlist = false;
+                            currentEntrantDocId = null;
+                            refreshWaitlistButtonState();
+                            stopWaitlistLocationSharing();
                         }
                     });
         }
@@ -393,13 +421,90 @@ public class EventDetailFragment extends Fragment {
             TigerToast.show(requireContext(), "The waitlist for this event is full", Toast.LENGTH_SHORT);
             return;
         }
-        btnWaitlist.setEnabled(false);
+        setWaitlistButtonsEnabled(false);
 
         if (!eventDetailsLoaded) {
             fetchEventSettingsThenContinueJoin(currentUser);
             return;
         }
         continueJoinWithResolvedGeoSetting(currentUser);
+    }
+
+    private void joinWaitlistWithGroup() {
+        if (userIsOrganizer || isPrivateEvent) {
+            return;
+        }
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null || currentUser.getId().isEmpty()) {
+            TigerToast.show(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT);
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Join Waitlist with Group");
+        builder.setMessage("Enter email addresses of friends to join with (comma-separated):");
+
+        final EditText input = new EditText(requireContext());
+        input.setHint("email1@example.com, email2@example.com");
+        builder.setView(input);
+
+        builder.setPositiveButton("Invite", (dialog, which) -> {
+            String emailsStr = input.getText().toString().trim();
+            if (emailsStr.isEmpty()) {
+                TigerToast.show(requireContext(), "Please enter at least one email", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            List<String> emails = new ArrayList<>();
+            for (String email : emailsStr.split(",")) {
+                String e = email.trim();
+                if (!e.isEmpty()) {
+                    emails.add(e);
+                }
+            }
+
+            if (emails.isEmpty()) {
+                TigerToast.show(requireContext(), "Please enter valid emails", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            createWaitlistGroup(currentUser, emails);
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    private void createWaitlistGroup(Users currentUser, List<String> emails) {
+        String groupId = UUID.randomUUID().toString();
+        Map<String, Object> groupData = new HashMap<>();
+        groupData.put("groupId", groupId);
+        groupData.put("eventId", eventId);
+        groupData.put("creatorId", currentUser.getId());
+        groupData.put("creatorEmail", currentUser.getEmail());
+        groupData.put("memberEmails", emails);
+        
+        List<String> acceptedEmails = new ArrayList<>();
+        acceptedEmails.add(currentUser.getEmail());
+        groupData.put("acceptedEmails", acceptedEmails);
+        groupData.put("status", "PENDING");
+        groupData.put("timestamp", FieldValue.serverTimestamp());
+
+        db.collection("events").document(eventId)
+                .collection("groups").document(groupId)
+                .set(groupData)
+                .addOnSuccessListener(unused -> {
+                    TigerToast.show(requireContext(), "Group invitations sent!", Toast.LENGTH_SHORT);
+                    // Send notifications to all invited emails
+                    for (String email : emails) {
+                        notificationHelper.sendGroupWaitlistInvitationNotification(email, eventId, groupId, currentUser.getName());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    TigerToast.show(requireContext(), "Failed to create group", Toast.LENGTH_SHORT);
+                    Log.e(TAG, "Error creating group", e);
+                });
     }
 
     /**
@@ -412,7 +517,7 @@ public class EventDetailFragment extends Fragment {
                 .addOnSuccessListener(doc -> {
                     if (!isAdded()) return;
                     if (doc == null || !doc.exists()) {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                         return;
                     }
@@ -422,7 +527,7 @@ public class EventDetailFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                     Log.e(TAG, "join: failed to load event settings", e);
                 });
@@ -481,7 +586,7 @@ public class EventDetailFragment extends Fragment {
     private void fetchLocationAndCompleteJoin(boolean required) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
-            btnWaitlist.setEnabled(true);
+            setWaitlistButtonsEnabled(true);
             return;
         }
 
@@ -567,7 +672,7 @@ public class EventDetailFragment extends Fragment {
 
     private void onNoLocation(boolean required, @NonNull Users currentUser) {
         if (required) {
-            btnWaitlist.setEnabled(true);
+            setWaitlistButtonsEnabled(true);
             TigerToast.show(requireContext(), "Could not read your location. Check Google Play services or try again.", Toast.LENGTH_LONG);
         } else {
             writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
@@ -611,14 +716,14 @@ public class EventDetailFragment extends Fragment {
                     waitlistCount++;
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT);
                     writeEventHistoryForCurrentUser(currentUser.getId());
                     startWaitlistLocationSharingIfNeeded();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Failed to join waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error joining waitlist", e);
                 });
@@ -630,7 +735,7 @@ public class EventDetailFragment extends Fragment {
     private void leaveWaitlist() {
         if (currentEntrantDocId == null) return;
 
-        btnWaitlist.setEnabled(false);
+        setWaitlistButtonsEnabled(false);
         stopWaitlistLocationSharing();
 
         db.collection("events").document(eventId)
@@ -643,7 +748,7 @@ public class EventDetailFragment extends Fragment {
                     waitlistCount = Math.max(0, waitlistCount - 1);
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT);
                     // Delete history record since user voluntarily left
                     Users user = UserManager.getInstance().getCurrentUser();
@@ -653,7 +758,7 @@ public class EventDetailFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Failed to leave waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error leaving waitlist", e);
                 });
@@ -739,42 +844,50 @@ public class EventDetailFragment extends Fragment {
      * Updates the text and color of the waitlist button based on whether the user is on the waitlist.
      */
     private void refreshWaitlistButtonState() {
+        String text;
+        String text2 = null;
+        int colorRes;
+        boolean enabled = true;
+
         if (userIsOrganizer) {
-            btnWaitlist.setText("Organizer Access");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
+            text = "Organizer Access";
+            enabled = false;
+            colorRes = R.color.dark_grey;
+        } else if (isPrivateEvent && !isOnWaitlist) {
+            text = "Private Event By Invitation";
+            enabled = false;
+            colorRes = R.color.dark_grey;
+        } else if (isOnWaitlist) {
+            text = getString(R.string.leave_waitlist);
+            colorRes = R.color.colorDanger;
+            // Hide the second button when on waitlist
+            if (btnWaitlist2 != null) btnWaitlist2.setVisibility(View.GONE);
+            updateWaitlistButton(btnWaitlist, text, colorRes, enabled);
             return;
-        }
-
-        if (isPrivateEvent && !isOnWaitlist) {
-            btnWaitlist.setText("Private Event By Invitation");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
-            return;
-        }
-
-        btnWaitlist.setEnabled(true);
-        if (isOnWaitlist) {
-            btnWaitlist.setText("Leave Waitlist");
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.colorDanger, null)));
         } else if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity){
-            btnWaitlist.setText("Waitlist Full");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
+            text = getString(R.string.waitlist_full);
+            enabled = false;
+            colorRes = R.color.dark_grey;
         } else {
-            btnWaitlist.setText("Join Waitlist");
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                    getResources().getColor(R.color.colorPrimary, null)));
+            text = getString(R.string.join_waitlist);
+            text2 = getString(R.string.join_waitlist_with_group);
+            colorRes = R.color.colorPrimary;
         }
+
+        if (text2 == null) text2 = text;
+        if (btnWaitlist2 != null) btnWaitlist2.setVisibility(View.VISIBLE);
+
+        updateWaitlistButton(btnWaitlist, text, colorRes, enabled);
+        updateWaitlistButton(btnWaitlist2, text2, colorRes, enabled);
+    }
+
+    private void updateWaitlistButton(MaterialButton button, String text, int colorRes, boolean enabled) {
+        if (button == null) return;
+        button.setText(text);
+        button.setEnabled(enabled);
+        button.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(colorRes, null)));
     }
 
     /**

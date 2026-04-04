@@ -20,7 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/btnWaitlist"
+        app:layout_constraintBottom_toTopOf="@id/llWaitlistButtons"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -307,22 +307,45 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Join/Leave Waitlist Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnWaitlist"
+    <!-- Join/Leave Waitlist Buttons Container -->
+    <LinearLayout
+        android:id="@+id/llWaitlistButtons"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp"
-        android:layout_marginEnd="8dp"
-        android:text="Join Waitlist"
-        android:textSize="16sp"
-        app:cornerRadius="8dp"
-        app:backgroundTint="@color/colorPrimary"
+        android:layout_marginEnd="4dp"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnInfo"/>
+        app:layout_constraintEnd_toStartOf="@id/btnInfo">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWaitlist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/join_waitlist"
+            android:textSize="13sp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/colorPrimary"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnWaitlist2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="@string/join_waitlist_with_group"
+            android:textSize="13sp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="@color/colorPrimary"/>
+    </LinearLayout>
 
     <ImageButton
         android:id="@+id/btnInfo"
@@ -333,8 +356,8 @@
         android:contentDescription="Event info"
         android:padding="8dp"
         app:srcCompat="@drawable/ic_info"
-        app:layout_constraintBottom_toBottomOf="@id/btnWaitlist"
-        app:layout_constraintTop_toTopOf="@id/btnWaitlist"
+        app:layout_constraintBottom_toBottomOf="@id/llWaitlistButtons"
+        app:layout_constraintTop_toTopOf="@id/llWaitlistButtons"
         app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

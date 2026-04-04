@@ -15,4 +15,8 @@
     <string name="notif_waitlist_location_title">Live location for waitlist</string>
     <string name="notif_waitlist_location_generic">An event you joined</string>
     <string name="notif_waitlist_location_stop">Stop</string>
+    <string name="join_waitlist">Join Waitlist</string>
+    <string name="join_waitlist_with_group">Join Waitlist with Group</string>
+    <string name="leave_waitlist">Leave Waitlist</string>
+    <string name="waitlist_full">Waitlist Full</string>
 </resources>
