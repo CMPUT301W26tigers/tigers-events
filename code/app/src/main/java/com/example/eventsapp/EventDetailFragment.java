@@ -75,6 +75,8 @@ public class EventDetailFragment extends Fragment {
     private TextInputEditText etComment;
     private MaterialButton btnPostComment;
 
+    private String preloadPosterUrl = null;
+    private String preloadHostPicUrl = null;
     private boolean isOnWaitlist = false;
     private boolean isPrivateEvent = false;
     private boolean userIsOrganizer = false;
@@ -122,6 +124,8 @@ public class EventDetailFragment extends Fragment {
         if (getArguments() != null) {
             eventId = getArguments().getString("eventId", "");
             fromHistory = getArguments().getBoolean("fromHistory", false);
+            preloadPosterUrl = getArguments().getString("posterUrl");
+            preloadHostPicUrl = getArguments().getString("hostProfilePictureUrl");
         } else {
             eventId = "";
         }
@@ -170,6 +174,14 @@ public class EventDetailFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         ivHostPicture = view.findViewById(R.id.iv_host_picture);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
+
+        if (preloadPosterUrl != null) {
+            Glide.with(this).load(preloadPosterUrl).into(ivPoster);
+        }
+        if (preloadHostPicUrl != null) {
+            ivHostPicture.setVisibility(View.VISIBLE);
+            Glide.with(this).load(preloadHostPicUrl).circleCrop().into(ivHostPicture);
+        }
 
         view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
@@ -761,7 +773,7 @@ public class EventDetailFragment extends Fragment {
             btnWaitlist.setText("Join Waitlist");
             btnWaitlist.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(
-                    getResources().getColor(R.color.colorPrimaryPurple, null)));
+                    getResources().getColor(R.color.colorPrimary, null)));
         }
     }
 

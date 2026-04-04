@@ -27,7 +27,7 @@
         android:id="@+id/tvManageNotificationsTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Manage\nNotifications"
+        android:text="Manage Notifications"
         android:textColor="@color/colorTextPrimary"
         android:textSize="28sp"
         android:textStyle="bold"

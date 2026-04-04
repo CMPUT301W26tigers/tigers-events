@@ -69,7 +69,7 @@
                 android:minWidth="0dp"
                 android:text="Replace"
                 android:textAllCaps="false"
-                android:textColor="@color/colorPrimaryPurple"
+                android:textColor="@color/colorPrimary"
                 android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButton

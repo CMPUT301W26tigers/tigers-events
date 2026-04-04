@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="@color/colorSurface"
     android:fillViewport="true"
     tools:ignore="HardcodedText">
 
@@ -38,7 +38,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/profileAvatarCard"
-            app:strokeColor="#D6D0DB"
+            app:strokeColor="@color/colorDivider"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -53,7 +53,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="First Name"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp"
                     android:visibility="gone" />
 
@@ -63,12 +63,12 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:hintEnabled="false">
@@ -85,8 +85,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Sign-up only: Last Name -->
@@ -96,7 +96,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Last Name"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp"
                     android:visibility="gone" />
 
@@ -106,12 +106,12 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:hintEnabled="false">
@@ -128,8 +128,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Email (always visible) -->
@@ -138,19 +138,19 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Email"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:hintEnabled="false">
@@ -167,8 +167,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Sign-up only: Phone Number -->
@@ -178,7 +178,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Phone Number"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp"
                     android:visibility="gone" />
 
@@ -188,12 +188,12 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:hintEnabled="false">
@@ -210,8 +210,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Password (always visible) -->
@@ -220,19 +220,19 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Password"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:endIconMode="password_toggle"
@@ -250,8 +250,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Sign-up only: Confirm Password -->
@@ -261,7 +261,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Confirm Password"
-                    android:textColor="#1F1B24"
+                    android:textColor="@color/colorTextPrimary"
                     android:textSize="18sp"
                     android:visibility="gone" />
 
@@ -271,12 +271,12 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
-                    app:boxBackgroundColor="#F6F4F8"
+                    app:boxBackgroundColor="@color/colorSurfaceContainerLow"
                     app:boxCornerRadiusBottomEnd="10dp"
                     app:boxCornerRadiusBottomStart="10dp"
                     app:boxCornerRadiusTopEnd="10dp"
                     app:boxCornerRadiusTopStart="10dp"
-                    app:boxStrokeColor="#D6D0DB"
+                    app:boxStrokeColor="@color/colorDivider"
                     app:boxStrokeWidth="1dp"
                     app:boxStrokeWidthFocused="1dp"
                     app:endIconMode="password_toggle"
@@ -294,8 +294,8 @@
                         android:paddingTop="16dp"
                         android:paddingEnd="16dp"
                         android:paddingBottom="16dp"
-                        android:textColor="#1F1B24"
-                        android:textColorHint="#A19AA8" />
+                        android:textColor="@color/colorTextPrimary"
+                        android:textColorHint="@color/colorTextHint" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Remember device checkbox (sign-up only) -->
@@ -304,9 +304,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:buttonTint="#231F29"
+                    android:buttonTint="@color/colorPrimary"
                     android:text="Remember device"
-                    android:textColor="#8A858F"
+                    android:textColor="@color/colorTextHint"
                     android:textSize="16sp"
                     android:visibility="gone" />
 
@@ -320,7 +320,7 @@
                     android:text="Sign In"
                     android:textAllCaps="false"
                     android:textSize="18sp"
-                    app:backgroundTint="#231F29"
+                    app:backgroundTint="@color/colorPrimaryFixed"
                     app:cornerRadius="10dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -332,7 +332,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:text="Don't have an account? Sign Up"
-            android:textColor="#5A3E9B"
+            android:textColor="@color/colorPrimary"
             android:textSize="16sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

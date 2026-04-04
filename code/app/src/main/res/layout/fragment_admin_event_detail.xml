@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hosted by —"
-                android:textColor="@color/colorPrimaryPurple"
+                android:textColor="@color/colorPrimary"
                 android:textSize="14sp"
                 android:layout_marginBottom="20dp" />
 

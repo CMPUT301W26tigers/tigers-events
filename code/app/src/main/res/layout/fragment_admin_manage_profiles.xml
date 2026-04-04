@@ -27,7 +27,7 @@
         android:id="@+id/tvManageUsersTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Manage\nUsers"
+        android:text="Manage Profiles"
         android:textColor="@color/colorTextPrimary"
         android:textSize="28sp"
         android:textStyle="bold"

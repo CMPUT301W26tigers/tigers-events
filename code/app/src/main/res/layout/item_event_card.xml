@@ -7,7 +7,7 @@
     android:layout_marginBottom="10dp"
     app:cardCornerRadius="14dp"
     app:cardElevation="1dp"
-    app:cardBackgroundColor="@android:color/white"
+    app:cardBackgroundColor="@color/colorCardBackground"
     app:strokeWidth="0dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -35,7 +35,7 @@
                 android:gravity="center"
                 android:text="A"
                 android:textStyle="bold"
-                android:textColor="@color/colorPrimaryPurpleDark"
+                android:textColor="@color/colorPrimaryFixed"
                 android:textSize="16sp" />
 
             <ImageView
