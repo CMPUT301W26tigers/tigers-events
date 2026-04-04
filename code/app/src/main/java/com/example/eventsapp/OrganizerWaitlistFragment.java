@@ -96,32 +96,17 @@ public class OrganizerWaitlistFragment extends Fragment {
         toolbar.setNavigationOnClickListener(v ->
                 requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
-        toolbar.inflateMenu(R.menu.menu_waitlist);
-
-        toolbar.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-
-            if (id == R.id.action_notify_waitlisted) {
-                notifyWaitlistedEntrants();
-                return true;
-            }
-
-            if (id == R.id.action_notify_selected) {
-                notifySelectedEntrants();
-                return true;
-            }
-
-            if (id == R.id.action_notify_not_selected) {
-                notifyNotSelectedEntrants();
-                return true;
-            }
-
-            return false;
-        });
-
         rvWaitlist = view.findViewById(R.id.rv_waitlist);
         etSearchWaitlist = view.findViewById(R.id.et_search_waitlist);
         tvWaitlistStats = view.findViewById(R.id.tv_waitlist_stats);
+
+        MaterialButton btnNotifyWaitlisted = view.findViewById(R.id.btn_notify_waitlisted);
+        MaterialButton btnNotifySelected = view.findViewById(R.id.btn_notify_selected);
+        MaterialButton btnNotifyNotSelected = view.findViewById(R.id.btn_notify_not_selected);
+
+        btnNotifyWaitlisted.setOnClickListener(v -> notifyWaitlistedEntrants());
+        btnNotifySelected.setOnClickListener(v -> notifySelectedEntrants());
+        btnNotifyNotSelected.setOnClickListener(v -> notifyNotSelectedEntrants());
 
         adapter = new OrganizerEntrantAdapter(filteredEntrants, new OrganizerEntrantAdapter.OnEntrantActionListener() {
             @Override
@@ -339,8 +324,8 @@ public class OrganizerWaitlistFragment extends Fragment {
     private void notifyNotSelectedEntrants() {
         notifyEntrantsByStatusCode(
                 3,
-                "No cancelled entrants to notify",
-                "Failed to notify cancelled entrants",
+                "No non-selected entrants to notify",
+                "Failed to notify non-selected entrants",
                 userId -> notificationHelper.sendNotSelectedNotification(userId, eventId)
         );
     }

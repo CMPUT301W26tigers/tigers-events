@@ -22,12 +22,21 @@ import androidx.navigation.Navigation;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A fragment that allows users to explore and search for all available events.
@@ -43,6 +52,10 @@ public class ExploreFragment extends Fragment {
     private RecyclerView rvSearchResults;
     private ConstraintLayout normalContainer;
     private ConstraintLayout searchContainer;
+    private ChipGroup chipGroupFilters;
+    private boolean filterAvailableOnly = false;
+    private String filterDateFrom = null;
+    private String filterDateTo = null;
 
     /**
      * Default constructor for ExploreFragment.
@@ -69,6 +82,7 @@ public class ExploreFragment extends Fragment {
         rvSearchResults = view.findViewById(R.id.rvSearchResults);
         normalContainer = view.findViewById(R.id.normalContainer);
         searchContainer = view.findViewById(R.id.searchContainer);
+        chipGroupFilters = view.findViewById(R.id.chipGroupFilters);
 
         // Main event list adapter
         adapter = new ExploreEventAdapter(allEvents, event -> navigateToDetail(view, event));
@@ -91,6 +105,9 @@ public class ExploreFragment extends Fragment {
         // Back button exits search mode
         view.findViewById(R.id.btnBack).setOnClickListener(v -> hideSearchMode());
 
+        // Filter button opens the filter bottom sheet
+        view.findViewById(R.id.ivMenu).setOnClickListener(v -> openFilterBottomSheet());
+
         // Search text filtering
         EditText etSearch = view.findViewById(R.id.etSearch);
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -99,7 +116,7 @@ public class ExploreFragment extends Fragment {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                filterEvents(s.toString());
+                applyFilters();
             }
 
             @Override
@@ -132,39 +149,111 @@ public class ExploreFragment extends Fragment {
     private void showSearchMode() {
         normalContainer.setVisibility(View.GONE);
         searchContainer.setVisibility(View.VISIBLE);
-        filteredEvents.clear();
-        filteredEvents.addAll(allEvents);
-        searchAdapter.notifyDataSetChanged();
+        applyFilters();
     }
 
     /**
      * Exits search mode, showing the normal list and clearing the search input.
+     * Resets all filters.
      */
     private void hideSearchMode() {
         searchContainer.setVisibility(View.GONE);
         normalContainer.setVisibility(View.VISIBLE);
+        filterAvailableOnly = false;
+        filterDateFrom = null;
+        filterDateTo = null;
+        chipGroupFilters.removeAllViews();
+        chipGroupFilters.setVisibility(View.GONE);
         EditText etSearch = requireView().findViewById(R.id.etSearch);
         etSearch.setText("");
     }
 
     /**
-     * Filters the list of all events based on the provided query string and updates the search adapter.
-     *
-     * @param query The search query.
+     * Opens the filter bottom sheet with the current filter state.
      */
-    private void filterEvents(String query) {
+    private void openFilterBottomSheet() {
+        ExploreFilterBottomSheet sheet = ExploreFilterBottomSheet.newInstance(
+                filterAvailableOnly, filterDateFrom, filterDateTo);
+        sheet.setOnFilterAppliedListener((availableOnly, dateFrom, dateTo) -> {
+            filterAvailableOnly = availableOnly;
+            filterDateFrom = dateFrom;
+            filterDateTo = dateTo;
+            applyFilters();
+        });
+        sheet.show(getChildFragmentManager(), "filter_sheet");
+    }
+
+    /**
+     * Applies all active filters (text search, available only, date range) and updates the search results.
+     */
+    private void applyFilters() {
+        EditText etSearch = requireView().findViewById(R.id.etSearch);
+        String query = etSearch.getText().toString();
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
+
         filteredEvents.clear();
-        if (query.isEmpty()) {
-            filteredEvents.addAll(allEvents);
-        } else {
-            String lowerQuery = query.toLowerCase();
-            for (Event event : allEvents) {
-                if (event.getName().toLowerCase().contains(lowerQuery)) {
-                    filteredEvents.add(event);
-                }
-            }
-        }
+        filteredEvents.addAll(ExploreFilterHelper.applyAllFilters(
+                allEvents, query, filterAvailableOnly, filterDateFrom, filterDateTo, today));
         searchAdapter.notifyDataSetChanged();
+        updateFilterChips();
+    }
+
+    /**
+     * Updates the filter chip indicators below the search bar.
+     */
+    private void updateFilterChips() {
+        chipGroupFilters.removeAllViews();
+
+        if (filterAvailableOnly) {
+            Chip chip = new Chip(requireContext());
+            chip.setText("Available Only");
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> {
+                filterAvailableOnly = false;
+                applyFilters();
+            });
+            chipGroupFilters.addView(chip);
+        }
+
+        boolean hasFrom = filterDateFrom != null && !filterDateFrom.isEmpty();
+        boolean hasTo = filterDateTo != null && !filterDateTo.isEmpty();
+        if (hasFrom || hasTo) {
+            Chip chip = new Chip(requireContext());
+            String label = formatDateChipLabel(filterDateFrom, filterDateTo);
+            chip.setText(label);
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> {
+                filterDateFrom = null;
+                filterDateTo = null;
+                applyFilters();
+            });
+            chipGroupFilters.addView(chip);
+        }
+
+        chipGroupFilters.setVisibility(chipGroupFilters.getChildCount() > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private String formatDateChipLabel(String from, String to) {
+        boolean hasFrom = from != null && !from.isEmpty();
+        boolean hasTo = to != null && !to.isEmpty();
+        if (hasFrom && hasTo) {
+            return formatShortDate(from) + " – " + formatShortDate(to);
+        } else if (hasFrom) {
+            return "From " + formatShortDate(from);
+        } else {
+            return "Until " + formatShortDate(to);
+        }
+    }
+
+    private String formatShortDate(String dateStr) {
+        try {
+            SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
+            SimpleDateFormat output = new SimpleDateFormat("MMM d", Locale.CANADA);
+            Date date = input.parse(dateStr);
+            return date != null ? output.format(date) : dateStr;
+        } catch (Exception e) {
+            return dateStr;
+        }
     }
 
     /**
@@ -211,9 +300,74 @@ public class ExploreFragment extends Fragment {
                         allEvents.add(e);
                     }
                 }
-                adapter.notifyDataSetChanged();
+                resolveHostNames(allEvents, () -> {
+                    adapter.notifyDataSetChanged();
+                });
             }
         });
+    }
+
+    /**
+     * Resolves display names for all unique host IDs in the given event list.
+     * Once all names are resolved, sets hostName on each event and runs the callback.
+     */
+    private void resolveHostNames(List<Event> events, Runnable onComplete) {
+        Set<String> hostIds = new HashSet<>();
+        for (Event e : events) {
+            if (e.getHostId() != null && !e.getHostId().isEmpty()) {
+                hostIds.add(e.getHostId());
+            }
+        }
+        if (hostIds.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        Map<String, String> nameMap = new HashMap<>();
+        final int[] remaining = {hostIds.size()};
+
+        for (String hostId : hostIds) {
+            FirebaseFirestore.getInstance().collection("users").document(hostId)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String first = doc.getString("firstName");
+                            String last = doc.getString("lastName");
+                            if (first == null || first.isEmpty()) {
+                                String fullName = doc.getString("name");
+                                if (fullName != null && !fullName.isEmpty()) {
+                                    String[] parts = fullName.trim().split("\\s+");
+                                    first = parts[0];
+                                    last = parts.length > 1 ? parts[parts.length - 1] : null;
+                                }
+                            }
+                            if (first != null && !first.isEmpty()) {
+                                String display = last != null && !last.isEmpty()
+                                        ? first + " " + last.charAt(0) + "."
+                                        : first;
+                                nameMap.put(hostId, display);
+                            }
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event e : events) {
+                                String resolved = nameMap.get(e.getHostId());
+                                e.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event ev : events) {
+                                String resolved = nameMap.get(ev.getHostId());
+                                ev.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    });
+        }
     }
 
     /**
@@ -256,22 +410,18 @@ public class ExploreFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
-            holder.tvEventHost.setText(event.getDescription());
+            holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
 
             holder.tvEventDate.setText(event.getFormattedEventDate());
 
-            View avatarCircle = holder.itemView.findViewById(R.id.avatarCircle);
-            View cardThumb = holder.itemView.findViewById(R.id.cardThumb);
             if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
-                avatarCircle.setVisibility(View.GONE);
-                cardThumb.setVisibility(View.VISIBLE);
+                holder.ivThumb.setVisibility(View.VISIBLE);
             } else {
-                avatarCircle.setVisibility(View.VISIBLE);
-                cardThumb.setVisibility(View.GONE);
+                holder.ivThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
@@ -286,7 +436,7 @@ public class ExploreFragment extends Fragment {
          * ViewHolder for event card items in the Explore fragment.
          */
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime;
+            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate;
             ImageView ivThumb;
 
             /**
@@ -299,7 +449,6 @@ public class ExploreFragment extends Fragment {
                 tvEventHost = itemView.findViewById(R.id.tvEventHost);
                 tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
-                tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
             }
         }

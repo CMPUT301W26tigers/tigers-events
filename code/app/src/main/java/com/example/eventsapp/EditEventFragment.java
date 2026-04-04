@@ -40,7 +40,7 @@ import java.util.Map;
  * A fragment that allows users to edit an existing event.
  * Handles user stories for event modification, including:
  * - Updating event details and poster.
- * - Toggling event privacy status.
+ * - Preserving event privacy status while editing other details.
  * - Managing co-organizers.
  */
 public class EditEventFragment extends Fragment {
@@ -56,6 +56,7 @@ public class EditEventFragment extends Fragment {
     private TextInputEditText editEventDate;
     private TextInputEditText editRegistrationStart;
     private TextInputEditText editRegistrationEnd;
+    private TextInputEditText editLocation;
     private ImageView ivPoster;
     private ImageView ivQR;
     private TextView tvEventLink;
@@ -64,6 +65,7 @@ public class EditEventFragment extends Fragment {
     private View shareTitle;
     private MaterialButton btnViewWaitlist;
     private MaterialButton btnManageEnrolledList;
+    private MaterialButton btnInviteCoOrganizer;
 
     private FirebaseFirestore db;
     private Uri posterUri;
@@ -129,6 +131,7 @@ public class EditEventFragment extends Fragment {
         editEventDate = view.findViewById(R.id.edit_event_date);
         editRegistrationStart = view.findViewById(R.id.edit_registration_start);
         editRegistrationEnd = view.findViewById(R.id.edit_registration_end);
+        editLocation = view.findViewById(R.id.edit_location);
         ivPoster = view.findViewById(R.id.iv_poster);
         ivQR = view.findViewById(R.id.iv_qr);
         tvEventLink = view.findViewById(R.id.tv_event_link);
@@ -137,6 +140,7 @@ public class EditEventFragment extends Fragment {
         shareTitle = view.findViewById(R.id.tv_share);
         btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
         btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
+        btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
 
         setupDatePickers();
 
@@ -157,18 +161,20 @@ public class EditEventFragment extends Fragment {
         });
 
         view.findViewById(R.id.btn_done).setOnClickListener(v -> saveEventChanges());
-        view.findViewById(R.id.btn_back).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-        btnTogglePrivateEvent.setOnClickListener(v -> {
-            isPrivateEvent = !isPrivateEvent;
-            updatePrivateUi();
-        });
+        if (btnTogglePrivateEvent != null) {
+            btnTogglePrivateEvent.setVisibility(View.GONE);
+        }
 
         if (btnViewWaitlist != null) {
             btnViewWaitlist.setOnClickListener(v -> openWaitlistManager());
         }
         if (btnManageEnrolledList != null) {
             btnManageEnrolledList.setOnClickListener(v -> openEnrolledManager());
+        }
+        if (btnInviteCoOrganizer != null) {
+            btnInviteCoOrganizer.setOnClickListener(v ->
+                    CoOrganizerInviteHelper.showInviteDialog(this, db, eventId));
         }
 
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
@@ -213,7 +219,10 @@ public class EditEventFragment extends Fragment {
             editEventDate.setText(doc.getString("event_date"));
             editRegistrationStart.setText(doc.getString("registration_start"));
             editRegistrationEnd.setText(doc.getString("registration_end"));
-            
+            if (editLocation != null) {
+                editLocation.setText(doc.getString("location"));
+            }
+
             isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
             updatePrivateUi();
 
@@ -231,8 +240,6 @@ public class EditEventFragment extends Fragment {
     }
 
     private void updatePrivateUi() {
-        btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
-        
         int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
         if (shareTitle != null) shareTitle.setVisibility(visibility);
         
@@ -329,6 +336,9 @@ public class EditEventFragment extends Fragment {
         data.put("event_date", eDate);
         data.put("registration_start", rStart);
         data.put("registration_end", rEnd);
+        String location = editLocation != null && editLocation.getText() != null
+                ? editLocation.getText().toString().trim() : "";
+        data.put("location", location);
         data.put("isPrivate", isPrivateEvent);
         data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
 

@@ -11,7 +11,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:title="Event Details"
-        app:navigationIcon="@android:drawable/ic_menu_revert"
+        app:navigationIcon="@drawable/ic_arrow_back"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -56,8 +56,9 @@
                 <ImageView
                     android:id="@+id/iv_poster"
                     android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
                     android:contentDescription="Event poster"
                     android:src="@android:color/darker_gray"/>
             </com.google.android.material.card.MaterialCardView>
@@ -72,15 +73,126 @@
                 android:textColor="@color/colorTextPrimary"
                 android:layout_marginBottom="8dp"/>
 
-            <!-- Waitlist Counter -->
-            <TextView
-                android:id="@+id/tv_waitlist_counter"
+            <!-- Host Section -->
+            <LinearLayout
+                android:id="@+id/hostSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/colorPrimaryPurple"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <!-- Host Avatar Placeholder -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/colorAvatarBackground"
+                    app:strokeWidth="0dp">
+
+                    <TextView
+                        android:id="@+id/tv_host_avatar"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorPrimaryPurple"/>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView
+                    android:id="@+id/tv_host_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/colorTextSecondary"/>
+            </LinearLayout>
+
+            <!-- Info Row: Event Date | Registration Range | Waitlist | Capacity -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <!-- Event Date -->
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="Event date"
+                    app:srcCompat="@drawable/ic_calendar_clock"/>
+
+                <TextView
+                    android:id="@+id/tv_event_date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/colorTextPrimary"/>
+            </LinearLayout>
+
+            <!-- Info Row 2: Registration Range | Waitlist | Capacity -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="16dp">
+
+                <!-- Registration Date Range -->
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="Registration period"
+                    app:srcCompat="@drawable/ic_date_range"/>
+
+                <TextView
+                    android:id="@+id/tv_registration_range"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:textSize="13sp"
+                    android:textColor="@color/colorTextSecondary"/>
+
+                <!-- Waitlist Count -->
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="12dp"
+                    android:contentDescription="Waitlist count"
+                    app:srcCompat="@drawable/ic_hourglass"/>
+
+                <TextView
+                    android:id="@+id/tv_waitlist_counter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorPrimaryPurple"/>
+
+                <!-- Capacity -->
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="12dp"
+                    android:contentDescription="Capacity"
+                    app:srcCompat="@drawable/ic_chair"/>
+
+                <TextView
+                    android:id="@+id/tv_capacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorPrimaryPurple"/>
+            </LinearLayout>
 
             <!-- Divider -->
             <View
@@ -105,79 +217,32 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:textColor="@color/colorTextPrimary"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="12dp"/>
 
-            <!-- Event Date -->
-            <TextView
+            <!-- Location -->
+            <LinearLayout
+                android:id="@+id/locationSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Event Date"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorTextHint"
-                android:layout_marginBottom="4dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
 
-            <TextView
-                android:id="@+id/tv_event_date"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/colorTextPrimary"
-                android:layout_marginBottom="16dp"/>
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="Location"
+                    app:srcCompat="@drawable/ic_location"
+                    app:tint="@color/colorPrimaryPurple"/>
 
-            <!-- Registration Start -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Registration Opens"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorTextHint"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tv_registration_start"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/colorTextPrimary"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Registration End -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Registration Closes"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorTextHint"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tv_registration_end"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/colorTextPrimary"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Capacity -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Capacity"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorTextHint"
-                android:layout_marginBottom="4dp"/>
-
-            <TextView
-                android:id="@+id/tv_capacity"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/colorTextPrimary"
-                android:layout_marginBottom="24dp"/>
+                <TextView
+                    android:id="@+id/tv_location"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textSize="14sp"
+                    android:textColor="@color/colorTextSecondary"/>
+            </LinearLayout>
 
             <!-- Comments -->
             <View
@@ -239,13 +304,29 @@
         android:id="@+id/btnWaitlist"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="8dp"
         android:text="Join Waitlist"
         android:textSize="16sp"
         app:cornerRadius="8dp"
         app:backgroundTint="@color/colorPrimaryPurple"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnInfo"/>
+
+    <ImageButton
+        android:id="@+id/btnInfo"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Event info"
+        android:padding="8dp"
+        app:srcCompat="@drawable/ic_info"
+        app:layout_constraintBottom_toBottomOf="@id/btnWaitlist"
+        app:layout_constraintTop_toTopOf="@id/btnWaitlist"
         app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

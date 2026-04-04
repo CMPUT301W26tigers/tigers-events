@@ -24,6 +24,8 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -61,8 +63,8 @@ public class EventDetailFragment extends Fragment {
     private boolean fromHistory = false;
     private FirebaseFirestore db;
 
-    private TextView tvName, tvDescription, tvEventDate, tvRegistrationStart,
-            tvRegistrationEnd, tvCapacity, tvWaitlistCounter, tvExpiredBanner;
+    private TextView tvName, tvDescription, tvEventDate, tvRegistrationRange,
+            tvCapacity, tvWaitlistCounter, tvExpiredBanner, tvHostName, tvHostAvatar, tvLocation;
     private ImageView ivPoster;
     private MaterialButton btnWaitlist;
 
@@ -97,7 +99,9 @@ public class EventDetailFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
+        if (isGooglePlayServicesLocationAvailable()) {
+            fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext());
+        }
         requestLocationPermission = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(),
                 granted -> {
@@ -165,13 +169,23 @@ public class EventDetailFragment extends Fragment {
         tvName = view.findViewById(R.id.tv_name);
         tvDescription = view.findViewById(R.id.tv_description);
         tvEventDate = view.findViewById(R.id.tv_event_date);
-        tvRegistrationStart = view.findViewById(R.id.tv_registration_start);
-        tvRegistrationEnd = view.findViewById(R.id.tv_registration_end);
+        tvRegistrationRange = view.findViewById(R.id.tv_registration_range);
         tvCapacity = view.findViewById(R.id.tv_capacity);
         tvWaitlistCounter = view.findViewById(R.id.tv_waitlist_counter);
         tvExpiredBanner = view.findViewById(R.id.tv_expired_banner);
+        tvHostName = view.findViewById(R.id.tv_host_name);
+        tvHostAvatar = view.findViewById(R.id.tv_host_avatar);
+        tvLocation = view.findViewById(R.id.tv_location);
         ivPoster = view.findViewById(R.id.iv_poster);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
+
+        view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(requireContext())
+                    .setTitle("How joining events work:")
+                    .setMessage("filler description")
+                    .setPositiveButton("OK", null)
+                    .show();
+        });
 
         // Initialize comments section
         rvComments = view.findViewById(R.id.rv_comments);
@@ -265,8 +279,10 @@ public class EventDetailFragment extends Fragment {
                         tvName.setText(doc.getString("name"));
                         tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
                         tvEventDate.setText(formatDate(doc, "event_date", "TBD"));
-                        tvRegistrationStart.setText(formatDate(doc, "registration_start", "TBD"));
-                        tvRegistrationEnd.setText(formatDate(doc, "registration_end", "TBD"));
+                        tvRegistrationRange.setText(
+                                formatDate(doc, "registration_start", "TBD")
+                                + " - "
+                                + formatDate(doc, "registration_end", "TBD"));
                         isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
                         userIsOrganizer = isCurrentUserOrganizer(doc);
                         eventCreatorId = doc.getString("createdBy");
@@ -287,6 +303,17 @@ public class EventDetailFragment extends Fragment {
                         } else {
                             ivPoster.setImageResource(android.R.color.darker_gray);
                         }
+
+                        // Location
+                        String location = doc.getString("location");
+                        if (location != null && !location.isEmpty()) {
+                            tvLocation.setText(location);
+                        } else {
+                            tvLocation.setText("No location set");
+                        }
+
+                        // Resolve host name
+                        resolveHostName(eventCreatorId);
 
                         applyGeolocationRequiredFromEvent(doc);
                         eventDetailsLoaded = true;
@@ -457,6 +484,11 @@ public class EventDetailFragment extends Fragment {
         }
 
         if (!isAdded()) return;
+        if (fusedLocationClient == null || !isGooglePlayServicesLocationAvailable()) {
+            Log.w(TAG, "Fused location unavailable; continuing without Play services location");
+            onNoLocation(required, currentUser);
+            return;
+        }
         Toast.makeText(requireContext(), "Getting your location…", Toast.LENGTH_SHORT).show();
 
         LocationRequest freshRequest = new LocationRequest.Builder(
@@ -517,7 +549,13 @@ public class EventDetailFragment extends Fragment {
 
         try {
             fusedLocationClient.requestLocationUpdates(
-                    freshRequest, callbackHolder[0], Looper.getMainLooper());
+                    freshRequest, callbackHolder[0], Looper.getMainLooper())
+                    .addOnFailureListener(e -> {
+                        timeoutHandler.removeCallbacksAndMessages(null);
+                        if (!isAdded()) return;
+                        Log.w(TAG, "Failed to request fused location updates", e);
+                        onNoLocation(required, currentUser);
+                    });
         } catch (SecurityException e) {
             timeoutHandler.removeCallbacksAndMessages(null);
             Log.e(TAG, "location permission missing", e);
@@ -529,11 +567,19 @@ public class EventDetailFragment extends Fragment {
         if (required) {
             btnWaitlist.setEnabled(true);
             Toast.makeText(requireContext(),
-                    "Could not read your location. Try again.",
+                    "Could not read your location. Check Google Play services or try again.",
                     Toast.LENGTH_LONG).show();
         } else {
             writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
         }
+    }
+
+    private boolean isGooglePlayServicesLocationAvailable() {
+        if (!isAdded()) {
+            return false;
+        }
+        int status = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireContext());
+        return status == ConnectionResult.SUCCESS;
     }
 
     private void writeEntrantToFirestore(@NonNull Users currentUser, double latitude, double longitude,
@@ -735,14 +781,46 @@ public class EventDetailFragment extends Fragment {
      * Updates the waitlist counter text view with current statistics.
      */
     private void updateWaitlistCounter() {
-//        tvWaitlistCounter.setText(waitlistCount + "/" + eventCapacity + " on waitlist"); may be obsolete
         if (waitlistCapacity > 0) {
-                tvWaitlistCounter.setText(waitlistCount + "/" + waitlistCapacity + " on waitlist");
-            } else {
-                tvWaitlistCounter.setText(waitlistCount + " on waitlist");
-            }
+            tvWaitlistCounter.setText(waitlistCount + "/" + waitlistCapacity);
+        } else {
+            tvWaitlistCounter.setText(String.valueOf(waitlistCount));
+        }
     }
 
+
+    /**
+     * Fetches the host's display name from Firestore and updates the host section.
+     * Format: "FirstName L." with avatar showing the first letter.
+     */
+    private void resolveHostName(String hostId) {
+        if (hostId == null || hostId.isEmpty()) return;
+
+        db.collection("users").document(hostId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (!isAdded() || doc == null || !doc.exists()) return;
+
+                    String first = doc.getString("firstName");
+                    String last = doc.getString("lastName");
+                    if (first == null || first.isEmpty()) {
+                        String fullName = doc.getString("name");
+                        if (fullName != null && !fullName.isEmpty()) {
+                            String[] parts = fullName.trim().split("\\s+");
+                            first = parts[0];
+                            last = parts.length > 1 ? parts[parts.length - 1] : null;
+                        }
+                    }
+
+                    if (first != null && !first.isEmpty()) {
+                        String display = (last != null && !last.isEmpty())
+                                ? first + " " + last.charAt(0) + "."
+                                : first;
+                        tvHostName.setText(display);
+                        tvHostAvatar.setText(String.valueOf(first.charAt(0)).toUpperCase());
+                    }
+                });
+    }
 
     /**
      * Helper method to get a string field from a {@link DocumentSnapshot} or a default value if missing.
@@ -838,8 +916,10 @@ public class EventDetailFragment extends Fragment {
                         tvName.setText(doc.getString("name"));
                         tvDescription.setText(getFieldOrDefault(doc, "description", "No description available"));
                         tvEventDate.setText(formatDate(doc, "event_date", "TBD"));
-                        tvRegistrationStart.setText(formatDate(doc, "registration_start", "TBD"));
-                        tvRegistrationEnd.setText(formatDate(doc, "registration_end", "TBD"));
+                        tvRegistrationRange.setText(
+                                formatDate(doc, "registration_start", "TBD")
+                                + " - "
+                                + formatDate(doc, "registration_end", "TBD"));
 
                         Long amountLong = doc.getLong("amount");
                         eventCapacity = (amountLong != null) ? amountLong.intValue() : 0;
@@ -850,6 +930,18 @@ public class EventDetailFragment extends Fragment {
                             Glide.with(this).load(posterUrl).into(ivPoster);
                         } else {
                             ivPoster.setImageResource(android.R.color.darker_gray);
+                        }
+
+                        String location = doc.getString("location");
+                        if (location != null && !location.isEmpty()) {
+                            tvLocation.setText(location);
+                        } else {
+                            tvLocation.setText("No location set");
+                        }
+
+                        String createdBy = doc.getString("createdBy");
+                        if (createdBy != null) {
+                            resolveHostName(createdBy);
                         }
                     } else {
                         tvName.setText("Event not found");

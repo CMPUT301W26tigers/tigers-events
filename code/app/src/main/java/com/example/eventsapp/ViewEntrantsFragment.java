@@ -40,7 +40,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Organizer view: waitlisted entrants (APPLIED) plus invited and accepted.
+ * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
+ * Accepted entrants belong on the enrolled screen.
  */
 public class ViewEntrantsFragment extends Fragment {
 
@@ -56,7 +57,6 @@ public class ViewEntrantsFragment extends Fragment {
     private MaterialToolbar toolbar;
     private MaterialButton btnAddApplicant;
     private MaterialButton btnRunLottery;
-    private MaterialButton btnExportCsv;
     private boolean isPrivateEvent;
     private String createdByUserId = "";
     private final List<String> coOrganizerIds = new ArrayList<>();
@@ -94,7 +94,14 @@ public class ViewEntrantsFragment extends Fragment {
 
         btnAddApplicant = view.findViewById(R.id.btn_add_applicant);
         btnRunLottery = view.findViewById(R.id.btn_run_lottery);
-        btnExportCsv = view.findViewById(R.id.btn_export_csv);
+
+        MaterialButton btnNotifyWaitlisted = view.findViewById(R.id.btn_notify_waitlisted);
+        MaterialButton btnNotifySelected = view.findViewById(R.id.btn_notify_selected);
+        MaterialButton btnNotifyNotSelected = view.findViewById(R.id.btn_notify_not_selected);
+
+        btnNotifyWaitlisted.setOnClickListener(v -> notifyWaitlistedEntrants());
+        btnNotifySelected.setOnClickListener(v -> notifySelectedEntrants());
+        btnNotifyNotSelected.setOnClickListener(v -> notifyNotSelectedEntrants());
 
         adapter = new EntrantAdapter(filteredEntrants);
         adapter.setOnViewLocationListener(this::openMapFocusedOn);
@@ -118,16 +125,12 @@ public class ViewEntrantsFragment extends Fragment {
             showEntrantPickerDialog();
         });
         btnRunLottery.setOnClickListener(v -> runLottery());
-        btnExportCsv.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
-
         loadEventConfiguration();
         View btnViewMap = view.findViewById(R.id.btn_view_map);
         if (btnViewMap != null) {
             btnViewMap.setOnClickListener(v -> openMapOverview());
         }
 
-        loadEventConfiguration();
     }
 
     private void loadEventConfiguration() {
@@ -167,7 +170,7 @@ public class ViewEntrantsFragment extends Fragment {
         CollectionReference entrantsRef = db.collection("events").document(eventId).collection("entrants");
 
         Query query = entrantsRef.whereIn("status",
-                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED", "ACCEPTED"));
+                Arrays.asList("PRIVATE_INVITED", "APPLIED", "INVITED"));
 
         listenerRegistration = query.addSnapshotListener((value, error) -> {
             if (error != null || value == null || !isAdded()) {
@@ -449,7 +452,7 @@ public class ViewEntrantsFragment extends Fragment {
                 .setItems(labels, (dialog, which) -> {
                     Users selectedUser = matches.get(which);
                     if (coOrganizerInvite) {
-                        inviteCoOrganizer(selectedUser);
+                        CoOrganizerInviteHelper.inviteCoOrganizer(this, db, eventId, selectedUser);
                     } else {
                         inviteEntrant(selectedUser);
                     }
@@ -532,32 +535,6 @@ public class ViewEntrantsFragment extends Fragment {
                 });
     }
 
-    private void inviteCoOrganizer(Users user) {
-        String userId = user.getId();
-        if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (createdByUserId.equals(userId) || coOrganizerIds.contains(userId)) {
-            Toast.makeText(requireContext(), "User is already an organizer for this event", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (pendingCoOrganizerIds.contains(userId)) {
-            Toast.makeText(requireContext(), "User already has a pending co-organizer invite", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        db.collection("events").document(eventId)
-                .update("pendingCoOrganizerIds", com.google.firebase.firestore.FieldValue.arrayUnion(userId))
-                .addOnSuccessListener(unused -> {
-                    pendingCoOrganizerIds.add(userId);
-                    notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
-                    Toast.makeText(requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(unused ->
-                        Toast.makeText(requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show());
-    }
-
     private boolean isEventOrganizer(String userId) {
         return createdByUserId.equals(userId) || coOrganizerIds.contains(userId);
     }
@@ -609,6 +586,85 @@ public class ViewEntrantsFragment extends Fragment {
                             });
                 })
                 .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show());
+    }
+
+    private interface NotificationAction {void send(String userId);}
+    private void notifyEntrantsByStatusCode(
+            int statusCode,
+            String emptyMessage,
+            String failureMessage,
+            ViewEntrantsFragment.NotificationAction action
+    ) {
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .whereEqualTo("statusCode", statusCode)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    int sentCount = 0;
+                    int skippedCount = 0;
+
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        String userId = doc.getString("userId");
+                        if (userId == null || userId.trim().isEmpty()) {
+                            skippedCount++;
+                            continue;
+                        }
+
+                        action.send(userId);
+                        sentCount++;
+                    }
+
+                    String message;
+                    if (sentCount == 0) {
+                        message = "Entrants found, but no linked users could be notified";
+                    } else if (skippedCount == 0) {
+                        message = "Notifications sent to " + sentCount + " entrants";
+                    } else {
+                        message = "Notifications sent to " + sentCount
+                                + " entrants, skipped " + skippedCount;
+                    }
+
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(requireContext(), failureMessage, Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    private void notifyWaitlistedEntrants() {
+        notifyEntrantsByStatusCode(
+                0,
+                "No waitlisted entrants to notify",
+                "Failed to notify waitlisted entrants",
+                userId -> notificationHelper.sendWaitlistedNotification(userId, eventId)
+        );
+    }
+    private void notifySelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                1,
+                "No selected entrants to notify",
+                "Failed to notify selected entrants",
+                userId -> notificationHelper.sendInvitationNotification(userId, eventId)
+        );
+    }
+    private void notifyNotSelectedEntrants() {
+        notifyEntrantsByStatusCode(
+                3,
+                "No non-selected entrants to notify",
+                "Failed to notify non-selected entrants",
+                userId -> notificationHelper.sendNotSelectedNotification(userId, eventId)
+        );
     }
 
     @Override

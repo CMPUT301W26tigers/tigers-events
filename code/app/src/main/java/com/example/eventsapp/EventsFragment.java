@@ -30,8 +30,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Locale;
 import java.util.Set;
@@ -353,16 +355,20 @@ public class EventsFragment extends Fragment {
                         }
                     }
                     filterEventsByDate();
-                    adapter.notifyDataSetChanged();
-                    updateEmptyState();
+                    resolveHostNames(eventList, () -> {
+                        adapter.notifyDataSetChanged();
+                        updateEmptyState();
+                    });
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     Log.e(TAG, "Failed to load history events", e);
                     // Still display whatever active events we have
                     filterEventsByDate();
-                    adapter.notifyDataSetChanged();
-                    updateEmptyState();
+                    resolveHostNames(eventList, () -> {
+                        adapter.notifyDataSetChanged();
+                        updateEmptyState();
+                    });
                 });
     }
 
@@ -397,6 +403,68 @@ public class EventsFragment extends Fragment {
             return e;
         }
         return null;
+    }
+
+    /**
+     * Resolves display names for all unique host IDs in the given event list.
+     */
+    private void resolveHostNames(List<Event> events, Runnable onComplete) {
+        Set<String> hostIds = new HashSet<>();
+        for (Event e : events) {
+            if (e.getHostId() != null && !e.getHostId().isEmpty()) {
+                hostIds.add(e.getHostId());
+            }
+        }
+        if (hostIds.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        Map<String, String> nameMap = new HashMap<>();
+        final int[] remaining = {hostIds.size()};
+
+        for (String hostId : hostIds) {
+            FirebaseFirestore.getInstance().collection("users").document(hostId)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String first = doc.getString("firstName");
+                            String last = doc.getString("lastName");
+                            if (first == null || first.isEmpty()) {
+                                String fullName = doc.getString("name");
+                                if (fullName != null && !fullName.isEmpty()) {
+                                    String[] parts = fullName.trim().split("\\s+");
+                                    first = parts[0];
+                                    last = parts.length > 1 ? parts[parts.length - 1] : null;
+                                }
+                            }
+                            if (first != null && !first.isEmpty()) {
+                                String display = last != null && !last.isEmpty()
+                                        ? first + " " + last.charAt(0) + "."
+                                        : first;
+                                nameMap.put(hostId, display);
+                            }
+                        }
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event e : events) {
+                                String resolved = nameMap.get(e.getHostId());
+                                e.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        remaining[0]--;
+                        if (remaining[0] == 0) {
+                            for (Event ev : events) {
+                                String resolved = nameMap.get(ev.getHostId());
+                                ev.setHostName(resolved != null ? resolved : "");
+                            }
+                            onComplete.run();
+                        }
+                    });
+        }
     }
 
     /**
@@ -479,7 +547,7 @@ public class EventsFragment extends Fragment {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
-            holder.tvEventHost.setText(event.getDescription());
+            holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
             holder.tvAvatarLetter.setText(
                     event.getName().isEmpty() ? "?" : String.valueOf(event.getName().charAt(0)).toUpperCase()
             );
@@ -497,11 +565,9 @@ public class EventsFragment extends Fragment {
 
             if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
-                holder.avatarCircle.setVisibility(View.GONE);
-                holder.cardThumb.setVisibility(View.VISIBLE);
+                holder.ivThumb.setVisibility(View.VISIBLE);
             } else {
-                holder.avatarCircle.setVisibility(View.VISIBLE);
-                holder.cardThumb.setVisibility(View.GONE);
+                holder.ivThumb.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
@@ -516,10 +582,8 @@ public class EventsFragment extends Fragment {
          * ViewHolder for event card items.
          */
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEventTime, tvEntrantStatus;
+            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEntrantStatus;
             ImageView ivThumb;
-            View avatarCircle, cardThumb;
-
             /**
              * Constructs a ViewHolder and binds UI components.
              * @param itemView The root view of the item layout.
@@ -530,11 +594,8 @@ public class EventsFragment extends Fragment {
                 tvEventHost = itemView.findViewById(R.id.tvEventHost);
                 tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
                 tvEventDate = itemView.findViewById(R.id.tvEventDate);
-                tvEventTime = itemView.findViewById(R.id.tvEventTime);
                 ivThumb = itemView.findViewById(R.id.ivThumb);
                 tvEntrantStatus = itemView.findViewById(R.id.tvEntrantStatus);
-                avatarCircle = itemView.findViewById(R.id.avatarCircle);
-                cardThumb = itemView.findViewById(R.id.cardThumb);
             }
         }
 

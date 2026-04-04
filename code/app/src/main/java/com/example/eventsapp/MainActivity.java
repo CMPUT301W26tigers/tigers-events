@@ -54,7 +54,11 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
 
         // Hide bottom nav on sign-in page
         navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
-            if (destination.getId() == R.id.signInFragment) {
+            int id = destination.getId();
+            if (id == R.id.signInFragment
+                    || id == R.id.eventDetailFragment
+                    || id == R.id.createEventFragment
+                    || id == R.id.editEventFragment) {
                 bottomNav.setVisibility(View.GONE);
             } else {
                 bottomNav.setVisibility(View.VISIBLE);
