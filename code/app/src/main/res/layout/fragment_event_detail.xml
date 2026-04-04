@@ -59,8 +59,7 @@
                     android:layout_height="wrap_content"
                     android:adjustViewBounds="true"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Event poster"
-                    android:src="@android:color/darker_gray"/>
+                    android:contentDescription="Event poster"/>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Event Name -->
@@ -98,7 +97,8 @@
                         android:gravity="center"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="@color/colorPrimary"/>
+                        android:textColor="@color/colorPrimary"
+                        android:visibility="gone"/>
 
                     <ImageView
                         android:id="@+id/iv_host_picture"

@@ -14,6 +14,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -85,6 +86,12 @@ public class ExploreFragment extends Fragment {
     private void navigateToDetail(View view, Event event) {
         Bundle args = new Bundle();
         args.putString("eventId", event.getId());
+        if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+            args.putString("posterUrl", event.getPosterUrl());
+        }
+        if (event.getHostProfilePictureUrl() != null && !event.getHostProfilePictureUrl().isEmpty()) {
+            args.putString("hostProfilePictureUrl", event.getHostProfilePictureUrl());
+        }
         Navigation.findNavController(view)
                 .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
     }
@@ -110,10 +117,9 @@ public class ExploreFragment extends Fragment {
         String query = etSearch.getText().toString();
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
 
-        displayEvents.clear();
-        displayEvents.addAll(ExploreFilterHelper.applyAllFilters(
-                allEvents, query, filterAvailableOnly, filterDateFrom, filterDateTo, today));
-        adapter.notifyDataSetChanged();
+        List<Event> newList = ExploreFilterHelper.applyAllFilters(
+                allEvents, query, filterAvailableOnly, filterDateFrom, filterDateTo, today);
+        adapter.updateEvents(newList);
         updateFilterChips();
     }
 
@@ -191,6 +197,7 @@ public class ExploreFragment extends Fragment {
                     String registrationStart = snapshot.getString("registration_start");
                     String registrationEnd = snapshot.getString("registration_end");
                     String eventDate = snapshot.getString("event_date");
+                    String location = snapshot.getString("location");
                     if (id == null) id = snapshot.getId();
                     if (name == null) name = "";
                     if (description == null) description = "";
@@ -198,10 +205,12 @@ public class ExploreFragment extends Fragment {
                     if (registrationStart == null) registrationStart = "";
                     if (registrationEnd == null) registrationEnd = "";
                     if (eventDate == null) eventDate = "";
+                    if (location == null) location = "";
 
                     if (amount != 0) {
                         Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
                         e.setHostId(snapshot.getString("createdBy"));
+                        e.setLocation(location);
                         allEvents.add(e);
                     }
                 }
@@ -287,7 +296,7 @@ public class ExploreFragment extends Fragment {
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = android.view.LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.item_event_card, parent, false);
+                    .inflate(R.layout.item_explore_event_card, parent, false);
             return new ViewHolder(view);
         }
 
@@ -296,6 +305,7 @@ public class ExploreFragment extends Fragment {
             Event event = events.get(position);
             holder.tvEventName.setText(event.getName());
             holder.tvEventHost.setText(event.getHostName() != null ? event.getHostName() : "");
+            holder.tvEventDate.setText(event.getFormattedEventDate());
 
             String hostPicUrl = event.getHostProfilePictureUrl();
             if (hostPicUrl != null && !hostPicUrl.isEmpty()) {
@@ -310,33 +320,75 @@ public class ExploreFragment extends Fragment {
                         ? String.valueOf(hostName.charAt(0)).toUpperCase() : "?");
             }
 
-            holder.tvEventDate.setText(event.getFormattedEventDate());
+            String description = event.getDescription();
+            if (description != null && !description.isEmpty()) {
+                holder.tvDescription.setText(description);
+                holder.tvDescription.setVisibility(View.VISIBLE);
+            } else {
+                holder.tvDescription.setVisibility(View.GONE);
+            }
+
+            String location = event.getLocation();
+            if (location != null && !location.isEmpty()) {
+                holder.tvLocation.setText(location);
+                holder.llLocation.setVisibility(View.VISIBLE);
+            } else {
+                holder.llLocation.setVisibility(View.GONE);
+            }
 
             if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
-                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivThumb);
-                holder.ivThumb.setVisibility(View.VISIBLE);
+                holder.ivPoster.setVisibility(View.VISIBLE);
+                Glide.with(holder.itemView.getContext()).load(event.getPosterUrl()).into(holder.ivPoster);
             } else {
-                holder.ivThumb.setVisibility(View.GONE);
+                holder.ivPoster.setVisibility(View.GONE);
             }
 
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
+        }
+
+        void updateEvents(List<Event> newList) {
+            DiffUtil.DiffResult result = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+                @Override public int getOldListSize() { return events.size(); }
+                @Override public int getNewListSize() { return newList.size(); }
+                @Override public boolean areItemsTheSame(int oldPos, int newPos) {
+                    return events.get(oldPos).getId().equals(newList.get(newPos).getId());
+                }
+                @Override public boolean areContentsTheSame(int oldPos, int newPos) {
+                    Event o = events.get(oldPos), n = newList.get(newPos);
+                    return o.getId().equals(n.getId())
+                            && safeEqual(o.getName(), n.getName())
+                            && safeEqual(o.getPosterUrl(), n.getPosterUrl())
+                            && safeEqual(o.getHostName(), n.getHostName())
+                            && safeEqual(o.getHostProfilePictureUrl(), n.getHostProfilePictureUrl());
+                }
+                private boolean safeEqual(String a, String b) {
+                    return a == null ? b == null : a.equals(b);
+                }
+            });
+            events.clear();
+            events.addAll(newList);
+            result.dispatchUpdatesTo(this);
         }
 
         @Override
         public int getItemCount() { return events.size(); }
 
         static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate;
-            ImageView ivThumb, ivAvatarImage;
+            TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvDescription, tvLocation;
+            ImageView ivPoster, ivAvatarImage;
+            View llLocation;
 
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
-                tvEventName = itemView.findViewById(R.id.tvEventName);
-                tvEventHost = itemView.findViewById(R.id.tvEventHost);
-                tvAvatarLetter = itemView.findViewById(R.id.tvAvatarLetter);
-                tvEventDate = itemView.findViewById(R.id.tvEventDate);
-                ivThumb = itemView.findViewById(R.id.ivThumb);
-                ivAvatarImage = itemView.findViewById(R.id.ivAvatarImage);
+                tvEventName = itemView.findViewById(R.id.tvExploreEventName);
+                tvEventHost = itemView.findViewById(R.id.tvExploreHostName);
+                tvAvatarLetter = itemView.findViewById(R.id.tvExploreAvatarLetter);
+                tvEventDate = itemView.findViewById(R.id.tvExploreDate);
+                tvDescription = itemView.findViewById(R.id.tvExploreDescription);
+                tvLocation = itemView.findViewById(R.id.tvExploreLocation);
+                llLocation = itemView.findViewById(R.id.llExploreLocation);
+                ivPoster = itemView.findViewById(R.id.ivExplorePoster);
+                ivAvatarImage = itemView.findViewById(R.id.ivExploreAvatarImage);
             }
         }
     }
