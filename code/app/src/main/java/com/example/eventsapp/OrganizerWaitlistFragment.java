@@ -45,7 +45,7 @@ import java.util.Set;
  * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
  * Accepted entrants belong on the enrolled screen.
  */
-public class ViewEntrantsFragment extends Fragment {
+public class OrganizerWaitlistFragment extends Fragment {
 
     private final FirestoreNotificationHelper notificationHelper = new FirestoreNotificationHelper();
     private String eventId;
@@ -605,7 +605,7 @@ public class ViewEntrantsFragment extends Fragment {
             int statusCode,
             String emptyMessage,
             String failureMessage,
-            ViewEntrantsFragment.NotificationAction action
+            OrganizerWaitlistFragment.NotificationAction action
     ) {
         if (eventId == null || eventId.isEmpty()) {
             Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
