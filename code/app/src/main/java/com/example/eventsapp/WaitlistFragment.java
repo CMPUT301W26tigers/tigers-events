@@ -23,7 +23,7 @@
 // * - Export the list of entrants as a CSV file.
 // * - Navigate to view cancelled entrants.
 // *
-// * NOTE: This class is being phased out in favor of OrganizerWaitlistFragment.
+// * NOTE: This class is being phased out in favor of ViewEntrantsFragment.
 // */
 //public class WaitlistFragment extends Fragment {
 //
