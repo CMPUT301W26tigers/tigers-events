@@ -22,4 +22,8 @@
     <color name="notification_red">#E8A1A1</color>
     <color name="notification_grey">#D9D9D9</color>
     <color name="notification_chip">#F6EEF9</color>
+
+    <color name="tigerOrange">#E8752A</color>
+    <color name="tigerBlack">#1A1A1A</color>
+    <color name="splashBackground">#FFF8F0</color>
 </resources>

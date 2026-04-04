@@ -41,7 +41,7 @@ final class CoOrganizerInviteHelper {
                 })
                 .addOnFailureListener(unused -> {
                     if (fragment.isAdded()) {
-                        Toast.makeText(fragment.requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(fragment.requireContext(), "Failed to load event", Toast.LENGTH_SHORT);
                     }
                 });
     }
@@ -173,7 +173,7 @@ final class CoOrganizerInviteHelper {
                                   @NonNull Users user) {
         String userId = user.getId();
         if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(fragment.requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            TigerToast.show(fragment.requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -185,11 +185,11 @@ final class CoOrganizerInviteHelper {
                         return;
                     }
                     notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
-                    Toast.makeText(fragment.requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(fragment.requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(unused -> {
                     if (fragment.isAdded()) {
-                        Toast.makeText(fragment.requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(fragment.requireContext(), "Failed to invite co-organizer", Toast.LENGTH_SHORT);
                     }
                 });
     }
