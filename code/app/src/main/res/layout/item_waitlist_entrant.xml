@@ -51,6 +51,17 @@
             app:layout_constraintEnd_toStartOf="@id/tv_action"
             app:layout_constraintTop_toTopOf="@id/tv_action"
             app:layout_constraintBottom_toBottomOf="@id/tv_action" />
+        <ImageView
+            android:id="@+id/iv_cancel_entrant"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="8dp"
+            android:visibility="gone"
+            app:srcCompat="@android:drawable/ic_menu_delete"
+            app:tint="@android:color/holo_red_dark"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
         <TextView
             android:id="@+id/tv_action"
@@ -59,7 +70,7 @@
             android:text="Invited"
             android:textColor="@color/colorTextSecondary"
             android:textSize="12sp"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/iv_cancel_entrant"
             app:layout_constraintTop_toTopOf="@id/tv_name" />
 
         <TextView

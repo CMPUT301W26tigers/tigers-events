@@ -396,6 +396,22 @@ public class InboxFragment extends Fragment {
                     WriteBatch batch = db.batch();
                     if (!querySnapshot.isEmpty()) {
                         DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
+
+                        String currentStatus = entrantDoc.getString("status");
+                        // Prevent accepting/declining if the organizer already removed them
+                        if ("CANCELLED".equalsIgnoreCase(currentStatus)) {
+                            batch.delete(db.collection("users")
+                                    .document(currentUser.getId())
+                                    .collection("notifications")
+                                    .document(notification.getNotificationId()));
+                            batch.commit().addOnSuccessListener(unused -> {
+                                if (getContext() != null) {
+                                    android.widget.Toast.makeText(getContext(), "This invitation is no longer valid.", android.widget.Toast.LENGTH_LONG).show();
+                                }
+                            });
+                            return;
+                        }
+
                         String status = accept ? "ACCEPTED" : "DECLINED";
                         int statusCode = accept ? 2 : 3;
                         batch.update(entrantDoc.getReference(),
