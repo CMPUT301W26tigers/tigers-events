@@ -18,7 +18,7 @@ import java.util.ArrayList;
  *
  * Displays: participant name, participant email, enrollment status
  *
- * Used by EnrolledFragment to render the list of confirmed participants
+ * Used by OrganizerEnrolledFragment to render the list of confirmed participants
  */
 public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrantAdapter.EnrolledViewHolder> {
 

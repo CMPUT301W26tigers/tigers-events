@@ -99,7 +99,7 @@
 
     <fragment
         android:id="@+id/enrolledFragment"
-        android:name="com.example.eventsapp.EnrolledFragment"
+        android:name="com.example.eventsapp.OrganizerEnrolledFragment"
         android:label="Enrolled">
         <argument
             android:name="eventId"
@@ -109,7 +109,7 @@
 
     <fragment
         android:id="@+id/cancelledFragment"
-        android:name="com.example.eventsapp.CancelledFragment"
+        android:name="com.example.eventsapp.OrganizerCancelledFragment"
         android:label="Cancelled" />
 
     <fragment

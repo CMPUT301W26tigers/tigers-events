@@ -12,13 +12,13 @@ import com.google.android.material.appbar.MaterialToolbar;
 /**
  * A fragment that displays the list of events that have been cancelled for the user.
  */
-public class CancelledFragment extends Fragment {
+public class OrganizerCancelledFragment extends Fragment {
 
     /**
-     * Default constructor for CancelledFragment.
+     * Default constructor for OrganizerCancelledFragment.
      * Uses the layout R.layout.view_cancelled.
      */
-    public CancelledFragment() {
+    public OrganizerCancelledFragment() {
         super(R.layout.fragment_organizer_cancelled);
     }
 

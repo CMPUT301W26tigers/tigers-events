@@ -11,7 +11,7 @@ package com.example.eventsapp;
  * email: participant contact email
  * status: enrollment status (typically "Enrolled")
  *
- * Displayed in the recyclerview within EnrolledFragment.
+ * Displayed in the recyclerview within OrganizerEnrolledFragment.
  */
 public class EnrolledEntrant {
 
