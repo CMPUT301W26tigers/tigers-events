@@ -348,7 +348,7 @@ public class ViewEntrantsFragment extends Fragment {
             String phoneFilter = valueOrEmpty(editPhone.getText() != null ? editPhone.getText().toString() : "");
 
             if (nameFilter.isEmpty() && emailFilter.isEmpty() && phoneFilter.isEmpty()) {
-                Toast.makeText(requireContext(), "Enter at least one search field", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Enter at least one search field", Toast.LENGTH_SHORT);
                 return;
             }
 
@@ -412,7 +412,7 @@ public class ViewEntrantsFragment extends Fragment {
                     }
 
                     if (matches.isEmpty()) {
-                        Toast.makeText(requireContext(), "No matching users found", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "No matching users found", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -420,7 +420,7 @@ public class ViewEntrantsFragment extends Fragment {
                     showUserSelectionDialog(matches, coOrganizerInvite);
                 })
                 .addOnFailureListener(unused ->
-                        Toast.makeText(requireContext(), "Failed to search users", Toast.LENGTH_SHORT).show());
+                        TigerToast.show(requireContext(), "Failed to search users", Toast.LENGTH_SHORT));
     }
 
     private boolean matchesSearch(Users user, String nameFilter, String emailFilter, String phoneFilter) {
@@ -475,11 +475,11 @@ public class ViewEntrantsFragment extends Fragment {
     private void inviteEntrant(Users user) {
         String userId = user.getId();
         if (userId == null || userId.trim().isEmpty()) {
-            Toast.makeText(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Selected user is invalid", Toast.LENGTH_SHORT);
             return;
         }
         if (isEventOrganizer(userId)) {
-            Toast.makeText(requireContext(), "Organizers cannot join the entrant pool", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Organizers cannot join the entrant pool", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -502,7 +502,7 @@ public class ViewEntrantsFragment extends Fragment {
                             || "APPLIED".equals(existingStatus)
                             || "INVITED".equals(existingStatus)
                             || "ACCEPTED".equals(existingStatus)) {
-                        Toast.makeText(requireContext(), "User is already linked to this event", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "User is already linked to this event", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -519,10 +519,10 @@ public class ViewEntrantsFragment extends Fragment {
                     entrantRef.set(data, SetOptions.merge())
                             .addOnSuccessListener(unused -> {
                                 notificationHelper.sendPrivateWaitlistInvitationNotification(userId, eventId);
-                                Toast.makeText(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT).show();
+                                TigerToast.show(requireContext(), "Waitlist invitation sent", Toast.LENGTH_SHORT);
                             })
                             .addOnFailureListener(unused ->
-                                    Toast.makeText(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT).show());
+                                    TigerToast.show(requireContext(), "Failed to invite entrant", Toast.LENGTH_SHORT));
                 });
     }
 
@@ -537,7 +537,7 @@ public class ViewEntrantsFragment extends Fragment {
                     Long sampleSizeLong = eventDoc != null ? eventDoc.getLong("sampleSize") : null;
                     int sampleSize = sampleSizeLong != null ? sampleSizeLong.intValue() : 0;
                     if (sampleSize <= 0) {
-                        Toast.makeText(requireContext(), "Set sample size in event first", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "Set sample size in event first", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -548,7 +548,7 @@ public class ViewEntrantsFragment extends Fragment {
                                 List<QueryDocumentSnapshot> applicants = new ArrayList<>();
                                 for (QueryDocumentSnapshot d : appliedQuery) applicants.add(d);
                                 if (applicants.isEmpty()) {
-                                    Toast.makeText(requireContext(), "No applicants to sample", Toast.LENGTH_SHORT).show();
+                                    TigerToast.show(requireContext(), "No applicants to sample", Toast.LENGTH_SHORT);
                                     return;
                                 }
                                 Collections.shuffle(applicants);
@@ -569,14 +569,14 @@ public class ViewEntrantsFragment extends Fragment {
                                                 notificationHelper.sendInvitationNotification(invitedUserId, eventId);
                                                 EventCleanupHelper.updateHistoryStatus(invitedUserId, eventId, "INVITED");
                                             }
-                                            Toast.makeText(requireContext(),
-                                                    "Lottery run for " + toInvite + " applicants", Toast.LENGTH_SHORT).show();
+                                            TigerToast.show(requireContext(),
+                                                    "Lottery run for " + toInvite + " applicants", Toast.LENGTH_SHORT);
                                         })
-                                        .addOnFailureListener(e -> Toast.makeText(requireContext(),
-                                                "Lottery failed", Toast.LENGTH_SHORT).show());
+                                        .addOnFailureListener(e -> TigerToast.show(requireContext(),
+                                                "Lottery failed", Toast.LENGTH_SHORT));
                             });
                 })
-                .addOnFailureListener(e -> Toast.makeText(requireContext(), "Failed to load event", Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> TigerToast.show(requireContext(), "Failed to load event", Toast.LENGTH_SHORT));
     }
 
     @Override

@@ -112,7 +112,7 @@ public class EditEventFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
 
         if (eventId == null) {
-            Toast.makeText(requireContext(), "Error: Event ID missing", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Error: Event ID missing", Toast.LENGTH_SHORT);
             Navigation.findNavController(view).popBackStack();
             return;
         }
@@ -308,7 +308,7 @@ public class EditEventFragment extends Fragment {
         String rEnd = getText(editRegistrationEnd);
 
         if (name.isEmpty() || capStr.isEmpty() || eDate.isEmpty() || rStart.isEmpty() || rEnd.isEmpty()) {
-            Toast.makeText(requireContext(), "Please fill required fields", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Please fill required fields", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -317,7 +317,7 @@ public class EditEventFragment extends Fragment {
             capacity = Integer.parseInt(capStr);
             sampleSize = Integer.parseInt(samStr);
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid numbers", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Invalid numbers", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -363,14 +363,14 @@ public class EditEventFragment extends Fragment {
                             performFirestoreUpdate(data);
                         }).addOnFailureListener(e -> {
                             Log.e(TAG, "Failed to get download URL", e);
-                            Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                            TigerToast.show(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT);
                             performFirestoreUpdate(data);
                         })
                 )
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to upload poster", e);
                     if (isAdded()) {
-                        Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT);
                     }
                     performFirestoreUpdate(data);
                 });
@@ -380,12 +380,12 @@ public class EditEventFragment extends Fragment {
         db.collection("events").document(eventId).update(data)
                 .addOnSuccessListener(aVoid -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Event updated", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Event updated", Toast.LENGTH_SHORT);
                     Navigation.findNavController(requireView()).popBackStack();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Update failed", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Update failed", Toast.LENGTH_SHORT);
                 });
     }
 
@@ -396,11 +396,11 @@ public class EditEventFragment extends Fragment {
             Date start = sdf.parse(rStart);
             Date end = sdf.parse(rEnd);
             if (start.after(end)) {
-                Toast.makeText(requireContext(), "Start must be before end", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Start must be before end", Toast.LENGTH_SHORT);
                 return false;
             }
             if (end.after(event)) {
-                Toast.makeText(requireContext(), "Registration must end before event", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Registration must end before event", Toast.LENGTH_SHORT);
                 return false;
             }
             return true;

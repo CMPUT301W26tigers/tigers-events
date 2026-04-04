@@ -348,7 +348,7 @@ public class CreateEventFragment extends Fragment {
         //    return;
         //}
         if (eventCapacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -380,13 +380,13 @@ public class CreateEventFragment extends Fragment {
             // }
             eventCapacityVal = Integer.parseInt(eventCapacityStr);
                 if (eventCapacityVal <= 0) {
-                    Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT);
                 return;
             }
             // sampleSize = Integer.parseInt(sampleStr);
             // if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT);
             return;
         }
         if (!waitlistCapacityStr.isEmpty()) {
@@ -394,7 +394,7 @@ public class CreateEventFragment extends Fragment {
                 waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
                 if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
             } catch (NumberFormatException e) {
-                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT);
                 return;
             }
         }
@@ -410,7 +410,7 @@ public class CreateEventFragment extends Fragment {
         }
 
         if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Event name required", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -520,7 +520,7 @@ public class CreateEventFragment extends Fragment {
         String registrationEnd = getText(editRegistrationEnd);
 
         if (name.isEmpty()) {
-            Toast.makeText(requireContext(), "Event name required", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Event name required", Toast.LENGTH_SHORT);
             return null;
         }
         // May be obsolete
@@ -529,7 +529,7 @@ public class CreateEventFragment extends Fragment {
 //            return;
 //        }
         if (eventCapacityStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT);
             return null;
         }
 
@@ -559,13 +559,13 @@ public class CreateEventFragment extends Fragment {
 //            }
             eventCapacityVal = Integer.parseInt(eventCapacityStr);
             if (eventCapacityVal <= 0) {
-                Toast.makeText(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT);
                 return null;
             }
 //            sampleSize = Integer.parseInt(sampleStr);
 //            if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
-            Toast.makeText(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT);
             return null;
         }
 
@@ -574,7 +574,7 @@ public class CreateEventFragment extends Fragment {
                 waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
                 if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
             } catch (NumberFormatException e) {
-                Toast.makeText(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT);
                 return null;
             }
         }
@@ -583,7 +583,7 @@ public class CreateEventFragment extends Fragment {
             if (sampleSize < 0) sampleSize = 0;
         } catch (NumberFormatException e) {
             sampleSize = 0;
-            Toast.makeText(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT);
             return null;
         }
 
@@ -649,7 +649,7 @@ public class CreateEventFragment extends Fragment {
                     .addOnFailureListener(e -> {
                         Log.e("CreateEvent", "Failed to upload poster", e);
                         if (isAdded()) {
-                            Toast.makeText(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT).show();
+                            TigerToast.show(requireContext(), "Failed to upload poster", Toast.LENGTH_SHORT);
                         }
                         writeEventToFirestore(event, data, currentUser, onSuccess);
                     });
@@ -668,7 +668,7 @@ public class CreateEventFragment extends Fragment {
                     }
                     Log.d("CreateEvent", "Event saved");
                     draftSaved = true;
-                    Toast.makeText(requireContext(), "Event saved", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Event saved", Toast.LENGTH_SHORT);
                     if (currentUser != null && currentUser.getId() != null) {
                         EventCleanupHelper.writeHistoryRecord(currentUser.getId(), event.getId(), data, "ORGANIZED");
                     }
@@ -679,7 +679,7 @@ public class CreateEventFragment extends Fragment {
                         return;
                     }
                     Log.e("CreateEvent", "Failed to save", e);
-                    Toast.makeText(requireContext(), "Failed to save event", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Failed to save event", Toast.LENGTH_SHORT);
                 });
     }
 
@@ -710,7 +710,7 @@ public class CreateEventFragment extends Fragment {
             Date registrationEnd = sdf.parse(registrationEndStr);
 
             if (eventDate == null || registrationStart == null || registrationEnd == null) {
-                Toast.makeText(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Invalid date entered", Toast.LENGTH_SHORT);
                 return false;
             }
 
@@ -727,7 +727,7 @@ public class CreateEventFragment extends Fragment {
             }
 
         } catch (ParseException e) {
-            Toast.makeText(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Date format must be YYYY-MM-DD", Toast.LENGTH_SHORT);
             return false;
         }
 
