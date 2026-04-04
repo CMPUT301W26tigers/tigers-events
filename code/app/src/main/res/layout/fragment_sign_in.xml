@@ -16,26 +16,16 @@
         android:paddingEnd="24dp"
         android:paddingBottom="32dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <ImageView
             android:id="@+id/profileAvatarCard"
-            android:layout_width="190dp"
-            android:layout_height="190dp"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
             android:layout_marginTop="12dp"
-            app:cardBackgroundColor="#E6DCF7"
-            app:cardCornerRadius="110dp"
-            app:cardElevation="0dp"
+            android:contentDescription="Tigers Events logo"
+            android:src="@drawable/tiger_logo"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-            <ImageView
-                android:layout_width="110dp"
-                android:layout_height="110dp"
-                android:layout_gravity="center"
-                android:contentDescription="Profile placeholder"
-                android:src="@android:drawable/ic_menu_myplaces"
-                app:tint="#5A3E9B" />
-        </com.google.android.material.card.MaterialCardView>
+            app:layout_constraintTop_toTopOf="parent" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/signInCard"

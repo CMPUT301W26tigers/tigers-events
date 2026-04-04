@@ -155,7 +155,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .whereIn("statusCode", Arrays.asList(0, 1, 2))
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
-                        Toast.makeText(requireContext(), "Error loading waitlist", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "Error loading waitlist", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -203,7 +203,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .addOnSuccessListener(aVoid -> {
                     notificationHelper.sendNotSelectedNotification(entrantToRemove.getUserId(), eventId);
                     EventCleanupHelper.updateHistoryStatus(entrantToRemove.getUserId(), eventId, "CANCELLED");
-                    Toast.makeText(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Entrant removed.", Toast.LENGTH_SHORT);
                 });
     }
 
@@ -227,7 +227,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (queryDocumentSnapshots.isEmpty()) {
-                        Toast.makeText(requireContext(), "No more applicants left in the pool.", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), "No more applicants left in the pool.", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -241,7 +241,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 String replacementUserId = selectedApplicant.getString("userId");
                                 notificationHelper.sendInvitationNotification(replacementUserId, eventId);
                                 EventCleanupHelper.updateHistoryStatus(replacementUserId, eventId, "INVITED");
-                                Toast.makeText(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT).show();
+                                TigerToast.show(requireContext(), "Replacement drawn successfully!", Toast.LENGTH_SHORT);
                             });
                 });
     }
@@ -257,7 +257,7 @@ public class OrganizerWaitlistFragment extends Fragment {
             NotificationAction action
     ) {
         if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "No event selected", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -268,7 +268,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot.isEmpty()) {
-                        Toast.makeText(requireContext(), emptyMessage, Toast.LENGTH_SHORT).show();
+                        TigerToast.show(requireContext(), emptyMessage, Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -296,10 +296,10 @@ public class OrganizerWaitlistFragment extends Fragment {
                                 + " entrants, skipped " + skippedCount;
                     }
 
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), message, Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), failureMessage, Toast.LENGTH_SHORT).show()
+                        TigerToast.show(requireContext(), failureMessage, Toast.LENGTH_SHORT)
                 );
     }
 

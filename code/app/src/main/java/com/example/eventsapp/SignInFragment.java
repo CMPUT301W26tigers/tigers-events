@@ -60,7 +60,7 @@ public class SignInFragment extends Fragment {
                             if (user != null) {
                                 user.setId(querySnapshot.getDocuments().get(0).getId());
                                 UserManager.getInstance().setCurrentUser(user);
-                                Toast.makeText(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT).show();
+                                TigerToast.show(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT);
                                 navigateToExplore(view);
                             }
                         }
@@ -113,12 +113,12 @@ public class SignInFragment extends Fragment {
             String password = etPassword.getText().toString().trim();
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(getContext(), "Please enter email and password", Toast.LENGTH_SHORT).show();
+                TigerToast.show(getContext(), "Please enter email and password", Toast.LENGTH_SHORT);
                 return;
             }
 
             if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                Toast.makeText(getContext(), "Please enter a valid email", Toast.LENGTH_SHORT).show();
+                TigerToast.show(getContext(), "Please enter a valid email", Toast.LENGTH_SHORT);
                 return;
             }
 
@@ -149,18 +149,18 @@ public class SignInFragment extends Fragment {
                             user.setId(documentSnapshot.getId());
                             if (user.login(email, password)) {
                                 UserManager.getInstance().setCurrentUser(user);
-                                Toast.makeText(getContext(), "Welcome " + user.getName(), Toast.LENGTH_SHORT).show();
+                                TigerToast.show(getContext(), "Welcome " + user.getName(), Toast.LENGTH_SHORT);
                                 navigateToExplore(view);
                             } else {
-                                Toast.makeText(getContext(), "Invalid password", Toast.LENGTH_SHORT).show();
+                                TigerToast.show(getContext(), "Invalid password", Toast.LENGTH_SHORT);
                             }
                         }
                     } else {
-                        Toast.makeText(getContext(), "User not found", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(getContext(), "User not found", Toast.LENGTH_SHORT);
                     }
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                        TigerToast.show(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT));
     }
 
     /**
@@ -187,12 +187,12 @@ public class SignInFragment extends Fragment {
         String confirmPassword = etConfirmPassword.getText().toString().trim();
 
         if (firstName.isEmpty() || lastName.isEmpty() || phone.isEmpty()) {
-            Toast.makeText(getContext(), "Please fill in all fields", Toast.LENGTH_SHORT).show();
+            TigerToast.show(getContext(), "Please fill in all fields", Toast.LENGTH_SHORT);
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            Toast.makeText(getContext(), "Passwords do not match", Toast.LENGTH_SHORT).show();
+            TigerToast.show(getContext(), "Passwords do not match", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -200,7 +200,7 @@ public class SignInFragment extends Fragment {
         db.collection("users").whereEqualTo("email", email).get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
-                        Toast.makeText(getContext(), "An account with this email already exists", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(getContext(), "An account with this email already exists", Toast.LENGTH_SHORT);
                         return;
                     }
 
@@ -212,14 +212,14 @@ public class SignInFragment extends Fragment {
                     newDocRef.set(newUser)
                             .addOnSuccessListener(aVoid -> {
                                 UserManager.getInstance().setCurrentUser(newUser);
-                                Toast.makeText(getContext(), "Account created! Welcome " + newUser.getName(), Toast.LENGTH_SHORT).show();
+                                TigerToast.show(getContext(), "Account created! Welcome " + newUser.getName(), Toast.LENGTH_SHORT);
                                 navigateToExplore(view);
                             })
                             .addOnFailureListener(e ->
-                                    Toast.makeText(getContext(), "Error creating account: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                                    TigerToast.show(getContext(), "Error creating account: " + e.getMessage(), Toast.LENGTH_SHORT));
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                        TigerToast.show(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT));
     }
 
     /**

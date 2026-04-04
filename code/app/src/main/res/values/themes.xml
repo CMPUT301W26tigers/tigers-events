@@ -3,4 +3,11 @@
     </style>
 
     <style name="Theme.EventsApp" parent="Base.Theme.EventsApp" />
+
+    <style name="Theme.EventsApp.Splash" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_window_bg</item>
+        <item name="android:statusBarColor">#FFF8F0</item>
+        <item name="android:navigationBarColor">#FFF8F0</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

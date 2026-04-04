@@ -126,10 +126,10 @@ public class AdminEventDetailFragment extends Fragment {
                     btnDeletePoster.setVisibility(View.GONE);
                     ivPoster.setVisibility(View.GONE);
                     posterPlaceholder.setVisibility(View.VISIBLE);
-                    Toast.makeText(requireContext(), "Poster deleted", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Poster deleted", Toast.LENGTH_SHORT);
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), "Failed to delete poster", Toast.LENGTH_SHORT).show()
+                        TigerToast.show(requireContext(), "Failed to delete poster", Toast.LENGTH_SHORT)
                 );
     }
 
@@ -146,12 +146,12 @@ public class AdminEventDetailFragment extends Fragment {
         EventCleanupHelper.deleteEventCompletely(event.getId(),
                 () -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Event deleted", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Event deleted", Toast.LENGTH_SHORT);
                     Navigation.findNavController(view).popBackStack();
                 },
                 e -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Failed to delete event", Toast.LENGTH_SHORT);
                 }
         );
     }

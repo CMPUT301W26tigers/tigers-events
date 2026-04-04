@@ -124,7 +124,7 @@ public class EntrantMapFragment extends Fragment {
         mapView.setSaveEnabled(false);
 
         if (eventId.isEmpty()) {
-            Toast.makeText(requireContext(), "Missing event", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "Missing event", Toast.LENGTH_SHORT);
             return;
         }
 
