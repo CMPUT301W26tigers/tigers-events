@@ -94,7 +94,7 @@ public class EnrolledFragment extends Fragment {
         btnSeeCancelled = view.findViewById(R.id.btn_see_cancelled);
 
         if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(requireContext(), "No event selected", Toast.LENGTH_SHORT).show();
+            TigerToast.show(requireContext(), "No event selected", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -125,7 +125,7 @@ public class EnrolledFragment extends Fragment {
         });
 
         btnExportCsv.setOnClickListener(v ->
-                Toast.makeText(requireContext(), "Export CSV", Toast.LENGTH_SHORT).show());
+                TigerToast.show(requireContext(), "Export CSV", Toast.LENGTH_SHORT));
         btnSeeCancelled.setOnClickListener(v -> openCancelledFragment());
 
         loadEnrolledEntrants();
@@ -134,7 +134,7 @@ public class EnrolledFragment extends Fragment {
     private void loadEnrolledEntrants() {
         enrolledRef.addSnapshotListener((value, error) -> {
             if (error != null) {
-                Toast.makeText(requireContext(), "Failed to load enrolled entrants", Toast.LENGTH_SHORT).show();
+                TigerToast.show(requireContext(), "Failed to load enrolled entrants", Toast.LENGTH_SHORT);
                 return;
             }
 

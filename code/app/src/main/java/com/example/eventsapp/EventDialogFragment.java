@@ -109,11 +109,11 @@ public class EventDialogFragment extends DialogFragment {
                     try {
                         amount = Integer.parseInt(amountStr);
                         if (amount == 0) {
-                            Toast.makeText(getContext(), "Amount cannot be zero", Toast.LENGTH_SHORT).show();
+                            TigerToast.show(getContext(), "Amount cannot be zero", Toast.LENGTH_SHORT);
                             return;
                         }
                     } catch (NumberFormatException e) {
-                        Toast.makeText(getContext(), "Amount must be an integer", Toast.LENGTH_SHORT).show();
+                        TigerToast.show(getContext(), "Amount must be an integer", Toast.LENGTH_SHORT);
                         return;
                     }
 

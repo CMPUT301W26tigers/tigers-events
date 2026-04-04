@@ -187,10 +187,10 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
                 .document(user.getId())
                 .update("profilePictureUrl", "")
                 .addOnSuccessListener(aVoid ->
-                        Toast.makeText(requireContext(), "Profile picture removed", Toast.LENGTH_SHORT).show()
+                        TigerToast.show(requireContext(), "Profile picture removed", Toast.LENGTH_SHORT)
                 )
                 .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(), "Failed to remove profile picture", Toast.LENGTH_SHORT).show()
+                        TigerToast.show(requireContext(), "Failed to remove profile picture", Toast.LENGTH_SHORT)
                 );
     }
 
@@ -217,13 +217,13 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
         EventCleanupHelper.deleteUserCompletely(userId,
                 () -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Account deleted", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Account deleted", Toast.LENGTH_SHORT);
                     if (deleteListener != null) deleteListener.onAccountDeleted(userId);
                     dismiss();
                 },
                 e -> {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(), "Failed to delete account", Toast.LENGTH_SHORT).show();
+                    TigerToast.show(requireContext(), "Failed to delete account", Toast.LENGTH_SHORT);
                 }
         );
     }
