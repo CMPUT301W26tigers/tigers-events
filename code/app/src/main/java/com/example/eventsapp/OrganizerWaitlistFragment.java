@@ -151,7 +151,7 @@ public class OrganizerWaitlistFragment extends Fragment {
 
                     // Gettingg values to compute capacity and lottery sizes real-time
                     Long cap = eventDoc.getLong("amount");
-                    eventCapacity = cap != null ? cap.intValue() : 0;
+                    eventCapacity = (cap != null) ? cap.intValue() : 0;
                     Long ss = eventDoc.getLong("sampleSize");
                     eventSampleSize = ss != null ? ss.intValue() : 0;
 
@@ -207,6 +207,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                 Entrant entrant = new Entrant(id, eventId, name, email, status);
                 entrant.setUserId(doc.getString("userId"));
                 entrant.setStatusCode(doc.getLong("statusCode") != null ? doc.getLong("statusCode").intValue() : 0);
+                entrant.setGroupId(doc.getString("groupId"));
                 double lat = readNumeric(doc, "latitude");
                 double lng = readNumeric(doc, "longitude");
                 if (!Double.isNaN(lat)) entrant.setLatitude(lat);
@@ -560,7 +561,8 @@ public class OrganizerWaitlistFragment extends Fragment {
         int targetCapacity = eventSampleSize > 0 ? eventSampleSize : eventCapacity;
 
         int occupied = 0;
-        List<Entrant> candidates = new ArrayList<>();
+        List<Object> candidates = new ArrayList<>(); // Can contain Entrant or List<Entrant>
+        Map<String, List<Entrant>> groupMap = new HashMap<>();
 
         for (Entrant e : allEntrants) {
             Entrant.Status status = e.getStatus();
@@ -569,7 +571,16 @@ public class OrganizerWaitlistFragment extends Fragment {
                     status == Entrant.Status.PRIVATE_INVITED) {
                 occupied++;
             } else if (status == Entrant.Status.APPLIED) {
-                candidates.add(e);
+                String groupId = e.getGroupId();
+                if (groupId != null && !groupId.isEmpty()) {
+                    if (!groupMap.containsKey(groupId)) {
+                        groupMap.put(groupId, new ArrayList<>());
+                        candidates.add(groupMap.get(groupId));
+                    }
+                    groupMap.get(groupId).add(e);
+                } else {
+                    candidates.add(e);
+                }
             }
         }
 
@@ -589,15 +600,30 @@ public class OrganizerWaitlistFragment extends Fragment {
         tempSelectedIds.clear();
 
         Collections.shuffle(candidates);
-        int draftCount = Math.min(available, candidates.size());
-
-        for (int i = 0; i < draftCount; i++) {
-            tempSelectedIds.add(candidates.get(i).getId());
+        int currentCount = 0;
+        
+        for (Object candidate : candidates) {
+            if (candidate instanceof Entrant) {
+                if (currentCount < available) {
+                    tempSelectedIds.add(((Entrant) candidate).getId());
+                    currentCount++;
+                }
+            } else if (candidate instanceof List) {
+                List<Entrant> group = (List<Entrant>) candidate;
+                if (currentCount < available) {
+                    // Entire group selected as one entity
+                    for (Entrant ge : group) {
+                        tempSelectedIds.add(ge.getId());
+                    }
+                    currentCount++; // The group counts as one entity for selection
+                }
+            }
+            if (currentCount >= available) break;
         }
 
         // Apply draft highlights to EntrantAdapter
         adapter.setTempSelectedIds(tempSelectedIds);
-        TigerToast.show(requireContext(), "Lottery pulled " + draftCount + " entrant(s)! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
+        TigerToast.show(requireContext(), "Lottery pulled " + currentCount + " entity/entities! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
     }
 
     private interface NotificationAction {void send(String userId);}
