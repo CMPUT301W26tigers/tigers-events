@@ -19,7 +19,7 @@ public class CancelledFragment extends Fragment {
      * Uses the layout R.layout.view_cancelled.
      */
     public CancelledFragment() {
-        super(R.layout.view_cancelled);
+        super(R.layout.fragment_organizer_cancelled);
     }
 
     @Override
