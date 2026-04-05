@@ -22,6 +22,19 @@ import androidx.appcompat.app.AppCompatActivity;
  */
 public class SplashActivity extends AppCompatActivity {
 
+    /**
+     * Builds and runs the three-phase logo assembly animation, then schedules navigation to
+     * {@link MainActivity} via a 600 ms post-animation delay.
+     *
+     * <p>Animation phases:
+     * <ol>
+     *   <li>Logo scales from 0.3× to 1× with an overshoot bounce while fading in (700 ms).</li>
+     *   <li>App name slides up 40 dp and fades in (500 ms).</li>
+     *   <li>Tagline fades in (400 ms).</li>
+     * </ol>
+     *
+     * @param savedInstanceState Unused; splash screens are never recreated from saved state.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

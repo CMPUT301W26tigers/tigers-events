@@ -20,11 +20,24 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
     private final Context context;
     private final ArrayList<Entrant> entrants;
 
+    /**
+     * Constructs a CancelledEntrantAdapter.
+     *
+     * @param context  The context used to inflate item layouts.
+     * @param entrants The list of cancelled or declined {@link Entrant} objects to display.
+     */
     public CancelledEntrantAdapter(Context context, ArrayList<Entrant> entrants) {
         this.context = context;
         this.entrants = entrants;
     }
 
+    /**
+     * Inflates the cancelled-entrant item layout and wraps it in a {@link CancelledViewHolder}.
+     *
+     * @param parent   The parent ViewGroup into which the new view will be added.
+     * @param viewType The view type of the new view (unused; only one type exists).
+     * @return A new {@link CancelledViewHolder} backed by the inflated item view.
+     */
     @NonNull
     @Override
     public CancelledViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -32,6 +45,14 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
         return new CancelledViewHolder(view);
     }
 
+    /**
+     * Binds entrant data to the provided {@link CancelledViewHolder}. Displays the entrant's
+     * name and email, and sets a human-readable status label distinguishing
+     * {@link Entrant.Status#DECLINED} from {@link Entrant.Status#CANCELLED}.
+     *
+     * @param holder   The ViewHolder to update.
+     * @param position The position of the item within the data set.
+     */
     @Override
     public void onBindViewHolder(@NonNull CancelledViewHolder holder, int position) {
         Entrant entrant = entrants.get(position);
@@ -49,16 +70,31 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
         }
     }
 
+    /**
+     * Returns the total number of cancelled/declined entrants managed by this adapter.
+     *
+     * @return The size of the entrants list.
+     */
     @Override
     public int getItemCount() {
         return entrants.size();
     }
 
+    /**
+     * ViewHolder for a single cancelled or declined entrant row.
+     * Holds references to the name, email, and status text views
+     * defined in {@code item_cancelled_entrant.xml}.
+     */
     static class CancelledViewHolder extends RecyclerView.ViewHolder {
         TextView tvName;
         TextView tvEmail;
         TextView tvStatus;
 
+        /**
+         * Constructs a CancelledViewHolder and resolves all child view references.
+         *
+         * @param itemView The inflated item view for a cancelled entrant row.
+         */
         public CancelledViewHolder(@NonNull View itemView) {
             super(itemView);
             tvName = itemView.findViewById(R.id.tv_name);

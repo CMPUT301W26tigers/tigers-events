@@ -42,10 +42,20 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
     private OnCancelEntrantListener onCancelEntrantListener;
     private Set<String> tempSelectedIds = new HashSet<>(); // Tracks local drafted lottery selections
 
+    /**
+     * Registers a listener that is invoked when the user taps the map-pin icon on an entrant row.
+     *
+     * @param listener The callback to invoke, or {@code null} to remove the current listener.
+     */
     public void setOnViewLocationListener(OnViewLocationListener listener) {
         this.onViewLocationListener = listener;
     }
 
+    /**
+     * Registers a listener that is invoked when the organizer cancels an invited entrant.
+     *
+     * @param listener The callback to invoke, or {@code null} to remove the current listener.
+     */
     public void setOnCancelEntrantListener(OnCancelEntrantListener listener) {
         this.onCancelEntrantListener = listener;
     }
@@ -206,6 +216,13 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         ImageView ivCancel;
         ColorStateList defaultActionTextColor;
 
+        /**
+         * Constructs a ViewHolder and resolves all child view references from the item layout.
+         * Captures the default text color of {@code tvAction} so it can be restored after
+         * temporary lottery-draft highlighting is cleared.
+         *
+         * @param itemView The inflated item view for a waitlist entrant row.
+         */
         ViewHolder(View itemView) {
             super(itemView);
             cardView = itemView.findViewById(R.id.item_waitlist_root);

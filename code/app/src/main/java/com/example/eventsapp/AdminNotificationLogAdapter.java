@@ -23,10 +23,22 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
     private final List<NotificationLogItem> logs;
     private final SparseBooleanArray expandedPositions = new SparseBooleanArray();
 
+    /**
+     * Constructs an AdminNotificationLogAdapter.
+     *
+     * @param logs The list of {@link NotificationLogItem} entries to display.
+     */
     public AdminNotificationLogAdapter(List<NotificationLogItem> logs) {
         this.logs = logs;
     }
 
+    /**
+     * Inflates the notification log item layout and wraps it in a {@link ViewHolder}.
+     *
+     * @param parent   The parent ViewGroup into which the new view will be added.
+     * @param viewType The view type of the new view (unused; only one type exists).
+     * @return A new {@link ViewHolder} backed by the inflated item view.
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -35,6 +47,14 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
         return new ViewHolder(view);
     }
 
+    /**
+     * Binds a {@link NotificationLogItem} to the provided {@link ViewHolder}. Sets the organizer
+     * name, a short collapsed preview, and the full expanded message with a nested recipient list.
+     * Restores the expand/collapse state and wires the toggle click handler.
+     *
+     * @param holder   The ViewHolder to update.
+     * @param position The position of the item within the data set.
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         NotificationLogItem log = logs.get(position);
@@ -73,11 +93,23 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
         });
     }
 
+    /**
+     * Returns the total number of notification log entries managed by this adapter.
+     *
+     * @return The size of the logs list.
+     */
     @Override
     public int getItemCount() {
         return logs.size();
     }
 
+    /**
+     * Builds a one-line preview string shown in the collapsed state of a log entry.
+     * Combines event name and notification title when both are present.
+     *
+     * @param log The log entry to summarise.
+     * @return A non-null preview string.
+     */
     private String buildPreview(NotificationLogItem log) {
         String eventName = safe(log.getEventName());
         String title = safe(log.getTitle());
@@ -87,10 +119,22 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
         return !eventName.isEmpty() ? eventName : title;
     }
 
+    /**
+     * Returns the value unchanged, or an empty string if the value is {@code null}.
+     *
+     * @param value The string to guard.
+     * @return A non-null string.
+     */
     private String safe(String value) {
         return value != null ? value : "";
     }
 
+    /**
+     * Converts a raw notification type key into a human-readable label shown in the expanded view.
+     *
+     * @param type The raw type string stored in Firestore (e.g. {@code "invitation"}).
+     * @return A display label, or the original type string if the key is unrecognised.
+     */
     static String formatType(String type) {
         if (type == null) return "Unknown";
         switch (type) {
@@ -103,6 +147,11 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
         }
     }
 
+    /**
+     * ViewHolder for a single notification log entry.
+     * Manages two layout regions — a collapsed summary and an expanded detail panel —
+     * along with a nested {@link RecyclerView} for the recipient list.
+     */
     static class ViewHolder extends RecyclerView.ViewHolder {
         View layoutCollapsed;
         View layoutExpanded;
@@ -110,6 +159,11 @@ public class AdminNotificationLogAdapter extends RecyclerView.Adapter<AdminNotif
         ImageView ivExpandArrow;
         RecyclerView rvRecipients;
 
+        /**
+         * Constructs a ViewHolder and resolves all child view references.
+         *
+         * @param itemView The inflated notification log item view.
+         */
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             layoutCollapsed = itemView.findViewById(R.id.layoutCollapsed);

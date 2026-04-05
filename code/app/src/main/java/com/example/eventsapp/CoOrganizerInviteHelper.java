@@ -23,10 +23,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Package-private utility class that drives the co-organizer invitation workflow.
+ *
+ * <p>Entry points are {@link #showInviteDialog} (shows a searchable user-picker dialog)
+ * and {@link #inviteCoOrganizer} (sends the actual invitation without showing a dialog).
+ * All methods are stateless and static; instances cannot be created.
+ */
 final class CoOrganizerInviteHelper {
 
     private CoOrganizerInviteHelper() {}
 
+    /**
+     * Fetches the event document and, if it exists, opens a searchable user-picker dialog
+     * that lets the organizer choose a co-organizer to invite.
+     *
+     * <p>Users who are already the creator, a confirmed co-organizer, or have a pending
+     * invitation are excluded from the picker list.
+     *
+     * @param fragment the host fragment used for context and lifecycle checks
+     * @param db       the Firestore instance to query
+     * @param eventId  the Firestore document ID of the event
+     */
     static void showInviteDialog(@NonNull Fragment fragment,
                                  @NonNull FirebaseFirestore db,
                                  @NonNull String eventId) {
@@ -167,6 +185,18 @@ final class CoOrganizerInviteHelper {
         rvUserResults.setVisibility(View.VISIBLE);
     }
 
+    /**
+     * Sends a co-organizer invitation to the given user for the specified event.
+     *
+     * <p>The user's ID is appended to the event's {@code pendingCoOrganizerIds} array and
+     * the user is removed from the entrant sub-collection so they no longer appear as a
+     * regular applicant. A Firestore-backed in-app notification is also dispatched.
+     *
+     * @param fragment the host fragment used for context and lifecycle checks
+     * @param db       the Firestore instance to update
+     * @param eventId  the Firestore document ID of the event
+     * @param user     the user to invite; must have a non-blank {@code id}
+     */
     static void inviteCoOrganizer(@NonNull Fragment fragment,
                                   @NonNull FirebaseFirestore db,
                                   @NonNull String eventId,
@@ -184,6 +214,10 @@ final class CoOrganizerInviteHelper {
                     if (!fragment.isAdded()) {
                         return;
                     }
+                    // Remove this user from the event's entrant pool so they don't appear as an applicant.
+                    db.collection("events").document(eventId)
+                            .collection("entrants").document(userId)
+                            .delete();
                     notificationHelper.sendCoOrganizerInvitationNotification(userId, eventId);
                     TigerToast.show(fragment.requireContext(), "Co-organizer invite sent", Toast.LENGTH_SHORT);
                 })
@@ -210,19 +244,39 @@ final class CoOrganizerInviteHelper {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * RecyclerView adapter that displays a filterable list of eligible users inside the
+     * invite-co-organizer dialog. Selecting a row invokes {@link OnUserSelectedListener}.
+     */
     private static class UserPickerAdapter extends RecyclerView.Adapter<UserPickerAdapter.UserPickerViewHolder> {
+
+        /**
+         * Callback delivered when the user taps a row in the picker list.
+         */
         interface OnUserSelectedListener {
+            /**
+             * Invoked when a user row is tapped.
+             *
+             * @param user the user that was selected
+             */
             void onUserSelected(Users user);
         }
 
         private final List<Users> users;
         private final OnUserSelectedListener onUserSelectedListener;
 
+        /**
+         * @param users                  the live, filtered list backing the adapter
+         * @param onUserSelectedListener callback to invoke when a row is tapped
+         */
         UserPickerAdapter(List<Users> users, OnUserSelectedListener onUserSelectedListener) {
             this.users = users;
             this.onUserSelectedListener = onUserSelectedListener;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @NonNull
         @Override
         public UserPickerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -230,6 +284,12 @@ final class CoOrganizerInviteHelper {
             return new UserPickerViewHolder(view);
         }
 
+        /**
+         * {@inheritDoc}
+         *
+         * <p>Displays the user's display name and available contact information (email and/or
+         * phone). Falls back to "No contact info" when neither is available.
+         */
         @Override
         public void onBindViewHolder(@NonNull UserPickerViewHolder holder, int position) {
             Users user = users.get(position);
@@ -250,15 +310,23 @@ final class CoOrganizerInviteHelper {
             holder.itemView.setOnClickListener(v -> onUserSelectedListener.onUserSelected(user));
         }
 
+        /** {@inheritDoc} */
         @Override
         public int getItemCount() {
             return users.size();
         }
 
+        /**
+         * ViewHolder that caches references to the name and contact-detail TextViews for a
+         * single user row in the picker list.
+         */
         static class UserPickerViewHolder extends RecyclerView.ViewHolder {
             private final TextView tvName;
             private final TextView tvDetails;
 
+            /**
+             * @param itemView the inflated {@code item_user_picker} row view
+             */
             UserPickerViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvName = itemView.findViewById(R.id.tv_user_picker_name);

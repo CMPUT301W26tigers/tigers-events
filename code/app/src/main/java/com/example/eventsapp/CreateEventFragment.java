@@ -112,6 +112,14 @@ public class CreateEventFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_create_event, container, false);
     }
 
+    /**
+     * Restores the stable event UUID from saved instance state (so a screen rotation does not
+     * silently generate a second event document), or generates a fresh UUID if this is a first
+     * creation.
+     *
+     * @param savedInstanceState Previously saved state containing the event ID and draft flag,
+     *                           or {@code null} on first launch.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -233,6 +241,12 @@ public class CreateEventFragment extends Fragment {
         });
     }
 
+    /**
+     * Persists the stable event UUID and the {@link #draftSaved} flag so they survive
+     * configuration changes without triggering duplicate Firestore writes.
+     *
+     * @param outState The bundle in which to place saved state.
+     */
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -276,6 +290,7 @@ public class CreateEventFragment extends Fragment {
                 (view, selectedYear, selectedMonth, selectedDay) -> {
                     String date = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay);
                     target.setText(date);
+                    target.setError(null);
                 },
                 year, month, day
         );
@@ -295,6 +310,15 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Synchronises the visibility of the sharing section (QR code, link, share buttons) and the
+     * label on the private-event toggle button with the current value of {@link #isPrivateEvent}.
+     *
+     * <p>For private events the QR image is cleared and a placeholder message is shown in place
+     * of the deep link.  For public events the QR is regenerated via {@link #updateQRCode(Event)}.
+     *
+     * @param event The event being created, used to derive the current deep-link URL.
+     */
     private void updatePrivateEventUi(Event event) {
         int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
         shareTitle.setVisibility(visibility);
@@ -489,6 +513,18 @@ public class CreateEventFragment extends Fragment {
         });
     }
 
+    /**
+     * Guarantees the event has been persisted to Firestore at least once before running
+     * {@code onSuccess}.
+     *
+     * <p>If {@link #draftSaved} is already {@code true} the callback is invoked immediately
+     * without a Firestore round-trip.  Otherwise {@link #buildEventData(Event)} is called to
+     * validate and build the payload, then {@link #saveEventToFirestore} is called.
+     *
+     * @param event     The event to persist if not yet saved.
+     * @param onSuccess Callback to invoke after a successful save (or immediately if already
+     *                  saved); never called if validation or saving fails.
+     */
     private void ensureDraftSaved(Event event, @NonNull Runnable onSuccess) {
         if (draftSaved) {
             onSuccess.run();
@@ -504,6 +540,18 @@ public class CreateEventFragment extends Fragment {
         saveEventToFirestore(event, data, currentUser, onSuccess);
     }
 
+    /**
+     * Validates all input fields and, on success, mutates the {@code event} object and builds a
+     * Firestore-ready field map.
+     *
+     * <p>Returns {@code null} (after showing an appropriate error message) if any required field
+     * is empty, any numeric value is unparseable or out of range, or the registration period is
+     * invalid.
+     *
+     * @param event The event object to mutate with the validated field values.
+     * @return A {@link Map} ready to pass to {@code DocumentReference.set()}, or {@code null} if
+     *         validation failed.
+     */
     @Nullable
     private Map<String, Object> buildEventData(Event event) {
         String name = editName.getText() != null ? editName.getText().toString().trim() : "";
@@ -637,6 +685,18 @@ public class CreateEventFragment extends Fragment {
         return data;
     }
 
+    /**
+     * Uploads the poster image (if one was selected) before writing the event document to
+     * Firestore.  If the upload fails the event is still saved without a poster URL so the
+     * organizer is not blocked.
+     *
+     * @param event       The event being saved (used to derive the Storage path).
+     * @param data        The Firestore field map; {@code posterUrl} may be mutated with the
+     *                    Storage download URL on a successful upload.
+     * @param currentUser The signed-in user; may be {@code null} if called before sign-in
+     *                    completes (unlikely in normal flow).
+     * @param onSuccess   Callback invoked after the event document is successfully written.
+     */
     private void saveEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
                                       @NonNull Runnable onSuccess) {
         if (posterUri != null) {
@@ -664,6 +724,17 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Writes (or overwrites) the event document in Firestore and, on success, marks
+     * {@link #draftSaved} as {@code true}, writes an organizer history record for the current
+     * user, and invokes {@code onSuccess}.
+     *
+     * @param event       The event whose ID is used as the Firestore document ID.
+     * @param data        The full field map to persist.
+     * @param currentUser The signed-in user for whom to write an organizer history record;
+     *                    history is skipped if {@code null}.
+     * @param onSuccess   Callback invoked after a successful Firestore write.
+     */
     private void writeEventToFirestore(Event event, Map<String, Object> data, @Nullable Users currentUser,
                                        @NonNull Runnable onSuccess) {
         DocumentReference docRef = db.collection("events").document(event.getId());
@@ -741,9 +812,11 @@ public class CreateEventFragment extends Fragment {
     }
 
     /**
-     * Attaches DatePicker dialogs to the event date and registration date input
+     * Safely extracts the trimmed text from a {@link TextInputEditText}.
      *
-     * When a field is clicked DatePickerDialog appears allowing the organizer to select date
+     * @param editText The input field to read; may be {@code null}.
+     * @return The trimmed string, or an empty string if {@code editText} or its content is
+     *         {@code null}.
      */
     private String getText(TextInputEditText editText) {
         return editText != null && editText.getText() != null

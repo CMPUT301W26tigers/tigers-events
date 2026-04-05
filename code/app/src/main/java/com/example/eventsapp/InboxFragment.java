@@ -117,6 +117,13 @@ public class InboxFragment extends Fragment {
         emptyStateView.setVisibility(notificationContainer.getChildCount() == 0 ? View.VISIBLE : View.GONE);
     }
 
+    /**
+     * Resolves the active user and attaches a real-time Firestore listener to their
+     * {@code notifications} sub-collection. For each document, the associated event name
+     * is looked up (and cached back to Firestore) before the raw data is converted to a
+     * {@link UserNotification} and rendered. Falls back to the in-memory notification list
+     * when the user has no Firestore ID.
+     */
     private void loadNotifications() {
         Users currentUser = getActiveUser();
         if (currentUser == null) {
@@ -176,6 +183,16 @@ public class InboxFragment extends Fragment {
                 });
     }
 
+    /**
+     * Called after a single notification's event-name look-up completes. Stores the result
+     * at the correct position in the shared array; once all outstanding resolutions have
+     * returned, rebuilds and renders the full notification list.
+     *
+     * @param loadedNotifications Shared array accumulating resolved {@link UserNotification} objects.
+     * @param remaining           Single-element counter tracking how many resolutions are still pending.
+     * @param index               The position in {@code loadedNotifications} for this result.
+     * @param notification        The resolved notification, or {@code null} if resolution failed.
+     */
     private void onNotificationResolved(UserNotification[] loadedNotifications, int[] remaining, int index,
                                         @Nullable UserNotification notification) {
         loadedNotifications[index] = notification;
@@ -194,6 +211,17 @@ public class InboxFragment extends Fragment {
         renderNotifications(notifications);
     }
 
+    /**
+     * Ensures the notification has a human-readable event name. If the name is already
+     * stored on the {@link NotificationItem} it is returned immediately via the callback.
+     * Otherwise the event document is fetched from Firestore and the resolved name is
+     * written back to the notification document as a cache so future reads skip the lookup.
+     *
+     * @param userId         The current user's Firestore document ID.
+     * @param notificationId The Firestore document ID of the notification being resolved.
+     * @param item           The raw notification data (may be {@code null}).
+     * @param callback       Invoked on the main thread with the resolved event name (never {@code null}).
+     */
     private void resolveEventName(@NonNull String userId, @NonNull String notificationId,
                                   @Nullable NotificationItem item, EventNameCallback callback) {
         String storedEventName = item != null ? item.getEventName() : null;
@@ -224,6 +252,13 @@ public class InboxFragment extends Fragment {
                 .addOnFailureListener(e -> callback.onResolved("Event update"));
     }
 
+    /**
+     * Extracts a non-empty event name from a Firestore document snapshot, trying the fields
+     * {@code name}, {@code eventName}, and {@code title} in order.
+     *
+     * @param doc The Firestore document snapshot for an event.
+     * @return A trimmed event name, or {@code "Event update"} if none of the fields are populated.
+     */
     @NonNull
     private String getDisplayEventName(@NonNull DocumentSnapshot doc) {
         String eventName = doc.getString("name");
@@ -248,6 +283,14 @@ public class InboxFragment extends Fragment {
         );
     }
 
+    /**
+     * Maps a raw type string from a Firestore notification document to the corresponding
+     * {@link UserNotification.Type} enum value. Unrecognised strings default to
+     * {@link UserNotification.Type#WAITLISTED}.
+     *
+     * @param type The raw type string (e.g., {@code "invitation"}, {@code "not_selected"}).
+     * @return The matching {@link UserNotification.Type}.
+     */
     private UserNotification.Type parseNotificationType(@Nullable String type) {
         if ("invitation".equalsIgnoreCase(type)) {
             return UserNotification.Type.INVITATION;
@@ -267,6 +310,13 @@ public class InboxFragment extends Fragment {
         return UserNotification.Type.WAITLISTED;
     }
 
+    /**
+     * Returns the notification title from the raw item, substituting the generic string
+     * {@code "Notification"} when the stored title is absent or blank.
+     *
+     * @param item The raw notification data from Firestore.
+     * @return A non-empty title string suitable for display.
+     */
     private String getNotificationTitle(NotificationItem item) {
         String title = item.getTitle();
         return title == null || title.trim().isEmpty() ? "Notification" : title;
@@ -312,6 +362,14 @@ public class InboxFragment extends Fragment {
         acceptButton.setOnClickListener(v -> handleActionableNotificationResponse(notification, true));
     }
 
+    /**
+     * Binds a list of waitlist notifications into a single grouped card view. All
+     * {@link UserNotification.Type#WAITLISTED} notifications are collapsed under one
+     * expandable header; each entry exposes "Stay on waitlist" and "Leave waitlist" actions.
+     *
+     * @param itemView                The inflated group card view.
+     * @param waitlistedNotifications The list of waitlist notifications to render inside the group.
+     */
     private void bindWaitlistGroup(View itemView, List<UserNotification> waitlistedNotifications) {
         View header = itemView.findViewById(R.id.waitlistGroupHeader);
         LinearLayout details = itemView.findViewById(R.id.waitlistGroupDetails);
@@ -349,6 +407,14 @@ public class InboxFragment extends Fragment {
         title.setOnClickListener(toggleListener);
     }
 
+    /**
+     * Returns {@code true} for notification types that require an explicit Accept/Decline
+     * response (any kind of invitation). Waitlist and informational notifications are
+     * not considered actionable in this sense.
+     *
+     * @param type The notification type to evaluate.
+     * @return {@code true} if the notification should display Accept/Decline action buttons.
+     */
     private boolean isActionableNotification(UserNotification.Type type) {
         return type == UserNotification.Type.INVITATION
                 || type == UserNotification.Type.PRIVATE_WAITLIST_INVITATION
@@ -356,6 +422,15 @@ public class InboxFragment extends Fragment {
                 || type == UserNotification.Type.GROUP_WAITLIST_INVITATION;
     }
 
+    /**
+     * Dispatches an Accept or Decline response for an actionable notification.
+     * If the notification has a Firestore-backed ID, the response is persisted remotely
+     * via the appropriate update method; otherwise it falls back to the in-memory
+     * {@link InvitationResponseController}.
+     *
+     * @param notification The notification the user responded to.
+     * @param accept       {@code true} if the user accepted; {@code false} if declined.
+     */
     private void handleActionableNotificationResponse(UserNotification notification, boolean accept) {
         Users currentUser = getActiveUser();
         if (currentUser == null) {
@@ -381,6 +456,15 @@ public class InboxFragment extends Fragment {
         }
     }
 
+    /**
+     * Routes the user's Accept/Decline response to the correct Firestore update method
+     * based on the notification's type (regular invitation, private-waitlist invitation,
+     * or co-organizer invitation).
+     *
+     * @param currentUser  The authenticated user responding to the notification.
+     * @param notification The actionable notification being acted upon.
+     * @param accept       {@code true} to accept; {@code false} to decline.
+     */
     private void updateFirestoreActionableNotification(Users currentUser, UserNotification notification, boolean accept) {
         if (notification.getType() == UserNotification.Type.PRIVATE_WAITLIST_INVITATION) {
             updateFirestorePrivateWaitlistInvitation(currentUser, notification, accept);
@@ -397,6 +481,17 @@ public class InboxFragment extends Fragment {
         updateFirestoreInvitation(currentUser, notification, accept);
     }
 
+    /**
+     * Persists an Accept or Decline response for a standard event invitation. Updates the
+     * entrant's {@code status} in the event's {@code entrants} sub-collection, adds the
+     * user to the {@code enrolled} sub-collection on acceptance, and deletes the
+     * notification document on completion. Silently dismisses stale invitations for
+     * entrants already cancelled by the organiser.
+     *
+     * @param currentUser  The authenticated user responding.
+     * @param notification The invitation notification being resolved.
+     * @param accept       {@code true} to accept the invitation; {@code false} to decline.
+     */
     private void updateFirestoreInvitation(Users currentUser, UserNotification notification, boolean accept) {
         db.collection("events")
                 .document(notification.getEventId())
@@ -461,6 +556,16 @@ public class InboxFragment extends Fragment {
                 });
     }
 
+    /**
+     * Persists an Accept or Decline response for a private-waitlist invitation. Accepting
+     * transitions the entrant's status to {@code APPLIED} (joining the public waitlist);
+     * declining removes the entrant document entirely. The notification document is
+     * deleted in both cases.
+     *
+     * @param currentUser  The authenticated user responding.
+     * @param notification The private-waitlist invitation notification.
+     * @param accept       {@code true} to join the waitlist; {@code false} to decline the invite.
+     */
     private void updateFirestorePrivateWaitlistInvitation(Users currentUser, UserNotification notification, boolean accept) {
         db.collection("events")
                 .document(notification.getEventId())
@@ -626,6 +731,14 @@ public class InboxFragment extends Fragment {
                 });
     }
 
+    /**
+     * Handles the user's decision to stay on or leave a waitlist. If the notification has
+     * a Firestore-backed ID the change is persisted remotely; otherwise the in-memory list
+     * is updated directly.
+     *
+     * @param notification The waitlist notification the user acted upon.
+     * @param decline      {@code true} if the user chose to leave the waitlist; {@code false} to stay.
+     */
     private void handleWaitlistResponse(UserNotification notification, boolean decline) {
         Users currentUser = getActiveUser();
         if (currentUser == null) {
@@ -647,6 +760,16 @@ public class InboxFragment extends Fragment {
         renderNotifications(notifications);
     }
 
+    /**
+     * Persists the user's decision to leave (or simply dismiss) a waitlist notification.
+     * If declining, the entrant document is deleted and the event is removed from the
+     * user's history. The notification document is deleted regardless of the outcome.
+     *
+     * @param currentUser  The authenticated user acting on the notification.
+     * @param notification The waitlist notification being resolved.
+     * @param decline      {@code true} if the user is leaving the waitlist; {@code false} to
+     *                     dismiss the notification without leaving.
+     */
     private void updateFirestoreWaitlist(Users currentUser, UserNotification notification, boolean decline) {
         db.collection("events")
                 .document(notification.getEventId())
@@ -678,11 +801,26 @@ public class InboxFragment extends Fragment {
                 });
     }
 
+    /**
+     * Returns the currently authenticated user, preferring {@link UserManager} and
+     * falling back to the legacy {@link UserSession} for in-memory sessions.
+     *
+     * @return The active {@link Users} object, or {@code null} if no session exists.
+     */
     private Users getActiveUser() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         return currentUser != null ? currentUser : UserSession.getCurrentUser();
     }
 
+    /**
+     * Fetches the event document from Firestore and, if it exists, writes or updates an
+     * entry in the user's {@code eventHistory} collection via {@link EventCleanupHelper}.
+     * Null or blank IDs are silently ignored.
+     *
+     * @param userId  The Firestore user document ID, or {@code null} to skip.
+     * @param eventId The Firestore event document ID, or {@code null} to skip.
+     * @param status  The entrant status to record (e.g., {@code "APPLIED"}, {@code "ORGANIZED"}).
+     */
     private void writeHistoryRecordForUser(@Nullable String userId, @Nullable String eventId, @NonNull String status) {
         if (userId == null || userId.trim().isEmpty() || eventId == null || eventId.trim().isEmpty()) {
             return;
@@ -698,6 +836,14 @@ public class InboxFragment extends Fragment {
                 });
     }
 
+    /**
+     * Constructs a map of event field values suitable for writing to a user's
+     * {@code eventHistory} document. All fields are extracted defensively, falling back
+     * to safe defaults when values are absent or null.
+     *
+     * @param eventDoc The Firestore document snapshot of the event.
+     * @return A map containing all relevant event fields ready for Firestore persistence.
+     */
     @NonNull
     private Map<String, Object> buildHistoryData(@NonNull DocumentSnapshot eventDoc) {
         Map<String, Object> historyData = new HashMap<>();
@@ -727,6 +873,14 @@ public class InboxFragment extends Fragment {
         return historyData;
     }
 
+    /**
+     * Returns {@code value} when it is non-null and non-blank; otherwise returns {@code fallback}.
+     * Intended for safely extracting optional Firestore string fields.
+     *
+     * @param value    The candidate string (may be {@code null} or blank).
+     * @param fallback The default string to use when {@code value} is absent or blank.
+     * @return A guaranteed non-null, non-blank string.
+     */
     @NonNull
     private String valueOrDefault(@Nullable String value, @NonNull String fallback) {
         if (value == null || value.trim().isEmpty()) {
@@ -782,6 +936,10 @@ public class InboxFragment extends Fragment {
         }
     }
 
+    /**
+     * Removes the active Firestore snapshot listener to prevent memory leaks and stale
+     * UI callbacks after the fragment's view hierarchy has been destroyed.
+     */
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -791,7 +949,13 @@ public class InboxFragment extends Fragment {
         }
     }
 
+    /** Internal callback for asynchronous event-name resolution within this fragment. */
     private interface EventNameCallback {
+        /**
+         * Invoked on the main thread once the event name has been determined.
+         *
+         * @param eventName The resolved event name; never {@code null}.
+         */
         void onResolved(String eventName);
     }
 }

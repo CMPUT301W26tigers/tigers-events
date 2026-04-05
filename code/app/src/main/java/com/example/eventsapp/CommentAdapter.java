@@ -18,7 +18,16 @@ import java.util.Locale;
  */
 public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
+    /**
+     * Callback invoked when a comment should be deleted. Only the event creator and
+     * admins are shown the delete button, so callers can trust this is an authorised action.
+     */
     public interface OnCommentDeleteListener {
+        /**
+         * Called when the delete button for the given comment is pressed.
+         *
+         * @param comment The {@link Comment} to remove.
+         */
         void onDeleteComment(Comment comment);
     }
 
@@ -29,10 +38,22 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
     private String currentUserAccountType;
     private OnCommentDeleteListener deleteListener;
 
+    /**
+     * Constructs a CommentAdapter with the given list of comments.
+     * Call the setter methods to enable delete functionality and host-tag highlighting
+     * before attaching this adapter to a RecyclerView.
+     *
+     * @param commentList The initial list of {@link Comment} objects to display.
+     */
     public CommentAdapter(List<Comment> commentList) {
         this.commentList = commentList;
     }
 
+    /**
+     * Registers the listener that is invoked when the delete button on a comment is pressed.
+     *
+     * @param listener The delete callback, or {@code null} to disable deletion handling.
+     */
     public void setOnCommentDeleteListener(OnCommentDeleteListener listener) {
         this.deleteListener = listener;
     }
@@ -64,6 +85,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         notifyDataSetChanged();
     }
 
+    /**
+     * Inflates the comment item layout and wraps it in a {@link CommentViewHolder}.
+     *
+     * @param parent   The parent ViewGroup into which the new view will be added.
+     * @param viewType The view type of the new view (unused; only one type exists).
+     * @return A new {@link CommentViewHolder} backed by the inflated item view.
+     */
     @NonNull
     @Override
     public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -71,6 +99,14 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         return new CommentViewHolder(view);
     }
 
+    /**
+     * Binds a {@link Comment} to the provided {@link CommentViewHolder}. Displays the author name,
+     * comment body, and formatted timestamp. Shows an "EventHost" badge when the commenter is the
+     * event creator, and shows the delete button only for the event creator or an admin user.
+     *
+     * @param holder   The ViewHolder to update.
+     * @param position The position of the item within the data set.
+     */
     @Override
     public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
         Comment comment = commentList.get(position);
@@ -103,15 +139,30 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentV
         }
     }
 
+    /**
+     * Returns the total number of comments managed by this adapter.
+     *
+     * @return The size of the comment list.
+     */
     @Override
     public int getItemCount() {
         return commentList.size();
     }
 
+    /**
+     * ViewHolder for a single comment row.
+     * Holds references to the author name, comment text, timestamp, host badge, and delete
+     * button views defined in {@code item_comment.xml}.
+     */
     static class CommentViewHolder extends RecyclerView.ViewHolder {
         TextView tvUserName, tvCommentText, tvTimestamp, tvHostTag;
         ImageButton btnDelete;
 
+        /**
+         * Constructs a CommentViewHolder and resolves all child view references.
+         *
+         * @param itemView The inflated comment item view.
+         */
         public CommentViewHolder(@NonNull View itemView) {
             super(itemView);
             tvUserName = itemView.findViewById(R.id.tv_comment_user);

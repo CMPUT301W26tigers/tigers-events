@@ -40,7 +40,26 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * OSMDroid map of entrant join locations read only from Firestore (latitude / longitude fields).
+ * Read-only OSMDroid map that visualises where entrants joined the waitlist for a given event.
+ *
+ * <p>Coordinates are read exclusively from Firestore ({@code latitude} / {@code longitude} fields
+ * or a {@code location} GeoPoint on each entrant document).  No device GPS is used.
+ *
+ * <p>The fragment supports two display modes, selected via navigation arguments:
+ * <ul>
+ *   <li><b>Overview mode</b> ({@code mapFocusEntrant = false}) – fits all entrant markers
+ *       into view using a bounding box with a configurable minimum span.</li>
+ *   <li><b>Focus mode</b> ({@code mapFocusEntrant = true}) – centres the camera on a
+ *       specific entrant identified by {@code focusEntrantDocId}.</li>
+ * </ul>
+ *
+ * <p>To prevent OSMDroid from restoring a stale camera position across navigations, the
+ * fragment uses its own isolated {@link android.content.SharedPreferences} store
+ * ({@value #OSM_PREFS_NAME}) and re-applies the Firestore-derived camera after every
+ * {@link MapView#onResume()} call.
+ *
+ * <p>Entrants with duplicate coordinates are spread apart by a small spiral offset
+ * ({@value #DUPLICATE_OFFSET_STEP}°) so all pins remain individually tappable.
  */
 public class EntrantMapFragment extends Fragment {
 
@@ -71,6 +90,14 @@ public class EntrantMapFragment extends Fragment {
     private BoundingBox savedCameraBounds;
     private boolean savedCameraUseBounds;
 
+    /**
+     * Reads all navigation arguments ({@code eventId}, {@code eventName},
+     * {@code mapFocusEntrant}, {@code focusEntrantDocId}, {@code focusName}) and
+     * initialises OSMDroid with the fragment's isolated preference store so that
+     * map state is not shared with other screens.
+     *
+     * @param savedInstanceState previously saved state, or {@code null} on first creation
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,6 +120,14 @@ public class EntrantMapFragment extends Fragment {
         }
     }
 
+    /**
+     * Inflates the map layout.
+     *
+     * @param inflater           layout inflater
+     * @param container          parent view, or {@code null}
+     * @param savedInstanceState previously saved state, or {@code null}
+     * @return the inflated root view
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -100,6 +135,14 @@ public class EntrantMapFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_entrant_map, container, false);
     }
 
+    /**
+     * Configures the {@link MapView}, subtitle label, and back button, then issues a
+     * server-first Firestore read followed by a live snapshot listener so the map always
+     * reflects the current state of the entrant collection.
+     *
+     * @param view               the root view returned by {@link #onCreateView}
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -277,6 +320,10 @@ public class EntrantMapFragment extends Fragment {
         scheduleReapplyFirestoreCamera();
     }
 
+    /**
+     * Resets all Firestore-derived camera fields so the map is not repositioned after
+     * an empty snapshot (no entrants with valid coordinates).
+     */
     private void clearSavedFirestoreCamera() {
         savedCameraCenter = null;
         savedCameraZoom = Double.NaN;
@@ -284,6 +331,16 @@ public class EntrantMapFragment extends Fragment {
         savedCameraUseBounds = false;
     }
 
+    /**
+     * Stores the camera position derived from Firestore data so it can be re-applied
+     * after OSMDroid's own resume-time state restoration.
+     *
+     * @param center    desired map centre, or {@code null} when {@code useBounds} is {@code true}
+     * @param zoom      desired zoom level, or {@link Double#NaN} when unused
+     * @param bounds    bounding box to fit, or {@code null} when centering on a single point
+     * @param useBounds {@code true} to call {@link MapView#zoomToBoundingBox} instead of
+     *                  setting an explicit centre+zoom
+     */
     private void rememberFirestoreCamera(@Nullable GeoPoint center, double zoom,
                                         @Nullable BoundingBox bounds, boolean useBounds) {
         savedCameraUseBounds = useBounds;
@@ -304,6 +361,11 @@ public class EntrantMapFragment extends Fragment {
         mapView.postDelayed(this::applySavedFirestoreCameraNow, 50L);
     }
 
+    /**
+     * Immediately applies the stored Firestore camera (center+zoom or bounding box)
+     * to the map and invalidates it.  Safe to call multiple times; no-ops when no
+     * camera has been stored.
+     */
     private void applySavedFirestoreCameraNow() {
         if (mapView == null || !isAdded()) {
             return;
@@ -328,6 +390,14 @@ public class EntrantMapFragment extends Fragment {
         mapView.invalidate();
     }
 
+    /**
+     * Reads the latitude from an entrant document, accepting either a standalone
+     * {@code latitude} field (any numeric type) or a Firestore {@code GeoPoint}
+     * stored under the {@code location} field.
+     *
+     * @param doc the entrant document snapshot
+     * @return the latitude in decimal degrees, or {@link Double#NaN} if absent or invalid
+     */
     private static double readLatitude(DocumentSnapshot doc) {
         Object o = doc.get("latitude");
         Double d = objectToDouble(o);
@@ -341,6 +411,13 @@ public class EntrantMapFragment extends Fragment {
         return Double.NaN;
     }
 
+    /**
+     * Reads the longitude from an entrant document using the same dual-field strategy
+     * as {@link #readLatitude(DocumentSnapshot)}.
+     *
+     * @param doc the entrant document snapshot
+     * @return the longitude in decimal degrees, or {@link Double#NaN} if absent or invalid
+     */
     private static double readLongitude(DocumentSnapshot doc) {
         Object o = doc.get("longitude");
         Double d = objectToDouble(o);
@@ -354,6 +431,13 @@ public class EntrantMapFragment extends Fragment {
         return Double.NaN;
     }
 
+    /**
+     * Coerces a Firestore field value to a {@link Double}.  Accepts {@link Number}
+     * subtypes directly and attempts {@link Double#parseDouble} on {@link String} values.
+     *
+     * @param o the raw field value, may be {@code null}
+     * @return the double value, or {@code null} if the value is absent or cannot be parsed
+     */
     @Nullable
     private static Double objectToDouble(@Nullable Object o) {
         if (o == null) {
@@ -372,6 +456,15 @@ public class EntrantMapFragment extends Fragment {
         return null;
     }
 
+    /**
+     * Offsets entrants that share the same GPS fix by a small spiral amount so their
+     * map markers do not completely overlap.  The first entrant at a given coordinate
+     * is placed exactly; subsequent ones are displaced by increasing multiples of
+     * {@link #DUPLICATE_OFFSET_STEP} in a rotating direction.
+     *
+     * @param rawLatLng list of {@code [latitude, longitude]} pairs in display order
+     * @return a parallel list of {@link GeoPoint} objects with duplicates spread apart
+     */
     private static List<GeoPoint> spreadDuplicateCoordinates(List<double[]> rawLatLng) {
         List<GeoPoint> out = new ArrayList<>();
         Map<String, Integer> keyToCount = new HashMap<>();
@@ -390,6 +483,15 @@ public class EntrantMapFragment extends Fragment {
         return out;
     }
 
+    /**
+     * Computes a {@link BoundingBox} that encloses all given points and guarantees a
+     * minimum geographic span so that a single-point view does not zoom in too far.
+     *
+     * @param points        the marker positions to enclose; must not be empty
+     * @param minLatDegrees minimum north–south span in degrees
+     * @param minLonDegrees minimum east–west span in degrees
+     * @return a bounding box at least {@code minLatDegrees} × {@code minLonDegrees} in size
+     */
     private static BoundingBox boundingBoxWithMinimumSpan(List<GeoPoint> points,
                                                           double minLatDegrees,
                                                           double minLonDegrees) {
@@ -410,6 +512,10 @@ public class EntrantMapFragment extends Fragment {
         return box;
     }
 
+    /**
+     * Forwards the resume event to the {@link MapView} and re-applies the Firestore
+     * camera so OSMDroid's own state restoration does not overwrite the entrant positions.
+     */
     @Override
     public void onResume() {
         super.onResume();
@@ -419,6 +525,10 @@ public class EntrantMapFragment extends Fragment {
         }
     }
 
+    /**
+     * Forwards the pause event to the {@link MapView} to allow OSMDroid to suspend
+     * tile downloads and rendering while the fragment is in the background.
+     */
     @Override
     public void onPause() {
         if (mapView != null) {
@@ -427,6 +537,10 @@ public class EntrantMapFragment extends Fragment {
         super.onPause();
     }
 
+    /**
+     * Detaches the Firestore snapshot listener, clears the saved camera state, and
+     * releases the {@link MapView} reference to prevent memory leaks.
+     */
     @Override
     public void onDestroyView() {
         if (registration != null) {

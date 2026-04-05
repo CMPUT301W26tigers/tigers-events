@@ -25,21 +25,61 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Bottom-sheet dialog that shows full profile details for a single {@link Users} object
+ * in the admin console.
+ *
+ * <p>Displays the user's avatar (profile photo or initial letter), display name,
+ * account type, email, phone, and a list of events they have created.  The admin
+ * can:
+ * <ul>
+ *   <li>Delete the user's profile picture (avatar tap or dedicated icon).</li>
+ *   <li>Delete the user's account along with all events they created, delegating to
+ *       {@link EventCleanupHelper#deleteUserCompletely}.</li>
+ *   <li>Navigate to the detail screen of any created event.</li>
+ * </ul>
+ *
+ * <p>The target user is passed as a serialized {@link Users} in the fragment arguments
+ * under the key {@code "user"}.
+ */
 public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
 
     private static final String ARG_USER = "user";
 
+    /**
+     * Callback used to navigate to the full detail screen of a created event.
+     */
     public interface OnEventClickListener {
+        /**
+         * Called when the admin taps an event row inside this bottom sheet.
+         *
+         * @param event the event that was tapped
+         */
         void onEventClick(Event event);
     }
 
+    /**
+     * Callback invoked after the admin successfully deletes a user account so the
+     * parent fragment can remove the entry from its list without a full reload.
+     */
     public interface OnAccountDeletedListener {
+        /**
+         * Called after the account identified by {@code userId} has been deleted.
+         *
+         * @param userId Firestore document ID of the deleted user
+         */
         void onAccountDeleted(String userId);
     }
 
     private OnEventClickListener eventClickListener;
     private OnAccountDeletedListener deleteListener;
 
+    /**
+     * Creates a new instance of this bottom sheet pre-populated with the given user.
+     *
+     * @param user the user whose profile should be displayed
+     * @return a configured {@link AdminUserDetailBottomSheet}
+     */
     public static AdminUserDetailBottomSheet newInstance(Users user) {
         AdminUserDetailBottomSheet sheet = new AdminUserDetailBottomSheet();
         Bundle args = new Bundle();
@@ -48,20 +88,45 @@ public class AdminUserDetailBottomSheet extends BottomSheetDialogFragment {
         return sheet;
     }
 
+    /**
+     * Registers the callback that will be invoked when the admin taps a created-event row.
+     *
+     * @param listener the listener to register, or {@code null} to clear it
+     */
     public void setOnEventClickListener(OnEventClickListener listener) {
         this.eventClickListener = listener;
     }
 
+    /**
+     * Registers the callback that will be invoked after the admin deletes a user account.
+     *
+     * @param listener the listener to register, or {@code null} to clear it
+     */
     public void setOnAccountDeletedListener(OnAccountDeletedListener listener) {
         this.deleteListener = listener;
     }
 
+    /**
+     * Inflates the bottom-sheet layout.
+     *
+     * @param inflater           the layout inflater
+     * @param container          the parent view, or {@code null}
+     * @param savedInstanceState previously saved state, or {@code null}
+     * @return the inflated root view
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_admin_user_detail_bottom_sheet, container, false);
     }
 
+    /**
+     * Populates all user detail views, loads their created events from Firestore,
+     * and wires up the avatar-delete and account-delete actions.
+     *
+     * @param view               the inflated bottom-sheet layout
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);

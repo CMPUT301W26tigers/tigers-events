@@ -25,6 +25,21 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The primary host activity of the application.
+ *
+ * <p>Responsibilities:
+ * <ul>
+ *   <li>Hosts the {@link androidx.navigation.fragment.NavHostFragment} and wires it to the
+ *       bottom navigation bar.</li>
+ *   <li>Hides the bottom bar on full-screen destinations (sign-in, event detail, create/edit).</li>
+ *   <li>Handles deep-link intents ({@code tigers-events://event/<id>}) and navigates directly to
+ *       {@code EventDetailFragment}.</li>
+ *   <li>Implements {@link EventDialogFragment.EventDialogListener} and
+ *       {@link DeleteEventDialogFragment.OnFragmentInteractionListener} to persist event
+ *       mutations originating from dialog fragments.</li>
+ * </ul>
+ */
 public class MainActivity extends AppCompatActivity implements EventDialogFragment.EventDialogListener, DeleteEventDialogFragment.OnFragmentInteractionListener {
 
     private static final String TAG = "MainActivity";
@@ -32,6 +47,12 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
     private CollectionReference eventsRef;
     private CollectionReference userRef;
 
+    /**
+     * Sets up the navigation graph, bottom-navigation bar, destination-change listener, and
+     * processes any deep-link that was present in the launching {@link android.content.Intent}.
+     *
+     * @param savedInstanceState Previously saved instance state, or {@code null} on first launch.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,6 +89,15 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         handleDeepLink(getIntent());
     }
 
+    /**
+     * Adds a new user document to the {@code users} Firestore collection if no document with the
+     * same e-mail address already exists.
+     *
+     * <p>The document ID is auto-generated and written back into {@link Users#setId(String)} before
+     * the document is persisted, so the ID is available server-side as well as locally.
+     *
+     * @param user The user to persist; must have a non-null e-mail address.
+     */
     public void addUser(Users user) {
         // Query to see if user already exists by email
         userRef.whereEqualTo("email", user.getEmail()).get()
@@ -85,6 +115,17 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
                 });
     }
 
+    /**
+     * Updates an existing event's name and capacity in Firestore.
+     *
+     * <p>The document ID is resolved from {@link Event#getId()} first, falling back to
+     * {@link Event#getName()} for legacy documents that lack an explicit ID field. No write is
+     * performed if the resolved ID is blank.
+     *
+     * @param event  The event object to update; must not be {@code null}.
+     * @param title  The new event name.
+     * @param amount The new attendee capacity.
+     */
     @Override
     public void updateEvent(Event event, String title, int amount) {
         if (event == null) {
@@ -109,6 +150,14 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         saveEvent(docId, event);
     }
 
+    /**
+     * Persists a newly created event to Firestore.
+     *
+     * <p>Uses {@link Event#getId()} as the document ID when present, otherwise falls back to
+     * {@link Event#getName()}. Delegates to {@link #saveEvent(String, Event)}.
+     *
+     * @param event The event to save; must not be {@code null}.
+     */
     @Override
     public void addEvent(Event event) {
         if (event == null) {
@@ -120,6 +169,15 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         saveEvent(docId, event);
     }
 
+    /**
+     * Called when the user confirms deletion of an event from the delete-event dialog.
+     *
+     * <p>Looks up the event first by document ID (fast path), then by name field (fallback for
+     * older documents), and delegates to {@link EventCleanupHelper#deleteEventCompletely} to
+     * atomically remove the event and all related sub-collections.
+     *
+     * @param eventName The name of the event to delete; trimmed of surrounding whitespace.
+     */
     @Override
     public void onConfirmPressed(String eventName) {
         if (eventName == null || eventName.trim().isEmpty()) {
@@ -155,6 +213,12 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
                 .addOnFailureListener(e -> Log.e(TAG, "Failed to look up event " + trimmedEventName, e));
     }
 
+    /**
+     * Handles deep-link intents delivered to an already-running activity instance (e.g. when the
+     * app is in the back-stack and a QR code is scanned again).
+     *
+     * @param intent The new intent containing an optional deep-link URI.
+     */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -162,6 +226,16 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         handleDeepLink(intent);
     }
 
+    /**
+     * Inspects the intent's data URI for the {@code tigers-events://event/<id>} scheme and, if
+     * matched, navigates the NavController directly to {@code EventDetailFragment} with the
+     * extracted event ID passed as an argument.
+     *
+     * <p>Navigation is posted to the next UI frame to ensure the NavController is fully
+     * initialised before {@link androidx.navigation.NavController#navigate} is called.
+     *
+     * @param intent The intent to inspect; ignored if {@code null} or has no data URI.
+     */
     private void handleDeepLink(Intent intent) {
         if (intent == null || intent.getData() == null) return;
         Uri data = intent.getData();
@@ -181,6 +255,15 @@ public class MainActivity extends AppCompatActivity implements EventDialogFragme
         });
     }
 
+    /**
+     * Writes (or overwrites) the given event to Firestore under the specified document ID.
+     *
+     * <p>Only a fixed set of known fields is written so that unrelated Firestore fields (e.g.
+     * sub-collection metadata) are not accidentally erased by a partial update.
+     *
+     * @param documentId The Firestore document ID to write to; must be non-null and non-empty.
+     * @param event      The event whose data should be persisted.
+     */
     private void saveEvent(String documentId, Event event) {
         if (documentId == null || documentId.trim().isEmpty()) {
             Log.w(TAG, "Refused to save event with empty document ID");

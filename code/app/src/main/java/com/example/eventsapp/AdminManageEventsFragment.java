@@ -30,6 +30,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Admin fragment for browsing and managing all events in the platform.
+ *
+ * <p>Provides two view modes toggled via a {@link com.google.android.material.button.MaterialButtonToggleGroup}:
+ * <ul>
+ *   <li><b>Event list</b> – a card-based {@link RecyclerView} showing event name, host
+ *       avatar/initial, date, and an optional thumbnail.</li>
+ *   <li><b>Poster grid</b> – a 2-column grid showing only events that have a poster image.</li>
+ * </ul>
+ *
+ * <p>Host names and avatars are resolved asynchronously from the {@code users} collection
+ * after the initial event load.  A search bar filters both views simultaneously.
+ */
 public class AdminManageEventsFragment extends Fragment {
 
     private static final String TAG = "AdminManageEvents";
@@ -43,10 +56,21 @@ public class AdminManageEventsFragment extends Fragment {
     private RecyclerView rvAdminEvents;
     private RecyclerView rvAdminPosters;
 
+    /**
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate this fragment automatically.
+     */
     public AdminManageEventsFragment() {
         super(R.layout.fragment_admin_manage_events);
     }
 
+    /**
+     * Sets up both RecyclerViews, the view-mode toggle, the search bar, and triggers
+     * the initial Firestore event load.
+     *
+     * @param view               the inflated layout root
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -253,19 +277,41 @@ public class AdminManageEventsFragment extends Fragment {
 
     // ── Event Card Adapter ──
 
+    /**
+     * Adapter that renders a list of {@link Event} objects as card rows.
+     * Shows the event name, host avatar (photo or initial letter), event date, and
+     * an optional thumbnail; hides the entrant-status chip used in the entrant-facing view.
+     */
     private static class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.ViewHolder> {
         private final List<Event> events;
         private final OnEventClickListener listener;
 
+        /**
+         * Callback invoked when an event card is tapped.
+         */
         interface OnEventClickListener {
+            /**
+             * @param event the event whose card was tapped
+             */
             void onEventClick(Event event);
         }
 
+        /**
+         * @param events   the live list of events to display
+         * @param listener click callback for navigation to the detail screen
+         */
         EventCardAdapter(List<Event> events, OnEventClickListener listener) {
             this.events = events;
             this.listener = listener;
         }
 
+        /**
+         * Inflates {@code item_event_card} and wraps it in a {@link ViewHolder}.
+         *
+         * @param parent   the parent RecyclerView
+         * @param viewType unused (single view type)
+         * @return a new view holder
+         */
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -274,6 +320,14 @@ public class AdminManageEventsFragment extends Fragment {
             return new ViewHolder(view);
         }
 
+        /**
+         * Binds the event at {@code position} to {@code holder}.  Loads the host
+         * avatar with Glide if a URL is available, otherwise shows the host's initial.
+         * Hides the entrant-status label.
+         *
+         * @param holder   the view holder to populate
+         * @param position adapter position
+         */
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
@@ -308,14 +362,22 @@ public class AdminManageEventsFragment extends Fragment {
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
+        /**
+         * @return the number of events currently in the filtered list
+         */
         @Override
         public int getItemCount() {
             return events.size();
         }
 
+        /** Holds view references for one event card row. */
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvEntrantStatus;
             ImageView ivThumb, ivAvatarImage;
+
+            /**
+             * @param itemView the inflated {@code item_event_card} view
+             */
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvEventName = itemView.findViewById(R.id.tvEventName);
@@ -331,15 +393,30 @@ public class AdminManageEventsFragment extends Fragment {
 
     // ── Poster Grid Adapter ──
 
+    /**
+     * Adapter that displays events in a 2-column grid using their poster images.
+     * Only events with a non-empty {@code posterUrl} are included in this adapter's list.
+     */
     private static class PosterGridAdapter extends RecyclerView.Adapter<PosterGridAdapter.ViewHolder> {
         private final List<Event> events;
         private final EventCardAdapter.OnEventClickListener listener;
 
+        /**
+         * @param events   the live list of poster-bearing events
+         * @param listener click callback shared with the card adapter for navigation
+         */
         PosterGridAdapter(List<Event> events, EventCardAdapter.OnEventClickListener listener) {
             this.events = events;
             this.listener = listener;
         }
 
+        /**
+         * Inflates {@code item_admin_poster} and wraps it in a {@link ViewHolder}.
+         *
+         * @param parent   the parent RecyclerView
+         * @param viewType unused (single view type)
+         * @return a new view holder
+         */
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -348,6 +425,13 @@ public class AdminManageEventsFragment extends Fragment {
             return new ViewHolder(view);
         }
 
+        /**
+         * Loads the event poster into {@code holder.ivPosterGrid} via Glide and
+         * attaches the navigation click listener.
+         *
+         * @param holder   view holder to populate
+         * @param position adapter position
+         */
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
@@ -357,14 +441,21 @@ public class AdminManageEventsFragment extends Fragment {
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
+        /**
+         * @return the number of poster-bearing events currently in the filtered list
+         */
         @Override
         public int getItemCount() {
             return events.size();
         }
 
+        /** Holds the poster {@link ImageView} for one grid cell. */
         static class ViewHolder extends RecyclerView.ViewHolder {
             ImageView ivPosterGrid;
 
+            /**
+             * @param itemView the inflated {@code item_admin_poster} view
+             */
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 ivPosterGrid = itemView.findViewById(R.id.ivPosterGrid);

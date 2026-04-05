@@ -70,12 +70,24 @@ public class AccountFragment extends Fragment {
         super(R.layout.fragment_account);
     }
 
+    /**
+     * Refreshes the displayed user data each time the fragment becomes visible again,
+     * ensuring that changes made elsewhere in the app (e.g., a name edit) are reflected
+     * without requiring a full fragment recreation.
+     */
     @Override
     public void onResume() {
         super.onResume();
         displayUserData();
     }
 
+    /**
+     * Registers the image-picker activity launcher before the fragment's view is created,
+     * as required by the Activity Result API. The launcher is used when the user selects
+     * a new profile picture from the device gallery.
+     *
+     * @param savedInstanceState If non-null, the fragment is being re-created from a saved state.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -322,6 +334,11 @@ public class AccountFragment extends Fragment {
                 });
     }
 
+    /**
+     * Shows a confirmation dialog before permanently deleting the user's account.
+     * The dialog warns that all created events will also be deleted and the action
+     * cannot be undone. Calls {@link #deleteAccount()} only if the user explicitly confirms.
+     */
     private void showDeleteConfirmation() {
         new AlertDialog.Builder(requireContext())
                 .setTitle("Delete Account")
@@ -331,6 +348,11 @@ public class AccountFragment extends Fragment {
                 .show();
     }
 
+    /**
+     * Permanently deletes the current user's Firestore document together with all events
+     * they created. After a successful deletion the local session is cleared and the user
+     * is redirected to the sign-in screen.
+     */
     private void deleteAccount() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) return;
@@ -352,6 +374,11 @@ public class AccountFragment extends Fragment {
                 });
     }
 
+    /**
+     * Displays a dialog that offers the user options to change or remove their profile photo.
+     * When no photo is currently set only "Upload Photo" is offered; when a photo exists,
+     * "Change Photo" and "Remove Photo" are also available.
+     */
     private void showAvatarOptions() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) return;
@@ -376,6 +403,13 @@ public class AccountFragment extends Fragment {
                 .show();
     }
 
+    /**
+     * Uploads the image at the given URI to Firebase Storage under the current user's ID,
+     * retrieves the resulting download URL, persists it to Firestore, and refreshes the
+     * avatar display. A progress indicator is shown for the duration of the upload.
+     *
+     * @param uri The URI of the image selected from the device gallery.
+     */
     private void uploadProfilePicture(Uri uri) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) return;
@@ -422,6 +456,11 @@ public class AccountFragment extends Fragment {
                 });
     }
 
+    /**
+     * Clears the user's profile picture by setting {@code profilePictureUrl} to an empty
+     * string in Firestore and updating the local user model. A progress indicator is shown
+     * while the Firestore write is in flight, and the avatar view is refreshed on success.
+     */
     private void removeProfilePicture() {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) return;
@@ -447,6 +486,11 @@ public class AccountFragment extends Fragment {
                 });
     }
 
+    /**
+     * Navigates to the {@link InboxFragment} using the action defined in the navigation graph.
+     *
+     * @param view The view used to locate the NavController.
+     */
     private void openInbox(View view) {
         Navigation.findNavController(view).navigate(R.id.action_accountFragment_to_inboxFragment);
     }

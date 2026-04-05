@@ -23,7 +23,12 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 /**
- * A fragment that displays the list of events that have been cancelled for the user.
+ * Organizer-facing fragment that displays entrants whose status is
+ * {@link Entrant.Status#CANCELLED} or {@link Entrant.Status#DECLINED} for a given event.
+ *
+ * <p>Reads directly from the event's {@code entrants} sub-collection and filters
+ * client-side so that only withdrawn or declined records are shown.  Supports a
+ * live name/email search and displays a running count of matching records.
  */
 public class OrganizerCancelledFragment extends Fragment {
 
@@ -43,13 +48,19 @@ public class OrganizerCancelledFragment extends Fragment {
     private CancelledEntrantAdapter adapter;
 
     /**
-     * Default constructor for OrganizerCancelledFragment.
-     * Uses the layout R.layout.view_cancelled.
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate the fragment without extra wiring.
      */
     public OrganizerCancelledFragment() {
         super(R.layout.fragment_organizer_cancelled);
     }
 
+    /**
+     * Creates a new instance pre-configured with the target event ID.
+     *
+     * @param eventId Firestore document ID of the event whose cancelled entrants should be shown
+     * @return a configured {@link OrganizerCancelledFragment}
+     */
     public static OrganizerCancelledFragment newInstance(String eventId) {
         OrganizerCancelledFragment fragment = new OrganizerCancelledFragment();
         Bundle args = new Bundle();
@@ -58,6 +69,11 @@ public class OrganizerCancelledFragment extends Fragment {
         return fragment;
     }
 
+    /**
+     * Reads the {@code eventId} from the fragment arguments before the view is inflated.
+     *
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +82,13 @@ public class OrganizerCancelledFragment extends Fragment {
         }
     }
 
+    /**
+     * Binds all views, sets up the adapter, attaches the search filter, and starts
+     * listening for changes in the event's entrant collection.
+     *
+     * @param view               the root view returned by the framework
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);

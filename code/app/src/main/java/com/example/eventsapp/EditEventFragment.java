@@ -92,6 +92,12 @@ public class EditEventFragment extends Fragment {
         return isCreatedTab && !isFromHistory;
     }
 
+    /**
+     * Retrieves the {@code eventId} argument passed by the navigation graph so it is available
+     * before the view is inflated.
+     *
+     * @param savedInstanceState Previously saved instance state, or {@code null}.
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,6 +106,14 @@ public class EditEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Inflates the edit-event layout.
+     *
+     * @param inflater           The LayoutInflater to inflate the view hierarchy.
+     * @param container          The parent view the fragment UI will attach to, or {@code null}.
+     * @param savedInstanceState Previously saved state, or {@code null}.
+     * @return The root {@link View} of the fragment's layout.
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -107,6 +121,14 @@ public class EditEventFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_edit_event, container, false);
     }
 
+    /**
+     * Initialises Firestore, validates that a non-null event ID was supplied, then delegates to
+     * {@link #initializeViews(View)}, {@link #loadEventData()}, and {@link #setupToolbar(View)}.
+     * Navigates back immediately if the event ID is missing.
+     *
+     * @param view               The inflated fragment view.
+     * @param savedInstanceState Previously saved state, or {@code null}.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -123,6 +145,13 @@ public class EditEventFragment extends Fragment {
         setupToolbar(view);
     }
 
+    /**
+     * Binds all widget references, applies underline styling to section headers, wires click
+     * listeners for poster editing/removal, "Done", waitlist management, co-organizer invite,
+     * QR sharing, and event deletion.
+     *
+     * @param view The root view of the fragment's layout.
+     */
     private void initializeViews(View view) {
         editName = view.findViewById(R.id.edit_name);
         editDescription = view.findViewById(R.id.edit_description);
@@ -183,6 +212,12 @@ public class EditEventFragment extends Fragment {
         view.findViewById(R.id.btn_view_event).setOnClickListener(v -> viewEvent());
     }
 
+    /**
+     * Attaches a navigation-up click listener to the {@link MaterialToolbar} so the back-stack
+     * is popped when the user presses the back arrow.
+     *
+     * @param view The root view used to locate the toolbar.
+     */
     private void setupToolbar(View view) {
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         if (toolbar != null) {
@@ -204,14 +239,25 @@ public class EditEventFragment extends Fragment {
         editRegistrationEnd.setFocusable(false);
     }
 
+    /**
+     * Shows a {@link DatePickerDialog} pre-initialised to today's date and writes the result into
+     * {@code target} in {@code yyyy-MM-dd} format, clearing any existing error on that field.
+     *
+     * @param target The input field that will receive the selected date string.
+     */
     private void showDatePicker(TextInputEditText target) {
         Calendar calendar = Calendar.getInstance();
         new DatePickerDialog(requireContext(), (view, year, month, day) -> {
             String date = String.format(Locale.CANADA, "%04d-%02d-%02d", year, month + 1, day);
             target.setText(date);
+            target.setError(null);
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
     }
 
+    /**
+     * Fetches the event document from Firestore and populates all input fields, the poster
+     * {@link ImageView}, the private-event toggle, the geolocation switch, and the QR code.
+     */
     private void loadEventData() {
         db.collection("events").document(eventId).get().addOnSuccessListener(doc -> {
             if (!doc.exists() || !isAdded()) return;
@@ -243,6 +289,13 @@ public class EditEventFragment extends Fragment {
         });
     }
 
+    /**
+     * Synchronises the visibility of the QR-code section, event-link text view, and sharing
+     * buttons with the current value of {@link #isPrivateEvent}.
+     *
+     * <p>When the event is public, {@link #updateQRCode()} is also called to regenerate the QR
+     * bitmap.  When private, these share elements are hidden.
+     */
     private void updatePrivateUi() {
         int visibility = isPrivateEvent ? View.GONE : View.VISIBLE;
         if (shareTitle != null) shareTitle.setVisibility(visibility);
@@ -266,6 +319,10 @@ public class EditEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Generates a QR code from the event's deep-link URI ({@code tigers-events://event/<id>})
+     * and displays it in {@link #ivQR}.  Also updates the plain-text event-link view.
+     */
     private void updateQRCode() {
         String link = "tigers-events://event/" + eventId;
         Bitmap qrBitmap = QRCodeUtil.generateQRCode(link, QR_SIZE, QR_SIZE);
@@ -277,6 +334,10 @@ public class EditEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Launches the system share sheet with the event's deep-link URI so the organizer can
+     * distribute the join link via any installed app.
+     */
     private void shareQR() {
         String link = "tigers-events://event/" + eventId;
         android.content.Intent shareIntent = new android.content.Intent(android.content.Intent.ACTION_SEND);
@@ -285,10 +346,17 @@ public class EditEventFragment extends Fragment {
         startActivity(android.content.Intent.createChooser(shareIntent, "Share QR link"));
     }
 
+    /**
+     * Shares the event's deep-link URI as plain text.  Currently delegates to {@link #shareQR()}.
+     */
     private void shareLink() {
         shareQR(); // Same logic for now
     }
 
+    /**
+     * Navigates to the waitlist management screen ({@code viewEntrantsFragment}), passing the
+     * current event ID and name as arguments.
+     */
     private void openWaitlistManager() {
         Bundle args = new Bundle();
         args.putString("eventId", eventId);
@@ -301,12 +369,27 @@ public class EditEventFragment extends Fragment {
         Navigation.findNavController(requireView()).navigate(R.id.viewEntrantsFragment, args);
     }
 
+    /**
+     * Navigates to the enrolled-entrants management screen ({@code enrolledFragment}), passing
+     * the current event ID as an argument.
+     */
     private void openEnrolledManager() {
         Bundle args = new Bundle();
         args.putString("eventId", eventId);
         Navigation.findNavController(requireView()).navigate(R.id.enrolledFragment, args);
     }
 
+    /**
+     * Reads all input fields, validates them, then delegates to
+     * {@link #savePosterLocallyAndSave(Map)} to persist the changes to Firestore.
+     *
+     * <p>Validation rules:
+     * <ul>
+     *   <li>Name, capacity, event date, and both registration dates are required.</li>
+     *   <li>Capacity and sample-size must parse as integers.</li>
+     *   <li>Registration period must be chronologically valid ({@link #isValidRegistrationPeriod}).</li>
+     * </ul>
+     */
     private void saveEventChanges() {
         String name = getText(editName);
         String description = getText(editDescription);
@@ -349,6 +432,19 @@ public class EditEventFragment extends Fragment {
         savePosterLocallyAndSave(data);
     }
 
+    /**
+     * Handles three poster scenarios before calling {@link #performFirestoreUpdate(Map)}:
+     * <ol>
+     *   <li><b>Removed:</b> deletes the existing poster from Firebase Storage and clears
+     *       {@code posterUrl} in {@code data}.</li>
+     *   <li><b>New image selected:</b> uploads {@link #posterUri} to Storage, sets the
+     *       {@code posterUrl} in {@code data} to the download URL.</li>
+     *   <li><b>Unchanged:</b> proceeds directly to the Firestore update.</li>
+     * </ol>
+     *
+     * @param data The event field map to persist; the {@code posterUrl} key may be mutated
+     *             depending on the poster scenario.
+     */
     private void savePosterLocallyAndSave(Map<String, Object> data) {
         if (posterRemoved) {
             // Delete the old poster from Firebase Storage
@@ -388,6 +484,12 @@ public class EditEventFragment extends Fragment {
                 });
     }
 
+    /**
+     * Merges the given field map into the Firestore event document via an {@code update} call,
+     * then pops the back-stack on success or shows an error toast on failure.
+     *
+     * @param data The map of field names to new values to write to Firestore.
+     */
     private void performFirestoreUpdate(Map<String, Object> data) {
         db.collection("events").document(eventId).update(data)
                 .addOnSuccessListener(aVoid -> {
@@ -401,6 +503,16 @@ public class EditEventFragment extends Fragment {
                 });
     }
 
+    /**
+     * Validates that the registration window is chronologically sound:
+     * registration start must not be after registration end, and registration end must not be
+     * after the event date.  Displays a toast describing the specific violation if invalid.
+     *
+     * @param eDate  Event date string in {@code yyyy-MM-dd} format.
+     * @param rStart Registration start date string in {@code yyyy-MM-dd} format.
+     * @param rEnd   Registration end date string in {@code yyyy-MM-dd} format.
+     * @return {@code true} if all dates are parseable and the period is valid.
+     */
     private boolean isValidRegistrationPeriod(String eDate, String rStart, String rEnd) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
         try {
@@ -433,6 +545,10 @@ public class EditEventFragment extends Fragment {
         return et.getText() != null ? et.getText().toString().trim() : "";
     }
 
+    /**
+     * Shows a confirmation {@link android.app.AlertDialog} warning the organizer that deletion is
+     * irreversible, then calls {@link #deleteEvent()} if confirmed.
+     */
     private void confirmDeleteEvent() {
         new android.app.AlertDialog.Builder(requireContext())
                 .setTitle("Delete Event")
@@ -442,6 +558,11 @@ public class EditEventFragment extends Fragment {
                 .show();
     }
 
+    /**
+     * Deletes the event from Firestore and attempts to remove the associated poster from Firebase
+     * Storage (a missing poster is treated as a no-op so the Firestore deletion still proceeds).
+     * Navigates back on success and shows an error toast on failure.
+     */
     private void deleteEvent() {
         StorageReference posterRef = FirebaseStorage.getInstance().getReference()
                 .child("posters/" + eventId + ".jpg");

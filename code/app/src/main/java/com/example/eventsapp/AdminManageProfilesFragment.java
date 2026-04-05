@@ -19,16 +19,34 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin fragment that displays all registered user profiles in a 3-column grid.
+ *
+ * <p>Tapping a grid cell opens an {@link AdminUserDetailBottomSheet} where the admin
+ * can view the user's events, remove their profile picture, or delete their account
+ * entirely.  A search bar filters profiles by name or email in real time.
+ */
 public class AdminManageProfilesFragment extends Fragment {
 
     private final List<Users> allUsers = new ArrayList<>();
     private final List<Users> filteredUsers = new ArrayList<>();
     private AdminUserAdapter adapter;
 
+    /**
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate this fragment automatically.
+     */
     public AdminManageProfilesFragment() {
         super(R.layout.fragment_admin_manage_profiles);
     }
 
+    /**
+     * Inflates the profile grid, wires up the search bar, and triggers the initial
+     * user load from Firestore.
+     *
+     * @param view               the inflated layout root
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);

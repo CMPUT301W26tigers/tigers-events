@@ -275,10 +275,20 @@ public class Users implements Serializable {
         this.accountType = accountType;
     }
 
+    /**
+     * Returns the URL of the user's profile picture stored in Firebase Storage.
+     *
+     * @return the profile picture URL, or {@code null} if the user has not uploaded one
+     */
     public String getProfilePictureUrl() {
         return profilePictureUrl;
     }
 
+    /**
+     * Sets the URL of the user's profile picture.
+     *
+     * @param profilePictureUrl a Firebase Storage download URL, or {@code null} to clear the picture
+     */
     public void setProfilePictureUrl(String profilePictureUrl) {
         this.profilePictureUrl = profilePictureUrl;
     }
