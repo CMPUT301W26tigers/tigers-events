@@ -184,7 +184,12 @@ public class ExploreFragment extends Fragment {
      * event list. Updates the adapter with the result and refreshes the chip strip.
      */
     private void applyFilters() {
-        EditText etSearch = requireView().findViewById(R.id.etSearch);
+        View view = getView();
+        if (!isAdded() || view == null || adapter == null || chipGroupFilters == null) {
+            return;
+        }
+
+        EditText etSearch = view.findViewById(R.id.etSearch);
         String query = etSearch.getText().toString();
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
 
@@ -201,6 +206,10 @@ public class ExploreFragment extends Fragment {
      * The chip group is hidden entirely when no filters are active.
      */
     private void updateFilterChips() {
+        if (!isAdded() || chipGroupFilters == null) {
+            return;
+        }
+
         chipGroupFilters.removeAllViews();
 
         if (filterAvailableOnly) {
@@ -332,7 +341,9 @@ public class ExploreFragment extends Fragment {
             if (e.getHostId() != null && !e.getHostId().isEmpty()) hostIds.add(e.getHostId());
         }
         if (hostIds.isEmpty()) {
-            onComplete.run();
+            if (isAdded() && getView() != null) {
+                onComplete.run();
+            }
             return;
         }
 
@@ -370,7 +381,9 @@ public class ExploreFragment extends Fragment {
                                 e.setHostName(nameMap.getOrDefault(e.getHostId(), ""));
                                 e.setHostProfilePictureUrl(urlMap.get(e.getHostId()));
                             }
-                            onComplete.run();
+                            if (isAdded() && getView() != null) {
+                                onComplete.run();
+                            }
                         }
                     })
                     .addOnFailureListener(e -> {
@@ -380,7 +393,9 @@ public class ExploreFragment extends Fragment {
                                 ev.setHostName(nameMap.getOrDefault(ev.getHostId(), ""));
                                 ev.setHostProfilePictureUrl(urlMap.get(ev.getHostId()));
                             }
-                            onComplete.run();
+                            if (isAdded() && getView() != null) {
+                                onComplete.run();
+                            }
                         }
                     });
         }
