@@ -161,7 +161,7 @@
 
     <LinearLayout
         android:id="@+id/waitlist_footer_row"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="center"
@@ -177,14 +177,17 @@
             android:layout_height="52dp"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:lines="1"
+            android:minWidth="0dp"
             android:text="Waitlist"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="12sp"
+            android:textSize="11sp"
             app:backgroundTint="@color/dark_grey"
             app:cornerRadius="26dp"
             app:icon="@android:drawable/ic_dialog_email"
-            app:iconPadding="6dp"
+            app:iconPadding="4dp"
             app:iconTint="@android:color/white" />
 
         <com.google.android.material.button.MaterialButton
@@ -194,6 +197,9 @@
             android:layout_marginStart="3dp"
             android:layout_marginEnd="3dp"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:lines="1"
+            android:minWidth="0dp"
             android:text="Selected"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
@@ -201,7 +207,7 @@
             app:backgroundTint="@color/dark_grey"
             app:cornerRadius="26dp"
             app:icon="@android:drawable/ic_dialog_email"
-            app:iconPadding="6dp"
+            app:iconPadding="4dp"
             app:iconTint="@android:color/white" />
 
         <com.google.android.material.button.MaterialButton
@@ -210,14 +216,17 @@
             android:layout_height="52dp"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
+            android:ellipsize="end"
+            android:lines="1"
+            android:minWidth="0dp"
             android:text="Not Selected"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="11sp"
+            android:textSize="10sp"
             app:backgroundTint="@color/dark_grey"
             app:cornerRadius="26dp"
             app:icon="@android:drawable/ic_dialog_email"
-            app:iconPadding="6dp"
+            app:iconPadding="4dp"
             app:iconTint="@android:color/white" />
     </LinearLayout>
 
