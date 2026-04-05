@@ -963,7 +963,7 @@ public class EventDetailFragment extends Fragment {
         } else {
             text = getString(R.string.join_waitlist);
             text2 = getString(R.string.join_waitlist_with_group);
-            colorRes = R.color.colorPrimary;
+            colorRes = R.color.colorPrimaryContainer;
         }
 
         if (text2 == null) text2 = text;
@@ -976,6 +976,7 @@ public class EventDetailFragment extends Fragment {
     private void updateWaitlistButton(MaterialButton button, String text, int colorRes, boolean enabled) {
         if (button == null) return;
         button.setText(text);
+        button.setTextColor(getResources().getColor(R.color.white));
         button.setEnabled(enabled);
         button.setBackgroundTintList(
                 android.content.res.ColorStateList.valueOf(
