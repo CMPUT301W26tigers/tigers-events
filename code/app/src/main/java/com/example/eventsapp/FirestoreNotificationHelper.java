@@ -108,6 +108,42 @@ public class FirestoreNotificationHelper {
                 "not_selected");
     }
 
+    public void sendGroupWaitlistInvitationNotification(String email, String eventId, String groupId, String inviterName) {
+        db.collection("users")
+                .whereEqualTo("email", email)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        String userId = querySnapshot.getDocuments().get(0).getId();
+                        String title = "Group Waitlist Invitation";
+                        String message = inviterName + " invited you to join an event waitlist as a group.";
+                        String type = "group_waitlist_invitation";
+
+                        db.collection("events").document(eventId).get().addOnSuccessListener(eventDoc -> {
+                            String eventName = resolveEventName(eventDoc);
+                            NotificationItem item = new NotificationItem(title, message, eventId, eventName, type, false);
+                            // We use a custom field in NotificationItem for groupId or build it into the message
+                            // For simplicity, let's use a specialized document ID so the app knows it's a group invite
+                            Map<String, Object> notificationData = new HashMap<>();
+                            notificationData.put("title", title);
+                            notificationData.put("message", message);
+                            notificationData.put("eventId", eventId);
+                            notificationData.put("eventName", eventName);
+                            notificationData.put("type", type);
+                            notificationData.put("read", false);
+                            notificationData.put("groupId", groupId);
+
+                            db.collection("users")
+                                    .document(userId)
+                                    .collection("notifications")
+                                    .document("group_invite_" + groupId)
+                                    .set(notificationData);
+                        });
+                    }
+                });
+    }
+
     private void sendOptionalNotification(String userId, String eventId,
                                           String title, String message, String type) {
         if (isBlank(userId) || isBlank(eventId)) {

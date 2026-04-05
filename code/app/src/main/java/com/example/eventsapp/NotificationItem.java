@@ -11,6 +11,7 @@ package com.example.eventsapp;
  * -eventName: name of the related event
  * -type: category of notification (e.g., invitation, update, reminder)
  * -read: whether the notification has been viewed by the user
+ * -groupId: identifier of the related group for group waitlist invitations
  */
 public class NotificationItem {
     private String title;
@@ -19,6 +20,7 @@ public class NotificationItem {
     private String eventName;
     private String type;
     private boolean read;
+    private String groupId;
 
     /**
      * No-argument constructor required for Firestore deserialization.
@@ -36,12 +38,27 @@ public class NotificationItem {
      * @param read Status indicating if the notification has been read by the user.
      */
     public NotificationItem(String title, String message, String eventId, String eventName, String type, boolean read) {
+        this(title, message, eventId, eventName, type, read, null);
+    }
+
+    /**
+     * Constructs a NotificationItem with full details including groupId.
+     * @param title The title of the notification.
+     * @param message The detailed message of the notification.
+     * @param eventId The ID of the event related to this notification.
+     * @param eventName The name of the event related to this notification.
+     * @param type The type of notification (e.g., "invitation", "update").
+     * @param read Status indicating if the notification has been read by the user.
+     * @param groupId The ID of the group related to this notification.
+     */
+    public NotificationItem(String title, String message, String eventId, String eventName, String type, boolean read, String groupId) {
         this.title = title;
         this.message = message;
         this.eventId = eventId;
         this.eventName = eventName;
         this.type = type;
         this.read = read;
+        this.groupId = groupId;
     }
 
     /**
@@ -93,6 +110,14 @@ public class NotificationItem {
     }
 
     /**
+     * Gets the group ID associated with this notification.
+     * @return The group ID.
+     */
+    public String getGroupId() {
+        return groupId;
+    }
+
+    /**
      * Sets the notification title.
      * @param title The title to set.
      */
@@ -138,5 +163,13 @@ public class NotificationItem {
      */
     public void setRead(boolean read) {
         this.read = read;
+    }
+
+    /**
+     * Sets the group ID associated with this notification.
+     * @param groupId The group ID to set.
+     */
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 }

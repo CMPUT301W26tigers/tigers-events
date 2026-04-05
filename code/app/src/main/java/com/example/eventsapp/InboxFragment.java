@@ -1,12 +1,14 @@
 package com.example.eventsapp;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.ColorRes;
 import androidx.annotation.DrawableRes;
@@ -170,11 +172,12 @@ public class InboxFragment extends Fragment {
                             continue;
                         }
 
+                        String groupId = doc.getString("groupId");
                         resolveEventName(userId, doc.getId(), item, eventName -> onNotificationResolved(
                                 loadedNotifications,
                                 remaining,
                                 index,
-                                toUserNotification(doc.getId(), item, eventName)
+                                toUserNotification(doc.getId(), item, eventName, groupId)
                         ));
                     }
                 });
@@ -268,23 +271,15 @@ public class InboxFragment extends Fragment {
         return eventName == null || eventName.trim().isEmpty() ? "Event update" : eventName.trim();
     }
 
-    /**
-     * Maps a raw {@link NotificationItem} (plus its asynchronously resolved event name)
-     * to a {@link UserNotification} ready for display in the inbox.
-     *
-     * @param notificationId The Firestore document ID of the notification.
-     * @param item           The raw notification data retrieved from Firestore.
-     * @param eventName      The human-readable event name resolved by {@link #resolveEventName}.
-     * @return A populated {@link UserNotification}.
-     */
-    private UserNotification toUserNotification(String notificationId, NotificationItem item, String eventName) {
+    private UserNotification toUserNotification(String notificationId, NotificationItem item, String eventName, String groupId) {
         return new UserNotification(
                 parseNotificationType(item.getType()),
                 getNotificationTitle(item),
                 eventName,
                 item.getMessage(),
                 item.getEventId(),
-                notificationId
+                notificationId,
+                groupId
         );
     }
 
@@ -308,6 +303,9 @@ public class InboxFragment extends Fragment {
         }
         if ("not_selected".equalsIgnoreCase(type) || "rejected".equalsIgnoreCase(type)) {
             return UserNotification.Type.NOT_SELECTED;
+        }
+        if ("group_waitlist_invitation".equalsIgnoreCase(type)) {
+            return UserNotification.Type.GROUP_WAITLIST_INVITATION;
         }
         return UserNotification.Type.WAITLISTED;
     }
@@ -420,7 +418,8 @@ public class InboxFragment extends Fragment {
     private boolean isActionableNotification(UserNotification.Type type) {
         return type == UserNotification.Type.INVITATION
                 || type == UserNotification.Type.PRIVATE_WAITLIST_INVITATION
-                || type == UserNotification.Type.CO_ORGANIZER_INVITATION;
+                || type == UserNotification.Type.CO_ORGANIZER_INVITATION
+                || type == UserNotification.Type.GROUP_WAITLIST_INVITATION;
     }
 
     /**
@@ -473,6 +472,10 @@ public class InboxFragment extends Fragment {
         }
         if (notification.getType() == UserNotification.Type.CO_ORGANIZER_INVITATION) {
             updateFirestoreCoOrganizerInvitation(currentUser, notification, accept);
+            return;
+        }
+        if (notification.getType() == UserNotification.Type.GROUP_WAITLIST_INVITATION) {
+            updateFirestoreGroupWaitlistInvitation(currentUser, notification, accept);
             return;
         }
         updateFirestoreInvitation(currentUser, notification, accept);
@@ -597,16 +600,89 @@ public class InboxFragment extends Fragment {
                 });
     }
 
-    /**
-     * Persists an Accept or Decline response for a co-organiser invitation. Accepting
-     * promotes the user into the event's {@code coOrganizerIds} list and removes them from
-     * any entrant or enrolled records. Declining simply removes the user from
-     * {@code pendingCoOrganizerIds}. The notification document is deleted in both cases.
-     *
-     * @param currentUser  The authenticated user responding.
-     * @param notification The co-organiser invitation notification.
-     * @param accept       {@code true} to accept the co-organiser role; {@code false} to decline.
-     */
+    private void updateFirestoreGroupWaitlistInvitation(Users currentUser, UserNotification notification, boolean accept) {
+        String groupId = notification.getGroupId();
+        if (groupId == null) return;
+
+        db.collection("events").document(notification.getEventId())
+                .collection("groups").document(groupId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        WriteBatch batch = db.batch();
+                        if (accept) {
+                            batch.update(doc.getReference(), "acceptedEmails", FieldValue.arrayUnion(currentUser.getEmail()));
+                            
+                            // Check if everyone accepted
+                            List<String> memberEmails = (List<String>) doc.get("memberEmails");
+                            List<String> acceptedEmails = (List<String>) doc.get("acceptedEmails");
+                            // Add current user to local list for comparison
+                            if (acceptedEmails == null) acceptedEmails = new ArrayList<>();
+                            if (!acceptedEmails.contains(currentUser.getEmail())) {
+                                acceptedEmails.add(currentUser.getEmail());
+                            }
+                            
+                            if (memberEmails != null && acceptedEmails != null && acceptedEmails.size() >= memberEmails.size() + 1) { // +1 for creator
+                                batch.update(doc.getReference(), "status", "COMPLETED");
+                                // Add all members to waitlist
+                                addGroupToWaitlist(notification.getEventId(), doc);
+                            }
+                        } else {
+                            batch.update(doc.getReference(), "status", "DECLINED");
+                        }
+
+                        batch.delete(db.collection("users")
+                                .document(currentUser.getId())
+                                .collection("notifications")
+                                .document(notification.getNotificationId()));
+                        
+                        batch.commit();
+                    }
+                });
+    }
+
+    private void addGroupToWaitlist(String eventId, DocumentSnapshot groupDoc) {
+        String creatorId = groupDoc.getString("creatorId");
+        List<String> memberEmails = (List<String>) groupDoc.get("memberEmails");
+        List<String> allEmails = new ArrayList<>();
+        allEmails.add(groupDoc.getString("creatorEmail"));
+        if (memberEmails != null) allEmails.addAll(memberEmails);
+
+        for (String email : allEmails) {
+            db.collection("users").whereEqualTo("email", email).limit(1).get()
+                    .addOnSuccessListener(querySnapshot -> {
+                        if (!querySnapshot.isEmpty()) {
+                            DocumentSnapshot userDoc = querySnapshot.getDocuments().get(0);
+                            Users user = userDoc.toObject(Users.class);
+                            if (user != null) {
+                                user.setId(userDoc.getId());
+                                writeEntrantToWaitlist(eventId, user);
+                            }
+                        }
+                    });
+        }
+    }
+
+    private void writeEntrantToWaitlist(String eventId, Users user) {
+        Map<String, Object> entrantData = new HashMap<>();
+        entrantData.put("id", user.getId());
+        entrantData.put("eventId", eventId);
+        entrantData.put("name", user.getName());
+        entrantData.put("email", user.getEmail());
+        entrantData.put("status", "APPLIED");
+        entrantData.put("userId", user.getId());
+        entrantData.put("statusCode", 0);
+        entrantData.put("locationUpdatedAt", FieldValue.serverTimestamp());
+
+        db.collection("events").document(eventId)
+                .collection("entrants").document(user.getId())
+                .set(entrantData)
+                .addOnSuccessListener(unused -> {
+                    new FirestoreNotificationHelper().sendWaitlistedNotification(user.getId(), eventId);
+                    writeHistoryRecordForUser(user.getId(), eventId, "APPLIED");
+                });
+    }
+
     private void updateFirestoreCoOrganizerInvitation(Users currentUser, UserNotification notification, boolean accept) {
         if (!accept) {
             WriteBatch batch = db.batch();
@@ -825,6 +901,7 @@ public class InboxFragment extends Fragment {
             case INVITATION:
             case PRIVATE_WAITLIST_INVITATION:
             case CO_ORGANIZER_INVITATION:
+            case GROUP_WAITLIST_INVITATION:
                 return R.color.notification_green;
             case NOT_SELECTED:
                 return R.color.notification_red;
@@ -851,6 +928,8 @@ public class InboxFragment extends Fragment {
                 return android.R.drawable.ic_menu_manage;
             case NOT_SELECTED:
                 return android.R.drawable.ic_delete;
+            case GROUP_WAITLIST_INVITATION:
+                return android.R.drawable.ic_input_add;
             case WAITLISTED:
             default:
                 return android.R.drawable.ic_menu_recent_history;

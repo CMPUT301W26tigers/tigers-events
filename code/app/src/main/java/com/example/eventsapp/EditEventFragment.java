@@ -209,6 +209,7 @@ public class EditEventFragment extends Fragment {
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
         view.findViewById(R.id.btn_share_link).setOnClickListener(v -> shareLink());
         view.findViewById(R.id.btn_delete_event).setOnClickListener(v -> confirmDeleteEvent());
+        view.findViewById(R.id.btn_view_event).setOnClickListener(v -> viewEvent());
     }
 
     /**
@@ -226,11 +227,8 @@ public class EditEventFragment extends Fragment {
         }
     }
 
-    /**
-     * Attaches {@link DatePickerDialog} launchers to the event-date, registration-start, and
-     * registration-end fields, and makes those fields non-focusable so the software keyboard
-     * is never shown for them.
-     */
+
+
     private void setupDatePickers() {
         editEventDate.setOnClickListener(v -> showDatePicker(editEventDate));
         editRegistrationStart.setOnClickListener(v -> showDatePicker(editRegistrationStart));
@@ -535,12 +533,14 @@ public class EditEventFragment extends Fragment {
         }
     }
 
-    /**
-     * Safely extracts the trimmed text from a {@link TextInputEditText}.
-     *
-     * @param et The input field to read; must not be {@code null}.
-     * @return The trimmed text, or an empty string if the editable content is {@code null}.
-     */
+
+    private void viewEvent() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        args.putBoolean("fromHistory", false);
+        Navigation.findNavController(requireView()).navigate(R.id.action_editEventFragment_to_eventDetailFragment, args);
+    }
+
     private String getText(TextInputEditText et) {
         return et.getText() != null ? et.getText().toString().trim() : "";
     }

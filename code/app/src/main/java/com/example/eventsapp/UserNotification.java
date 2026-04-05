@@ -21,7 +21,9 @@ public class UserNotification implements Serializable {
         /** Status update indicating the user is still waitlisted. */
         WAITLISTED,
         /** Notification that the user was not selected in the lottery. */
-        NOT_SELECTED
+        NOT_SELECTED,
+        /** Invitation to join a waitlist as a group. */
+        GROUP_WAITLIST_INVITATION
     }
 
     private final Type type;
@@ -30,6 +32,7 @@ public class UserNotification implements Serializable {
     private final String message;
     private final String eventId;
     private final String notificationId;
+    private final String groupId;
 
     /**
      * Constructs a UserNotification.
@@ -39,7 +42,7 @@ public class UserNotification implements Serializable {
      * @param message The descriptive message.
      */
     public UserNotification(Type type, String title, String eventName, String message) {
-        this(type, title, eventName, message, null, null);
+        this(type, title, eventName, message, null, null, null);
     }
 
     /**
@@ -52,12 +55,27 @@ public class UserNotification implements Serializable {
      * @param notificationId The Firestore document ID for the notification.
      */
     public UserNotification(Type type, String title, String eventName, String message, String eventId, String notificationId) {
+        this(type, title, eventName, message, eventId, notificationId, null);
+    }
+
+    /**
+     * Constructs a UserNotification with group information.
+     * @param type The type of notification.
+     * @param title The title string.
+     * @param eventName The name of the event associated with the notification.
+     * @param message The descriptive message.
+     * @param eventId The Firestore event ID associated with the notification.
+     * @param notificationId The Firestore document ID for the notification.
+     * @param groupId The Firestore document ID for the group.
+     */
+    public UserNotification(Type type, String title, String eventName, String message, String eventId, String notificationId, String groupId) {
         this.type = type;
         this.title = title;
         this.eventName = eventName;
         this.message = message;
         this.eventId = eventId;
         this.notificationId = notificationId;
+        this.groupId = groupId;
     }
 
     /**
@@ -106,5 +124,13 @@ public class UserNotification implements Serializable {
      */
     public String getNotificationId() {
         return notificationId;
+    }
+
+    /**
+     * Gets the Firestore group ID associated with this notification, if any.
+     * @return The group ID or null.
+     */
+    public String getGroupId() {
+        return groupId;
     }
 }

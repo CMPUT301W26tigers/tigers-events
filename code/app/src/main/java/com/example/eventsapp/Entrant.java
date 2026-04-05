@@ -35,6 +35,7 @@ public class Entrant implements Serializable {
     private int statusCode;
     private double latitude = Double.NaN;
     private double longitude = Double.NaN;
+    private String groupId;
 
     public Entrant() {
     }
@@ -167,5 +168,13 @@ public class Entrant implements Serializable {
         if (Double.isNaN(latitude) || Double.isNaN(longitude)) return false;
         if (Math.abs(latitude) > 90.0 || Math.abs(longitude) > 180.0) return false;
         return !(latitude == 0.0 && longitude == 0.0);
+    }
+
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 }

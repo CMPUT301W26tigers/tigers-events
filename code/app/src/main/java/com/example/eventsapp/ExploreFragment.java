@@ -1,5 +1,7 @@
 package com.example.eventsapp;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -10,7 +12,9 @@ import android.widget.ImageButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -26,6 +30,8 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -50,6 +56,15 @@ public class ExploreFragment extends Fragment {
     private boolean filterAvailableOnly = false;
     private String filterDateFrom = null;
     private String filterDateTo = null;
+
+    private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(
+            new ScanContract(),
+            result -> {
+                if (result.getContents() != null) {
+                    handleScanResult(result.getContents());
+                }
+            }
+    );
 
     /**
      * Default constructor for ExploreFragment.
@@ -79,6 +94,7 @@ public class ExploreFragment extends Fragment {
         rvEvents.setAdapter(adapter);
 
         view.findViewById(R.id.btnInboxNormal).setOnClickListener(this::openInbox);
+        view.findViewById(R.id.btnScanQR).setOnClickListener(v -> scanQRCode());
 
         view.findViewById(R.id.ivMenu).setOnClickListener(v -> openFilterBottomSheet());
 
@@ -92,13 +108,37 @@ public class ExploreFragment extends Fragment {
         loadAllEvents();
     }
 
-    /**
-     * Navigates to {@link EventDetailFragment} for the selected event, passing the event ID
-     * and any available media URLs as navigation arguments.
-     *
-     * @param view  The current view, used to locate the NavController.
-     * @param event The event the user tapped on.
-     */
+    private void scanQRCode() {
+        ScanOptions options = new ScanOptions();
+        options.setPrompt("Scan an Event QR Code");
+        options.setBeepEnabled(true);
+        options.setOrientationLocked(true);
+        options.setCaptureActivity(CaptureActivityPortrait.class);
+        qrCodeLauncher.launch(options);
+    }
+
+    private void handleScanResult(String contents) {
+        if (contents == null || contents.isEmpty()) return;
+
+        Uri uri = Uri.parse(contents);
+        if ("tigers-events".equals(uri.getScheme()) && "event".equals(uri.getHost())) {
+            String path = uri.getPath();
+            if (path != null && path.length() > 1) {
+                String eventId = path.substring(1);
+                navigateToDetailById(eventId);
+            }
+        } else {
+            TigerToast.show(requireContext(), "Invalid QR Code for this app", Toast.LENGTH_SHORT);
+        }
+    }
+
+    private void navigateToDetailById(String eventId) {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        Navigation.findNavController(requireView())
+                .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
+    }
+
     private void navigateToDetail(View view, Event event) {
         Bundle args = new Bundle();
         args.putString("eventId", event.getId());

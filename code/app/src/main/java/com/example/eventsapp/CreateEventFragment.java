@@ -71,8 +71,10 @@ public class CreateEventFragment extends Fragment {
     private View shareLinkRow;
     private View shareQrImage;
     private View shareEventLink;
-    private MaterialButton btnViewWaitlist;
-    private MaterialButton btnManageEnrolledList;
+
+    // Removed from create event page
+//    private MaterialButton btnViewWaitlist;
+//    private MaterialButton btnManageEnrolledList;
     private MaterialButton btnInviteCoOrganizer;
     private boolean isPrivateEvent;
     private MaterialSwitch switchGeolocationRequired;
@@ -107,7 +109,7 @@ public class CreateEventFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.edit_event, container, false);
+        return inflater.inflate(R.layout.fragment_create_event, container, false);
     }
 
     /**
@@ -162,8 +164,8 @@ public class CreateEventFragment extends Fragment {
                 ? (View) ((View) view.findViewById(R.id.btn_share_link)).getParent() : null;
         shareQrImage = view.findViewById(R.id.iv_qr);
         shareEventLink = view.findViewById(R.id.tv_event_link);
-        btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
-        btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
+//        btnViewWaitlist = view.findViewById(R.id.btn_view_waitlist);
+//        btnManageEnrolledList = view.findViewById(R.id.btn_manage_enrolled_list);
         btnInviteCoOrganizer = view.findViewById(R.id.btn_invite_coorganizer);
         switchGeolocationRequired = view.findViewById(R.id.switch_geolocation_required);
         setupDatePickers();
@@ -213,10 +215,10 @@ public class CreateEventFragment extends Fragment {
         });
 
         // Save event and go to waitlist (chosen entrants)
-        btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
-        if (btnManageEnrolledList != null) {
-            btnManageEnrolledList.setOnClickListener(v -> saveAndNavigateToEnrolled(event));
-        }
+//        btnViewWaitlist.setOnClickListener(v -> saveAndNavigateToWaitlist(event));
+//        if (btnManageEnrolledList != null) {
+//            btnManageEnrolledList.setOnClickListener(v -> saveAndNavigateToEnrolled(event));
+//        }
         if (btnInviteCoOrganizer != null) {
             btnInviteCoOrganizer.setOnClickListener(v -> ensureDraftSaved(event, () -> {
                 if (!isAdded()) {
@@ -328,12 +330,12 @@ public class CreateEventFragment extends Fragment {
         }
         shareQrImage.setVisibility(visibility);
         shareEventLink.setVisibility(visibility);
-        if (btnViewWaitlist != null) {
-            btnViewWaitlist.setText("Manage Waitlist");
-        }
-        if (btnManageEnrolledList != null) {
-            btnManageEnrolledList.setText("Manage Enrolled");
-        }
+//        if (btnViewWaitlist != null) {
+//            btnViewWaitlist.setText("Manage Waitlist");
+//        }
+//        if (btnManageEnrolledList != null) {
+//            btnManageEnrolledList.setText("Manage Enrolled");
+//        }
         if (btnTogglePrivateEvent != null) {
             btnTogglePrivateEvent.setText(isPrivateEvent ? "Set Event Public" : "Set Event Private");
         }
@@ -348,161 +350,150 @@ public class CreateEventFragment extends Fragment {
         }
     }
 
-    /**
-     * Validates input fields, updates the {@link Event} object, saves the event to Firestore,
-     * and navigates to the waitlist management screen upon success.
-     *
-     * @param event The event object being created and saved.
-     */
-    private void saveAndNavigateToWaitlist(Event event) {
-        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
-        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
-        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; // May be obsolete
-        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
-        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
-        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
 
-        String eventDate = getText(editEventDate);
-        String registrationStart = getText(editRegistrationStart);
-        String registrationEnd = getText(editRegistrationEnd);
+//    private void saveAndNavigateToWaitlist(Event event) {
+//        String name = editName.getText() != null ? editName.getText().toString().trim() : "";
+//        String description = editDescription.getText() != null ? editDescription.getText().toString().trim() : "";
+//        // String capacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "1"; // May be obsolete
+//        String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
+//        String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
+//        String sampleStr = editSampleSize != null && editSampleSize.getText() != null
+//                ? editSampleSize.getText().toString().trim() : "0";
+//
+//        String eventDate = getText(editEventDate);
+//        String registrationStart = getText(editRegistrationStart);
+//        String registrationEnd = getText(editRegistrationEnd);
+//
+//
+//        // may be obsolete
+//        // if (capacityStr.isEmpty()) {
+//        //    Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
+//        //    return;
+//        //}
+//        if (eventCapacityStr.isEmpty()) {
+//            TigerToast.show(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT);
+//            return;
+//        }
+//
+//        if (eventDate.isEmpty()) {
+//            editEventDate.setError("Event date required");
+//            return;
+//        }
+//
+//        if (registrationStart.isEmpty()) {
+//            editRegistrationStart.setError("Registration start required");
+//            return;
+//        }
+//
+//        if (registrationEnd.isEmpty()) {
+//            editRegistrationEnd.setError("Registration end required");
+//            return;
+//        }
+//
+////        int capacity; may be obsolete
+//        int eventCapacityVal;
+//        int waitlistCapacityVal = 0;
+//        int sampleSize;
+//        try {
+//            // May be obsolete
+//            // capacity = Integer.parseInt(capacityStr);
+//            // if (capacity <= 0) {
+//            //    Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
+//            //    return;
+//            // }
+//            eventCapacityVal = Integer.parseInt(eventCapacityStr);
+//                if (eventCapacityVal <= 0) {
+//                    TigerToast.show(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT);
+//                return;
+//            }
+//            // sampleSize = Integer.parseInt(sampleStr);
+//            // if (sampleSize < 0) sampleSize = 0;
+//        } catch (NumberFormatException e) {
+//            TigerToast.show(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT);
+//            return;
+//        }
+//        if (!waitlistCapacityStr.isEmpty()) {
+//            try {
+//                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
+//                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
+//            } catch (NumberFormatException e) {
+//                TigerToast.show(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT);
+//                return;
+//            }
+//        }
+//        try {
+//            sampleSize = Integer.parseInt(sampleStr);
+//            if (sampleSize < 0) sampleSize = 0;
+//        } catch (NumberFormatException e) {
+//            sampleSize = 0;
+//        }
+//
+//        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
+//            return;
+//        }
+//
+//        if (name.isEmpty()) {
+//            TigerToast.show(requireContext(), "Event name required", Toast.LENGTH_SHORT);
+//            return;
+//        }
+//
+//        event.setName(name);
+//        event.setDescription(description);
+////        event.setAmount(capacity); may be obsolete
+//        event.setAmount(eventCapacityVal);
+//        event.setWaitlistCapacity(waitlistCapacityVal);
+//        event.setSampleSize(sampleSize);
+//        event.setEvent_date(eventDate);
+//        event.setRegistration_start(registrationStart);
+//        event.setRegistration_end(registrationEnd);
+//        if (!isPrivateEvent) {
+//            updateQRCode(event);
+//        }
+//
+//        Map<String, Object> data = new HashMap<>();
+//        data.put("id", event.getId());
+//        data.put("name", event.getName());
+//        data.put("amount", event.getAmount());
+//        data.put("waitlistCapacity", event.getWaitlistCapacity());
+//        data.put("description", event.getDescription());
+//        data.put("posterUrl", event.getPosterUrl());
+//        data.put("sampleSize", event.getSampleSize());
+//        data.put("event_date", event.getEvent_date());
+//        data.put("registration_start", event.getRegistration_start());
+//        data.put("registration_end", event.getRegistration_end());
+//        data.put("isPrivate", isPrivateEvent);
+//        data.put("coOrganizerIds", new ArrayList<String>());
+//        data.put("pendingCoOrganizerIds", new ArrayList<String>());
+//        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
+//
+//        // Store who created this event for filtering on the Events page
+//        Users currentUser = UserManager.getInstance().getCurrentUser();
+//        if (currentUser != null && currentUser.getId() != null) {
+//            data.put("createdBy", currentUser.getId());
+//        }
+//        ensureDraftSaved(event, () -> {
+//            if (!isAdded()) {
+//                return;
+//            }
+//            Bundle args = new Bundle();
+//            args.putString("eventId", event.getId());
+//            args.putString("eventName", event.getName());
+//            Navigation.findNavController(requireView())
+//                    .navigate(R.id.viewEntrantsFragment, args);
+//        });
+//    }
 
-
-        // may be obsolete
-        // if (capacityStr.isEmpty()) {
-        //    Toast.makeText(requireContext(), "Capacity required", Toast.LENGTH_SHORT).show();
-        //    return;
-        //}
-        if (eventCapacityStr.isEmpty()) {
-            TigerToast.show(requireContext(), "Event Capacity required", Toast.LENGTH_SHORT);
-            return;
-        }
-
-        if (eventDate.isEmpty()) {
-            editEventDate.setError("Event date required");
-            return;
-        }
-
-        if (registrationStart.isEmpty()) {
-            editRegistrationStart.setError("Registration start required");
-            return;
-        }
-
-        if (registrationEnd.isEmpty()) {
-            editRegistrationEnd.setError("Registration end required");
-            return;
-        }
-
-//        int capacity; may be obsolete
-        int eventCapacityVal;
-        int waitlistCapacityVal = 0;
-        int sampleSize;
-        try {
-            // May be obsolete
-            // capacity = Integer.parseInt(capacityStr);
-            // if (capacity <= 0) {
-            //    Toast.makeText(requireContext(), "Capacity must be positive", Toast.LENGTH_SHORT).show();
-            //    return;
-            // }
-            eventCapacityVal = Integer.parseInt(eventCapacityStr);
-                if (eventCapacityVal <= 0) {
-                    TigerToast.show(requireContext(), "Event Capacity must be positive", Toast.LENGTH_SHORT);
-                return;
-            }
-            // sampleSize = Integer.parseInt(sampleStr);
-            // if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            TigerToast.show(requireContext(), "Invalid Event Capacity", Toast.LENGTH_SHORT);
-            return;
-        }
-        if (!waitlistCapacityStr.isEmpty()) {
-            try {
-                waitlistCapacityVal = Integer.parseInt(waitlistCapacityStr);
-                if (waitlistCapacityVal < 0) waitlistCapacityVal = 0;
-            } catch (NumberFormatException e) {
-                TigerToast.show(requireContext(), "Invalid Waitlist Capacity", Toast.LENGTH_SHORT);
-                return;
-            }
-        }
-        try {
-            sampleSize = Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            sampleSize = 0;
-        }
-
-        if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
-            return;
-        }
-
-        if (name.isEmpty()) {
-            TigerToast.show(requireContext(), "Event name required", Toast.LENGTH_SHORT);
-            return;
-        }
-
-        event.setName(name);
-        event.setDescription(description);
-//        event.setAmount(capacity); may be obsolete
-        event.setAmount(eventCapacityVal);
-        event.setWaitlistCapacity(waitlistCapacityVal);
-        event.setSampleSize(sampleSize);
-        event.setEvent_date(eventDate);
-        event.setRegistration_start(registrationStart);
-        event.setRegistration_end(registrationEnd);
-        if (!isPrivateEvent) {
-            updateQRCode(event);
-        }
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("id", event.getId());
-        data.put("name", event.getName());
-        data.put("amount", event.getAmount());
-        data.put("waitlistCapacity", event.getWaitlistCapacity());
-        data.put("description", event.getDescription());
-        data.put("posterUrl", event.getPosterUrl());
-        data.put("sampleSize", event.getSampleSize());
-        data.put("event_date", event.getEvent_date());
-        data.put("registration_start", event.getRegistration_start());
-        data.put("registration_end", event.getRegistration_end());
-        data.put("isPrivate", isPrivateEvent);
-        data.put("coOrganizerIds", new ArrayList<String>());
-        data.put("pendingCoOrganizerIds", new ArrayList<String>());
-        data.put("geolocationRequired", switchGeolocationRequired != null && switchGeolocationRequired.isChecked());
-
-        // Store who created this event for filtering on the Events page
-        Users currentUser = UserManager.getInstance().getCurrentUser();
-        if (currentUser != null && currentUser.getId() != null) {
-            data.put("createdBy", currentUser.getId());
-        }
-        ensureDraftSaved(event, () -> {
-            if (!isAdded()) {
-                return;
-            }
-            Bundle args = new Bundle();
-            args.putString("eventId", event.getId());
-            args.putString("eventName", event.getName());
-            Navigation.findNavController(requireView())
-                    .navigate(R.id.viewEntrantsFragment, args);
-        });
-    }
-
-    /**
-     * Saves the event draft (if not already saved) and navigates to the enrolled-entrants
-     * management screen ({@code enrolledFragment}).
-     *
-     * @param event The event object whose data should be persisted before navigation.
-     */
-    private void saveAndNavigateToEnrolled(Event event) {
-        ensureDraftSaved(event, () -> {
-            if (!isAdded()) {
-                return;
-            }
-            Bundle args = new Bundle();
-            args.putString("eventId", event.getId());
-            Navigation.findNavController(requireView())
-                    .navigate(R.id.enrolledFragment, args);
-        });
-    }
+//    private void saveAndNavigateToEnrolled(Event event) {
+//        ensureDraftSaved(event, () -> {
+//            if (!isAdded()) {
+//                return;
+//            }
+//            Bundle args = new Bundle();
+//            args.putString("eventId", event.getId());
+//            Navigation.findNavController(requireView())
+//                    .navigate(R.id.enrolledFragment, args);
+//        });
+//    }
 
     /**
      * Validates inputs, saves the event to Firestore, then returns to the previous screen.
@@ -569,7 +560,7 @@ public class CreateEventFragment extends Fragment {
         String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
         String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
+                ? editSampleSize.getText().toString().trim() : "";
 
         String eventDate = getText(editEventDate);
         String registrationStart = getText(editRegistrationStart);
@@ -634,13 +625,16 @@ public class CreateEventFragment extends Fragment {
                 return null;
             }
         }
-        try {
-            sampleSize = Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            sampleSize = 0;
-            TigerToast.show(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT);
-            return null;
+        if (sampleStr.isEmpty()) {
+            sampleSize = eventCapacityVal;
+        } else {
+            try {
+                sampleSize = Integer.parseInt(sampleStr);
+                // If they enter 0 or a negative number, safely fall back to event capacity
+                if (sampleSize <= 0) sampleSize = eventCapacityVal;
+            } catch (NumberFormatException e) {
+                sampleSize = eventCapacityVal;
+            }
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {

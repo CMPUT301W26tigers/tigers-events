@@ -95,6 +95,9 @@
             android:name="eventId"
             app:argType="string"
             app:nullable="false" />
+        <action
+            android:id="@+id/action_editEventFragment_to_eventDetailFragment"
+            app:destination="@id/eventDetailFragment" />
     </fragment>
 
     <fragment
