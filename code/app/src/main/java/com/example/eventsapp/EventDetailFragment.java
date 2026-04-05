@@ -194,7 +194,7 @@ public class EventDetailFragment extends Fragment {
         view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
                     .setTitle("How joining events work:")
-                    .setMessage("filler description")
+                    .setMessage("Invites are sent randomly to entrants in the waitlist. If you were not chosen, you may are eligible for a re-draw if someone declines their invitation./n For Group joins: The group is treated as one person and the odds are the same.")
                     .setPositiveButton("OK", null)
                     .show();
         });
