@@ -331,7 +331,7 @@ public class EventCleanupHelper {
             return;
         }
 
-        int totalBatches = (refsToDelete.size() + MAX_BATCH_DELETES - 1) / MAX_BATCH_DELETES;
+        int totalBatches = calculateBatchCount(refsToDelete.size());
         AtomicInteger remainingBatches = new AtomicInteger(totalBatches);
 
         for (int start = 0; start < refsToDelete.size(); start += MAX_BATCH_DELETES) {
@@ -354,6 +354,13 @@ public class EventCleanupHelper {
                         }
                     });
         }
+    }
+
+    static int calculateBatchCount(int deleteCount) {
+        if (deleteCount <= 0) {
+            return 0;
+        }
+        return (deleteCount + MAX_BATCH_DELETES - 1) / MAX_BATCH_DELETES;
     }
 
     /**
