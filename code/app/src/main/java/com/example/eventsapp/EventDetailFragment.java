@@ -88,6 +88,7 @@ public class EventDetailFragment extends Fragment {
     private int waitlistCount = 0;
     private int waitlistCapacity = 0;
     private int eventCapacity = 0;
+    private boolean hasPendingGroup = false;
     private String eventCreatorId = null;
     private boolean geolocationRequired = false;
     /** False until {@link #loadEventDetails()} finishes; avoids joining before we know if location is required. */
@@ -396,6 +397,27 @@ public class EventDetailFragment extends Fragment {
                             stopWaitlistLocationSharing();
                         }
                     });
+
+            // Check if current user is part of a pending waitlist group
+            if (currentUser.getEmail() != null && !currentUser.getEmail().isEmpty()) {
+                db.collection("events").document(eventId)
+                        .collection("groups")
+                        .whereEqualTo("status", "PENDING")
+                        .whereArrayContains("acceptedEmails", currentUser.getEmail())
+                        .addSnapshotListener((value, error) -> {
+                            if (!isAdded()) return;
+                            if (error != null) {
+                                Log.e(TAG, "Error loading group status", error);
+                                return;
+                            }
+                            if (value != null && !value.isEmpty()) {
+                                hasPendingGroup = true;
+                            } else {
+                                hasPendingGroup = false;
+                            }
+                            refreshWaitlistButtonState();
+                        });
+            }
         }
     }
 
@@ -868,6 +890,11 @@ public class EventDetailFragment extends Fragment {
             text = getString(R.string.waitlist_full);
             enabled = false;
             colorRes = R.color.dark_grey;
+        } else if (hasPendingGroup) {
+            text = "Group Pending";
+            text2 = "Waiting for Group...";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
         } else {
             text = getString(R.string.join_waitlist);
             text2 = getString(R.string.join_waitlist_with_group);
