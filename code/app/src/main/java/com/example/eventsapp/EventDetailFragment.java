@@ -194,7 +194,7 @@ public class EventDetailFragment extends Fragment {
         view.findViewById(R.id.btnInfo).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
                     .setTitle("How joining events work:")
-                    .setMessage("filler description")
+                    .setMessage("Invites are sent randomly to entrants in the waitlist. If you were not chosen, you may are eligible for a re-draw if someone declines their invitation./n For Group joins: The group is treated as one person and the odds are the same.")
                     .setPositiveButton("OK", null)
                     .show();
         });
@@ -963,7 +963,7 @@ public class EventDetailFragment extends Fragment {
         } else {
             text = getString(R.string.join_waitlist);
             text2 = getString(R.string.join_waitlist_with_group);
-            colorRes = R.color.colorPrimary;
+            colorRes = R.color.colorPrimaryContainer;
         }
 
         if (text2 == null) text2 = text;
@@ -976,6 +976,7 @@ public class EventDetailFragment extends Fragment {
     private void updateWaitlistButton(MaterialButton button, String text, int colorRes, boolean enabled) {
         if (button == null) return;
         button.setText(text);
+        button.setTextColor(getResources().getColor(R.color.white));
         button.setEnabled(enabled);
         button.setBackgroundTintList(
                 android.content.res.ColorStateList.valueOf(

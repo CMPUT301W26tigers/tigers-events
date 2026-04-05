@@ -331,7 +331,7 @@
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
             app:cornerRadius="8dp"
-            app:backgroundTint="@color/colorPrimary"/>
+            app:backgroundTint="@color/colorPrimaryContainer"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnWaitlist2"
@@ -344,7 +344,7 @@
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
             app:cornerRadius="8dp"
-            app:backgroundTint="@color/colorPrimary"/>
+            app:backgroundTint="@color/colorPrimaryContainer"/>
     </LinearLayout>
 
     <ImageButton
