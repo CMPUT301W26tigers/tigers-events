@@ -130,7 +130,7 @@
         app:cardBackgroundColor="@color/colorCardBackground"
         app:cardCornerRadius="24dp"
         app:cardElevation="0dp"
-        app:layout_constraintBottom_toTopOf="@id/tv_waitlist_stats"
+        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/waitlist_secondary_actions_row">
@@ -145,20 +145,6 @@
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
     </com.google.android.material.card.MaterialCardView>
 
-    <TextView
-        android:id="@+id/tv_waitlist_stats"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:alpha="0.8"
-        android:gravity="center"
-        android:text="Private invites, waitlisted, and invited entrants appear here."
-        android:textColor="@color/colorTextSecondary"
-        android:textSize="12sp"
-        app:layout_constraintBottom_toTopOf="@id/waitlist_footer_row"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
     <LinearLayout
         android:id="@+id/waitlist_footer_row"
         android:layout_width="0dp"
@@ -169,7 +155,8 @@
         android:weightSum="3"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/card_waitlist_entries">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_notify_waitlisted"
