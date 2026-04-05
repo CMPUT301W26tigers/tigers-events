@@ -874,11 +874,11 @@ public class EventDetailFragment extends Fragment {
         if (userIsOrganizer) {
             text = "Organizer Access";
             enabled = false;
-            colorRes = R.color.dark_grey;
+            colorRes = R.color.colorPrimaryDark;
         } else if (isPrivateEvent && !isOnWaitlist) {
             text = "Private Event By Invitation";
             enabled = false;
-            colorRes = R.color.dark_grey;
+            colorRes = R.color.colorPrimaryDark;
         } else if (isOnWaitlist) {
             text = getString(R.string.leave_waitlist);
             colorRes = R.color.colorDanger;
@@ -889,7 +889,7 @@ public class EventDetailFragment extends Fragment {
         } else if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity){
             text = getString(R.string.waitlist_full);
             enabled = false;
-            colorRes = R.color.dark_grey;
+            colorRes = R.color.colorPrimaryDark;
         } else if (hasPendingGroup) {
             text = "Group Pending";
             text2 = "Waiting for Group...";
