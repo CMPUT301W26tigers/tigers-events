@@ -42,8 +42,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Organizer view: waitlisted entrants (APPLIED) plus invited entrants.
- * Accepted entrants belong on the enrolled screen.
+ * Organizer-facing fragment that displays entrants in the APPLIED, INVITED, and
+ * PRIVATE_INVITED states for a given event.  Accepted (ACCEPTED) entrants are
+ * shown on the enrolled screen instead.
+ *
+ * <p>Responsibilities:
+ * <ul>
+ *   <li>Stream the event's waitlist via a real-time Firestore listener.</li>
+ *   <li>Run the lottery: randomly sample APPLIED entrants up to the remaining
+ *       capacity and promote them to INVITED in a single Firestore batch write.</li>
+ *   <li>Allow the organizer to manually invite a user (private events) or cancel
+ *       an existing invitation.</li>
+ *   <li>Navigate to the entrant map, either in overview mode or focused on a
+ *       specific entrant's join location.</li>
+ * </ul>
  */
 public class OrganizerWaitlistFragment extends Fragment {
 
@@ -70,6 +82,12 @@ public class OrganizerWaitlistFragment extends Fragment {
     private Set<String> tempSelectedIds = new HashSet<>();
 
 
+    /**
+     * Extracts the {@code eventId} argument passed via the navigation back-stack and
+     * initialises the Firestore instance used throughout this fragment.
+     *
+     * @param savedInstanceState previously saved state, or {@code null} on first creation
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,6 +100,14 @@ public class OrganizerWaitlistFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
     }
 
+    /**
+     * Inflates the waitlist layout.
+     *
+     * @param inflater           layout inflater
+     * @param container          parent view, or {@code null}
+     * @param savedInstanceState previously saved state, or {@code null}
+     * @return the inflated root view
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -89,6 +115,13 @@ public class OrganizerWaitlistFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_organizer_waitlist, container, false);
     }
 
+    /**
+     * Wires up all UI controls, attaches the {@link RecyclerView} adapter, starts the
+     * real-time search filter, and triggers the initial event-configuration load.
+     *
+     * @param view               the root view returned by {@link #onCreateView}
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -759,6 +792,10 @@ public class OrganizerWaitlistFragment extends Fragment {
     }
 
 
+    /**
+     * Removes the Firestore snapshot listener to prevent callbacks from arriving
+     * after the view hierarchy has been torn down.
+     */
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -785,18 +822,43 @@ public class OrganizerWaitlistFragment extends Fragment {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * RecyclerView adapter used inside the entrant-picker dialog.  Displays a flat
+     * list of eligible {@link Users} objects and notifies the host when one is tapped.
+     */
     private static class UserPickerAdapter extends RecyclerView.Adapter<UserPickerAdapter.UserPickerViewHolder> {
+
+        /**
+         * Callback invoked when the user taps a row in the picker list.
+         */
         interface OnUserSelectedListener {
+            /**
+             * Called with the {@link Users} object that was tapped.
+             *
+             * @param user the selected user
+             */
             void onUserSelected(Users user);
         }
 
         private final List<Users> users;
         private final OnUserSelectedListener onUserSelectedListener;
+
+        /**
+         * @param users                  the live list of eligible users to display
+         * @param onUserSelectedListener callback to fire when a row is tapped
+         */
         UserPickerAdapter(List<Users> users, OnUserSelectedListener onUserSelectedListener) {
             this.users = users;
             this.onUserSelectedListener = onUserSelectedListener;
         }
 
+        /**
+         * Inflates {@code item_user_picker} and wraps it in a {@link UserPickerViewHolder}.
+         *
+         * @param parent   the parent RecyclerView
+         * @param viewType unused (single view type)
+         * @return a new view holder
+         */
         @NonNull
         @Override
         public UserPickerViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -804,6 +866,14 @@ public class OrganizerWaitlistFragment extends Fragment {
             return new UserPickerViewHolder(view);
         }
 
+        /**
+         * Binds the user at {@code position} to the holder.  Displays the user's name
+         * and any combination of email / phone, falling back to "No contact info" when
+         * both are absent.
+         *
+         * @param holder   view holder to populate
+         * @param position adapter position
+         */
         @Override
         public void onBindViewHolder(@NonNull UserPickerViewHolder holder, int position) {
             Users user = users.get(position);
@@ -825,15 +895,22 @@ public class OrganizerWaitlistFragment extends Fragment {
             holder.itemView.setOnClickListener(v -> onUserSelectedListener.onUserSelected(user));
         }
 
+        /**
+         * @return the total number of users currently in the list
+         */
         @Override
         public int getItemCount() {
             return users.size();
         }
 
+        /** Holds references to the name and detail {@link TextView}s for one list row. */
         static class UserPickerViewHolder extends RecyclerView.ViewHolder {
             private final TextView tvName;
             private final TextView tvDetails;
 
+            /**
+             * @param itemView the inflated {@code item_user_picker} view
+             */
             UserPickerViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvName = itemView.findViewById(R.id.tv_user_picker_name);

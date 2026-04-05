@@ -127,6 +127,11 @@ public class EventsFragment extends Fragment {
         });
     }
 
+    /**
+     * Shows the "Create Event" button only when the "Created" tab is selected. The button
+     * is hidden on the "Registered" tab because registering for a new event is handled
+     * through the Explore screen, not here.
+     */
     private void updateCreateButtonVisibility() {
         boolean isCreatedTab = toggleEventType.getCheckedButtonId() == R.id.btnCreated;
         btnCreateEvent.setVisibility(isCreatedTab ? View.VISIBLE : View.GONE);
@@ -542,6 +547,13 @@ public class EventsFragment extends Fragment {
             this.listener = listener;
         }
 
+        /**
+         * Inflates the event card item layout and wraps it in a {@link ViewHolder}.
+         *
+         * @param parent   The parent ViewGroup into which the new view will be inserted.
+         * @param viewType Unused; all cards share a single view type.
+         * @return A new {@link ViewHolder} instance.
+         */
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -550,6 +562,14 @@ public class EventsFragment extends Fragment {
             return new ViewHolder(view);
         }
 
+        /**
+         * Binds the event at {@code position} to the card views. Renders the host avatar
+         * (profile picture or initial-letter fallback), formatted event date, coloured
+         * entrant status chip, and poster thumbnail when available.
+         *
+         * @param holder   The ViewHolder to populate.
+         * @param position Position of the item within the adapter's data set.
+         */
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
@@ -590,6 +610,11 @@ public class EventsFragment extends Fragment {
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
+        /**
+         * Returns the total number of events currently held by this adapter.
+         *
+         * @return The size of the event list.
+         */
         @Override
         public int getItemCount() {
             return events.size();

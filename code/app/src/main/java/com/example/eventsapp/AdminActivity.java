@@ -9,8 +9,20 @@ import androidx.navigation.ui.NavigationUI;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+/**
+ * Host activity for the administrator section of the application.
+ *
+ * <p>Wires the admin-specific {@link androidx.navigation.fragment.NavHostFragment} to the
+ * admin bottom-navigation bar ({@code R.id.adminBottomNav}), giving administrators their own
+ * navigation graph that is entirely separate from the main entrant/organizer flow.
+ */
 public class AdminActivity extends AppCompatActivity {
 
+    /**
+     * Sets up the admin navigation graph and bottom-navigation bar.
+     *
+     * @param savedInstanceState Previously saved instance state, or {@code null} on first launch.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

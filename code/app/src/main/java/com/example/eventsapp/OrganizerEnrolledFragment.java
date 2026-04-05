@@ -26,10 +26,18 @@ import java.util.ArrayList;
 import java.util.Locale;
 
 /**
- * Fragment that displays the final list of entrants enrolled in an event.
+ * Fragment that displays the final list of entrants enrolled (ACCEPTED) in an event.
  *
- * Fulfills US 02.06.03 - As an organizer I want to see a final list of entrants
+ * <p>Fulfills US 02.06.03 – As an organizer I want to see a final list of entrants
  * who enrolled for the event.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Real-time synchronisation with the {@code enrolled} sub-collection.</li>
+ *   <li>Name/email search filter.</li>
+ *   <li>CSV export via the system document-creator contract.</li>
+ *   <li>Navigation to the cancelled-entrants screen.</li>
+ * </ul>
  */
 public class OrganizerEnrolledFragment extends Fragment {
 
@@ -45,16 +53,26 @@ public class OrganizerEnrolledFragment extends Fragment {
     private FirebaseFirestore db;
     private CollectionReference enrolledRef;
 
-    private final ArrayList<EnrolledEntrant> allEnrolledEntrants = new ArrayList<>();
-    private final ArrayList<EnrolledEntrant> filteredEnrolledEntrants = new ArrayList<>();
+    private final ArrayList<Entrant> allEnrolledEntrants = new ArrayList<>();
+    private final ArrayList<Entrant> filteredEnrolledEntrants = new ArrayList<>();
     private EnrolledEntrantAdapter adapter;
 
     private String eventId;
 
+    /**
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate the fragment automatically.
+     */
     public OrganizerEnrolledFragment() {
         super(R.layout.fragment_organizer_enrolled);
     }
 
+    /**
+     * Creates a new instance with the given event ID pre-loaded as an argument.
+     *
+     * @param eventId Firestore document ID of the target event
+     * @return a configured {@link OrganizerEnrolledFragment}
+     */
     public static OrganizerEnrolledFragment newInstance(String eventId) {
         OrganizerEnrolledFragment fragment = new OrganizerEnrolledFragment();
         Bundle args = new Bundle();
@@ -73,7 +91,7 @@ public class OrganizerEnrolledFragment extends Fragment {
                             entrant -> new String[]{
                                     entrant.getName(),
                                     entrant.getEmail(),
-                                    entrant.getStatus()
+                                    entrant.getStatus() != null ? entrant.getStatus().name() : "ACCEPTED"
                             });
 
                     if (success) {
@@ -84,6 +102,12 @@ public class OrganizerEnrolledFragment extends Fragment {
                 }
             });
 
+    /**
+     * Reads the {@code eventId} from the fragment arguments so it is available
+     * before the view is created.
+     *
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,6 +117,13 @@ public class OrganizerEnrolledFragment extends Fragment {
         }
     }
 
+    /**
+     * Binds views, configures the adapter and search filter, wires up the CSV-export
+     * and cancelled-list buttons, then starts listening for enrolled entrant changes.
+     *
+     * @param view               the root view provided by the framework
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull android.view.View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -162,19 +193,21 @@ public class OrganizerEnrolledFragment extends Fragment {
                     String userId = snapshot.getId();
                     String name = snapshot.getString("name");
                     String email = snapshot.getString("email");
-                    String status = snapshot.getString("status");
+                    String statusStr = snapshot.getString("status");
 
-                    if (name == null) {
-                        name = "Unknown User";
-                    }
-                    if (email == null) {
-                        email = "No email";
-                    }
-                    if (status == null) {
-                        status = "Enrolled";
+                    if (name == null) name = "Unknown User";
+                    if (email == null) email = "No email";
+
+                    Entrant.Status statusEnum;
+                    try {
+                        statusEnum = (statusStr != null) ? Entrant.Status.valueOf(statusStr) : Entrant.Status.ACCEPTED;
+                    } catch (IllegalArgumentException e) {
+                        statusEnum = Entrant.Status.ACCEPTED;
                     }
 
-                    allEnrolledEntrants.add(new EnrolledEntrant(userId, name, email, status));
+                    Entrant entrant = new Entrant(userId, eventId, name, email, statusEnum);
+                    entrant.setUserId(userId);
+                    allEnrolledEntrants.add(entrant);
                 }
             }
 
@@ -187,7 +220,7 @@ public class OrganizerEnrolledFragment extends Fragment {
         filteredEnrolledEntrants.clear();
         String normalizedQuery = query.trim().toLowerCase(Locale.CANADA);
 
-        for (EnrolledEntrant entrant : allEnrolledEntrants) {
+        for (Entrant entrant : allEnrolledEntrants) {
             if (normalizedQuery.isEmpty()
                     || containsIgnoreCase(entrant.getName(), normalizedQuery)
                     || containsIgnoreCase(entrant.getEmail(), normalizedQuery)) {

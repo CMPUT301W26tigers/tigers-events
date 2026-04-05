@@ -18,14 +18,41 @@ import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 
+/**
+ * Admin detail screen for a single {@link Event}.
+ *
+ * <p>Displays all event metadata (name, dates, capacity, description, host) and
+ * exposes two destructive admin actions:
+ * <ul>
+ *   <li><b>Delete poster</b> – removes the image from Firebase Storage and clears
+ *       the {@code posterUrl} field in Firestore.</li>
+ *   <li><b>Delete event</b> – delegates to {@link EventCleanupHelper#deleteEventCompletely}
+ *       and pops the back-stack on success.</li>
+ * </ul>
+ *
+ * <p>The target event is passed as a serialized {@link Event} in the navigation
+ * arguments under the key {@code "event"}.
+ */
 public class AdminEventDetailFragment extends Fragment {
 
     private static final String ARG_EVENT = "event";
 
+    /**
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate this fragment automatically.
+     */
     public AdminEventDetailFragment() {
         super(R.layout.fragment_admin_event_detail);
     }
 
+    /**
+     * Populates all detail views from the {@link Event} passed in the navigation
+     * arguments, resolves the host's display name from Firestore, and configures
+     * the delete-poster and delete-event action buttons.
+     *
+     * @param view               the inflated detail layout
+     * @param savedInstanceState previously saved instance state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);

@@ -16,8 +16,18 @@ import androidx.annotation.StringRes;
  */
 public final class TigerToast {
 
+    /** Utility class — not instantiable. */
     private TigerToast() {}
 
+    /**
+     * Inflates the branded toast layout, sets the message, and shows the toast.
+     *
+     * @param context  The context used to inflate the layout and display the toast.
+     * @param message  The text to display inside the toast.
+     * @param duration {@link Toast#LENGTH_SHORT} or {@link Toast#LENGTH_LONG}.
+     * @return The {@link Toast} instance after {@link Toast#show()} has been called,
+     *         in case the caller needs to cancel it early.
+     */
     public static Toast show(@NonNull Context context, @NonNull CharSequence message, int duration) {
         LayoutInflater inflater = LayoutInflater.from(context);
         View layout = inflater.inflate(R.layout.toast_tiger, null);
@@ -31,6 +41,15 @@ public final class TigerToast {
         return toast;
     }
 
+    /**
+     * Convenience overload that resolves a string resource before delegating to
+     * {@link #show(Context, CharSequence, int)}.
+     *
+     * @param context  The context used to resolve the string resource and display the toast.
+     * @param resId    The string resource ID of the message to display.
+     * @param duration {@link Toast#LENGTH_SHORT} or {@link Toast#LENGTH_LONG}.
+     * @return The {@link Toast} instance after {@link Toast#show()} has been called.
+     */
     public static Toast show(@NonNull Context context, @StringRes int resId, int duration) {
         return show(context, context.getString(resId), duration);
     }

@@ -88,6 +88,8 @@ public class EventDetailFragment extends Fragment {
     private boolean geolocationRequired = false;
     /** False until {@link #loadEventDetails()} finishes; avoids joining before we know if location is required. */
     private boolean eventDetailsLoaded = false;
+    /** Tracks the user's actual entrant status so we can block re-joining if INVITED/ACCEPTED. */
+    private String currentEntrantStatus = null;
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestLocationPermission;
 
@@ -241,6 +243,10 @@ public class EventDetailFragment extends Fragment {
         btnPostComment.setOnClickListener(v -> postComment());
     }
 
+    /**
+     * Resumes location sharing via {@link WaitlistLocationForegroundService} when the user
+     * returns to this screen and is already on the waitlist.
+     */
     @Override
     public void onResume() {
         super.onResume();
@@ -250,8 +256,13 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Near–real-time location for the organizer map: runs in a foreground service so updates
-     * continue when the user leaves this screen (not only while it is visible).
+     * Starts {@link WaitlistLocationForegroundService} if the current user is on the waitlist,
+     * has a valid entrant document ID, and has already granted fine-location permission.
+     *
+     * <p>Because the service is a foreground service, location updates continue even when the
+     * user navigates away from this screen — allowing the organizer map to stay fresh.
+     * A no-op if {@link #fromHistory} is {@code true}, the user is not on the waitlist, or
+     * location permission is absent.
      */
     private void startWaitlistLocationSharingIfNeeded() {
         if (fromHistory || !isOnWaitlist || currentEntrantDocId == null || eventId.isEmpty()) {
@@ -267,6 +278,10 @@ public class EventDetailFragment extends Fragment {
         WaitlistLocationForegroundService.start(requireContext(), eventId, currentEntrantDocId, displayName);
     }
 
+    /**
+     * Stops the {@link WaitlistLocationForegroundService}, halting location uploads and removing
+     * the persistent notification. Called when the user leaves the waitlist.
+     */
     private void stopWaitlistLocationSharing() {
         WaitlistLocationForegroundService.stop(requireContext());
     }
@@ -351,19 +366,20 @@ public class EventDetailFragment extends Fragment {
                     updateWaitlistCounter();
                 });
 
-        // Check if current user is already on the waitlist
+        // Check if current user already has any entrant record for this event.
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
             db.collection("events").document(eventId)
                     .collection("entrants")
                     .whereEqualTo("userId", currentUser.getId())
-                    .whereEqualTo("status", "APPLIED")
                     .get()
                     .addOnSuccessListener(querySnapshot -> {
                         if (!isAdded()) return;
                         if (!querySnapshot.isEmpty()) {
-                            isOnWaitlist = true;
-                            currentEntrantDocId = querySnapshot.getDocuments().get(0).getId();
+                            DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
+                            currentEntrantDocId = entrantDoc.getId();
+                            currentEntrantStatus = entrantDoc.getString("status");
+                            isOnWaitlist = "APPLIED".equals(currentEntrantStatus);
                             refreshWaitlistButtonState();
                             startWaitlistLocationSharingIfNeeded();
                         }
@@ -376,6 +392,10 @@ public class EventDetailFragment extends Fragment {
      */
     private void joinWaitlist() {
         if (userIsOrganizer || isPrivateEvent) {
+            return;
+        }
+        // Prevent re-joining if the user has already been invited or accepted.
+        if ("INVITED".equals(currentEntrantStatus) || "ACCEPTED".equals(currentEntrantStatus)) {
             return;
         }
 
@@ -450,6 +470,16 @@ public class EventDetailFragment extends Fragment {
         geolocationRequired = false;
     }
 
+    /**
+     * Completes the join flow once {@link #geolocationRequired} is definitively known.
+     *
+     * <p>If geolocation is required: requests fine-location permission (if not yet granted) or
+     * immediately fetches a fresh GPS fix before writing the entrant record.
+     * If geolocation is not required: writes the entrant document with placeholder coordinates
+     * ({@code 0.0, 0.0}) immediately.
+     *
+     * @param currentUser The signed-in user performing the join; must not be {@code null}.
+     */
     private void continueJoinWithResolvedGeoSetting(@NonNull Users currentUser) {
         if (geolocationRequired) {
             // Organizer requires location: ask for permission, then capture GPS.
@@ -464,6 +494,11 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Returns whether the user has already granted {@link Manifest.permission#ACCESS_FINE_LOCATION}.
+     *
+     * @return {@code true} if the permission is granted, {@code false} otherwise.
+     */
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
@@ -565,6 +600,15 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Called when all attempts to obtain a device location have failed.
+     *
+     * <p>If the event requires location, the join is aborted and the user is shown an error.
+     * If location is optional, the join proceeds with placeholder coordinates ({@code 0.0, 0.0}).
+     *
+     * @param required    {@code true} if the organizer requires a location to join.
+     * @param currentUser The user attempting to join; must not be {@code null}.
+     */
     private void onNoLocation(boolean required, @NonNull Users currentUser) {
         if (required) {
             btnWaitlist.setEnabled(true);
@@ -574,6 +618,12 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
+    /**
+     * Checks whether Google Play Services is available on this device so the Fused Location
+     * Provider can be used.  Returns {@code false} if the fragment is detached.
+     *
+     * @return {@code true} if Google Play Services reports {@link ConnectionResult#SUCCESS}.
+     */
     private boolean isGooglePlayServicesLocationAvailable() {
         if (!isAdded()) {
             return false;
@@ -582,6 +632,20 @@ public class EventDetailFragment extends Fragment {
         return status == ConnectionResult.SUCCESS;
     }
 
+    /**
+     * Creates or overwrites the entrant document for the current user under
+     * {@code events/{eventId}/entrants/{userId}} with status {@code "APPLIED"} and the
+     * supplied GPS coordinates.
+     *
+     * <p>On success: updates local waitlist state, starts the location-sharing foreground service,
+     * writes an event-history record for the user, and re-enables the waitlist button.
+     *
+     * @param currentUser   The signed-in user; must not be {@code null}.
+     * @param latitude      Latitude to store; {@code 0.0} when location was not captured.
+     * @param longitude     Longitude to store; {@code 0.0} when location was not captured.
+     * @param accuracyMeters GPS accuracy in metres, or {@code null} if unavailable or coordinates
+     *                       are placeholder zeros.
+     */
     private void writeEntrantToFirestore(@NonNull Users currentUser, double latitude, double longitude,
                                        @Nullable Float accuracyMeters) {
         String docId = currentUser.getId();
@@ -748,6 +812,24 @@ public class EventDetailFragment extends Fragment {
             return;
         }
 
+        if ("INVITED".equals(currentEntrantStatus)) {
+            btnWaitlist.setText("You've been invited — check your inbox");
+            btnWaitlist.setEnabled(false);
+            btnWaitlist.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getResources().getColor(R.color.colorPrimary, null)));
+            return;
+        }
+
+        if ("ACCEPTED".equals(currentEntrantStatus)) {
+            btnWaitlist.setText("You are enrolled in this event");
+            btnWaitlist.setEnabled(false);
+            btnWaitlist.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(
+                            getResources().getColor(R.color.colorPrimary, null)));
+            return;
+        }
+
         if (isPrivateEvent && !isOnWaitlist) {
             btnWaitlist.setText("Private Event By Invitation");
             btnWaitlist.setEnabled(false);
@@ -845,6 +927,15 @@ public class EventDetailFragment extends Fragment {
         return (value != null && !value.isEmpty()) ? value : defaultValue;
     }
 
+    /**
+     * Determines whether the currently signed-in user has organizer privileges for this event.
+     *
+     * <p>A user is considered an organizer if their ID matches the {@code createdBy} field
+     * <em>or</em> appears in the {@code coOrganizerIds} list on the event document.
+     *
+     * @param eventDoc The Firestore document snapshot for this event; must not be {@code null}.
+     * @return {@code true} if the current user created or co-organizes the event.
+     */
     private boolean isCurrentUserOrganizer(@NonNull DocumentSnapshot eventDoc) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
@@ -862,8 +953,16 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Formats a yyyy-MM-dd date string to "Month Day, Year" format.
-     * Falls back to the raw string if parsing fails, or defaultValue if empty.
+     * Reads a date string from the given Firestore document field and converts it from
+     * {@code yyyy-MM-dd} to {@code "MMMM d, yyyy"} format (e.g. "April 4, 2026").
+     *
+     * <p>Falls back to the raw stored string if parsing fails, or to {@code defaultValue} if the
+     * field is absent or empty.
+     *
+     * @param doc          The Firestore document snapshot.
+     * @param field        The name of the date field to read.
+     * @param defaultValue The fallback value when the field is missing or blank.
+     * @return A human-readable date string or {@code defaultValue}.
      */
     private String formatDate(DocumentSnapshot doc, String field, String defaultValue) {
         String value = doc.getString(field);
@@ -881,7 +980,13 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Fetches the event data from Firestore and writes a copy to the user's eventHistory.
+     * Fetches the live event document from Firestore and writes a snapshot into the user's
+     * {@code users/{userId}/eventHistory/{eventId}} sub-collection with status {@code "APPLIED"}.
+     *
+     * <p>This record is used to display the event in the user's history screen after the main
+     * event document may have been deleted.
+     *
+     * @param userId The Firestore document ID of the current user.
      */
     private void writeEventHistoryForCurrentUser(String userId) {
         db.collection("events").document(eventId)

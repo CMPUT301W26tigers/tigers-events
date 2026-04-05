@@ -39,14 +39,29 @@ public class ExploreFilterBottomSheet extends BottomSheetDialogFragment {
     private OnFilterAppliedListener listener;
 
     /**
-     * Callback interface for when the user applies filters.
+     * Callback interface invoked when the user confirms their filter selections.
      */
     public interface OnFilterAppliedListener {
+        /**
+         * Called with the chosen filter values when the user taps "Apply Filters".
+         *
+         * @param availableOnly {@code true} if only events with open spots should be shown.
+         * @param dateFrom      Lower bound of the date range filter ({@code yyyy-MM-dd}),
+         *                      or {@code null} if not set.
+         * @param dateTo        Upper bound of the date range filter ({@code yyyy-MM-dd}),
+         *                      or {@code null} if not set.
+         */
         void onFiltersApplied(boolean availableOnly, String dateFrom, String dateTo);
     }
 
     /**
-     * Creates a new instance with the current filter state preserved.
+     * Creates a new instance with the current filter state pre-populated so that
+     * re-opening the sheet reflects any previously chosen filters.
+     *
+     * @param availableOnly Whether the "Available Only" toggle was active.
+     * @param dateFrom      The previously selected start date ({@code yyyy-MM-dd}), or {@code null}.
+     * @param dateTo        The previously selected end date ({@code yyyy-MM-dd}), or {@code null}.
+     * @return A new {@link ExploreFilterBottomSheet} with its arguments set.
      */
     public static ExploreFilterBottomSheet newInstance(boolean availableOnly, String dateFrom, String dateTo) {
         ExploreFilterBottomSheet sheet = new ExploreFilterBottomSheet();
@@ -58,10 +73,24 @@ public class ExploreFilterBottomSheet extends BottomSheetDialogFragment {
         return sheet;
     }
 
+    /**
+     * Registers the listener to be invoked when the user confirms their filter selections.
+     * Must be called before the sheet is shown.
+     *
+     * @param listener The callback to notify with the chosen filter values.
+     */
     public void setOnFilterAppliedListener(OnFilterAppliedListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Inflates the bottom sheet layout.
+     *
+     * @param inflater           The LayoutInflater object to inflate views.
+     * @param container          The parent ViewGroup that the fragment's UI will be attached to.
+     * @param savedInstanceState Previously saved state (unused here).
+     * @return The inflated root view for the bottom sheet.
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -69,6 +98,14 @@ public class ExploreFilterBottomSheet extends BottomSheetDialogFragment {
         return inflater.inflate(R.layout.fragment_explore_filter_bottom_sheet, container, false);
     }
 
+    /**
+     * Initialises UI components, restores prior filter state from the fragment arguments,
+     * and wires up click listeners for the date-picker cards, the Clear button, and
+     * the Apply button.
+     *
+     * @param view               The inflated bottom sheet view.
+     * @param savedInstanceState If non-null, the fragment is being re-created from saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -114,6 +151,13 @@ public class ExploreFilterBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
+    /**
+     * Opens a {@link MaterialDatePicker} and stores the selected date in either
+     * {@link #dateFrom} or {@link #dateTo}, updating the corresponding label TextView.
+     * The date is stored in {@code yyyy-MM-dd} format (UTC) for consistent comparison.
+     *
+     * @param isFrom {@code true} to set the "from" (start) date; {@code false} for the "to" (end) date.
+     */
     private void showDatePicker(boolean isFrom) {
         String title = isFrom ? "From Date" : "To Date";
         MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
@@ -138,7 +182,11 @@ public class ExploreFilterBottomSheet extends BottomSheetDialogFragment {
     }
 
     /**
-     * Converts "yyyy-MM-dd" to a user-friendly format like "April 2, 2026".
+     * Converts a {@code yyyy-MM-dd} date string to a user-friendly format like "April 2, 2026"
+     * suitable for display in the date label TextViews.
+     *
+     * @param dateStr The ISO date string to format.
+     * @return The formatted display string, or {@code dateStr} unchanged if parsing fails.
      */
     private String formatForDisplay(String dateStr) {
         try {

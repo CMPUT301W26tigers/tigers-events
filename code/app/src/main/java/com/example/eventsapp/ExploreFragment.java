@@ -56,6 +56,15 @@ public class ExploreFragment extends Fragment {
      */
     public ExploreFragment() { super(R.layout.fragment_explore); }
 
+    /**
+     * Called immediately after onCreateView has returned. Triggers expired-event cleanup,
+     * wires up the RecyclerView with a live-filter adapter, attaches listeners for the
+     * inbox button, filter sheet, and search bar, then begins a real-time load of all
+     * public events from Firestore.
+     *
+     * @param view               The View returned by onCreateView.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed from a previous saved state.
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -83,6 +92,13 @@ public class ExploreFragment extends Fragment {
         loadAllEvents();
     }
 
+    /**
+     * Navigates to {@link EventDetailFragment} for the selected event, passing the event ID
+     * and any available media URLs as navigation arguments.
+     *
+     * @param view  The current view, used to locate the NavController.
+     * @param event The event the user tapped on.
+     */
     private void navigateToDetail(View view, Event event) {
         Bundle args = new Bundle();
         args.putString("eventId", event.getId());
@@ -96,10 +112,20 @@ public class ExploreFragment extends Fragment {
                 .navigate(R.id.action_exploreFragment_to_eventDetailFragment, args);
     }
 
+    /**
+     * Navigates to the {@link InboxFragment}.
+     *
+     * @param view The view used to locate the NavController.
+     */
     private void openInbox(View view) {
         Navigation.findNavController(view).navigate(R.id.inboxFragment);
     }
 
+    /**
+     * Shows the {@link ExploreFilterBottomSheet} pre-populated with the current filter state.
+     * The callback updates the fragment's filter fields and re-runs {@link #applyFilters()}
+     * as soon as the user confirms.
+     */
     private void openFilterBottomSheet() {
         ExploreFilterBottomSheet sheet = ExploreFilterBottomSheet.newInstance(
                 filterAvailableOnly, filterDateFrom, filterDateTo);
@@ -112,6 +138,11 @@ public class ExploreFragment extends Fragment {
         sheet.show(getChildFragmentManager(), "filter_sheet");
     }
 
+    /**
+     * Combines the current search query with any active filter criteria (availability,
+     * date range) and passes them to {@link ExploreFilterHelper} to produce a filtered
+     * event list. Updates the adapter with the result and refreshes the chip strip.
+     */
     private void applyFilters() {
         EditText etSearch = requireView().findViewById(R.id.etSearch);
         String query = etSearch.getText().toString();
@@ -123,6 +154,12 @@ public class ExploreFragment extends Fragment {
         updateFilterChips();
     }
 
+    /**
+     * Rebuilds the active-filter chip row beneath the search bar. Each active filter
+     * (availability toggle, date range) receives its own dismissible chip. Tapping the
+     * close icon on a chip clears that filter and re-applies the remaining ones.
+     * The chip group is hidden entirely when no filters are active.
+     */
     private void updateFilterChips() {
         chipGroupFilters.removeAllViews();
 
@@ -154,6 +191,14 @@ public class ExploreFragment extends Fragment {
         chipGroupFilters.setVisibility(chipGroupFilters.getChildCount() > 0 ? View.VISIBLE : View.GONE);
     }
 
+    /**
+     * Builds a human-readable label for the active date-range chip, e.g.
+     * "Apr 2 – Apr 10", "From Apr 2", or "Until Apr 10".
+     *
+     * @param from The start date in {@code yyyy-MM-dd} format, or {@code null}/{@code ""} if unset.
+     * @param to   The end date in {@code yyyy-MM-dd} format, or {@code null}/{@code ""} if unset.
+     * @return A non-null chip label string.
+     */
     private String formatDateChipLabel(String from, String to) {
         boolean hasFrom = from != null && !from.isEmpty();
         boolean hasTo = to != null && !to.isEmpty();
@@ -162,6 +207,13 @@ public class ExploreFragment extends Fragment {
         else return "Until " + formatShortDate(to);
     }
 
+    /**
+     * Converts a {@code yyyy-MM-dd} date string to a compact display form such as "Apr 2".
+     * Returns the original string unchanged if parsing fails.
+     *
+     * @param dateStr The ISO date string to format.
+     * @return The formatted short date string, or {@code dateStr} on error.
+     */
     private String formatShortDate(String dateStr) {
         try {
             SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA);
@@ -173,6 +225,12 @@ public class ExploreFragment extends Fragment {
         }
     }
 
+    /**
+     * Attaches a real-time Firestore snapshot listener to the "events" collection.
+     * Private events are excluded. After each snapshot update, host display names and
+     * profile picture URLs are resolved before the current filters are re-applied so
+     * the list always reflects live data.
+     */
     private void loadAllEvents() {
         CollectionReference eventsRef = FirebaseFirestore.getInstance().collection("events");
         eventsRef.addSnapshotListener((value, error) -> {
@@ -219,6 +277,15 @@ public class ExploreFragment extends Fragment {
         });
     }
 
+    /**
+     * Resolves display names and profile picture URLs for every unique host ID present in
+     * the given event list. Each host document is fetched in parallel; once all requests
+     * have returned (success or failure), the resolved values are written back to the
+     * events and {@code onComplete} is invoked on the main thread.
+     *
+     * @param events     The list of events whose host metadata should be populated.
+     * @param onComplete Callback executed after all host data has been resolved.
+     */
     private void resolveHostNames(List<Event> events, Runnable onComplete) {
         Set<String> hostIds = new HashSet<>();
         for (Event e : events) {
@@ -279,19 +346,42 @@ public class ExploreFragment extends Fragment {
         }
     }
 
+    /**
+     * RecyclerView adapter for the Explore screen. Uses {@link DiffUtil} for efficient
+     * incremental updates whenever the filtered event list changes, minimising flicker.
+     */
     private static class ExploreEventAdapter extends RecyclerView.Adapter<ExploreEventAdapter.ViewHolder> {
         private final List<Event> events;
         private final OnEventClickListener listener;
 
+        /** Callback interface for taps on an event card. */
         interface OnEventClickListener {
+            /**
+             * Called when the user taps an event card.
+             *
+             * @param event The event associated with the tapped card.
+             */
             void onEventClick(Event event);
         }
 
+        /**
+         * Constructs the adapter.
+         *
+         * @param events   The initial (mutable) list of events to display.
+         * @param listener Callback invoked when an event card is tapped.
+         */
         ExploreEventAdapter(List<Event> events, OnEventClickListener listener) {
             this.events = events;
             this.listener = listener;
         }
 
+        /**
+         * Inflates the event card layout and wraps it in a {@link ViewHolder}.
+         *
+         * @param parent   The parent ViewGroup into which the new view will be inserted.
+         * @param viewType Unused; all items share the same view type.
+         * @return A new {@link ViewHolder} instance.
+         */
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -300,6 +390,14 @@ public class ExploreFragment extends Fragment {
             return new ViewHolder(view);
         }
 
+        /**
+         * Binds event data to the card views at {@code position}. Handles the host avatar
+         * (profile image or initial-letter fallback), poster visibility, description, and
+         * location row.
+         *
+         * @param holder   The ViewHolder to populate.
+         * @param position The position of the item within the adapter's data set.
+         */
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             Event event = events.get(position);
@@ -346,6 +444,13 @@ public class ExploreFragment extends Fragment {
             holder.itemView.setOnClickListener(v -> listener.onEventClick(event));
         }
 
+        /**
+         * Diffs the new list against the current one using {@link DiffUtil}, updates the
+         * backing list in-place, and dispatches the minimal set of change notifications
+         * to the RecyclerView to avoid a full rebind.
+         *
+         * @param newList The updated list of events to display.
+         */
         void updateEvents(List<Event> newList) {
             DiffUtil.DiffResult result = DiffUtil.calculateDiff(new DiffUtil.Callback() {
                 @Override public int getOldListSize() { return events.size(); }
@@ -370,14 +475,25 @@ public class ExploreFragment extends Fragment {
             result.dispatchUpdatesTo(this);
         }
 
+        /**
+         * Returns the total number of events currently displayed.
+         *
+         * @return The size of the event list.
+         */
         @Override
         public int getItemCount() { return events.size(); }
 
+        /** Holds references to all views in a single explore-event card. */
         static class ViewHolder extends RecyclerView.ViewHolder {
             TextView tvEventName, tvEventHost, tvAvatarLetter, tvEventDate, tvDescription, tvLocation;
             ImageView ivPoster, ivAvatarImage;
             View llLocation;
 
+            /**
+             * Binds view references from the inflated explore-event card layout.
+             *
+             * @param itemView The root view of the card layout.
+             */
             ViewHolder(@NonNull View itemView) {
                 super(itemView);
                 tvEventName = itemView.findViewById(R.id.tvExploreEventName);

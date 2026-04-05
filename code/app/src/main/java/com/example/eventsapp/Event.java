@@ -30,6 +30,9 @@ public class Event implements Serializable {
     private transient String entrantStatus; //used for UI display only
     private transient boolean fromHistory; //marks events loaded from user's eventHistory collection
 
+    /**
+     * No-argument constructor required for Firestore deserialization.
+     */
     public Event() {
     }
 
@@ -43,6 +46,22 @@ public class Event implements Serializable {
         this(null, name, amount, "", "", "", "", "", 0);
     }
 
+    /**
+     * Constructs a fully specified Event. A random UUID is assigned when {@code id} is {@code null}.
+     * {@code null} date/description/poster values are normalized to empty strings.
+     *
+     * @param id                 an explicit Firestore document ID, or {@code null} to auto-generate one
+     * @param name               the human-readable name of the event
+     * @param amount             the maximum number of confirmed attendees; must not be zero
+     * @param registration_start the registration opening date in {@code yyyy-MM-dd} format
+     * @param registration_end   the registration closing date in {@code yyyy-MM-dd} format
+     * @param event_date         the date the event takes place in {@code yyyy-MM-dd} format
+     * @param description        a description of the event
+     * @param posterUrl          a URL pointing to the event's promotional poster image
+     * @param sampleSize         the number of waitlisted entrants to invite during the lottery;
+     *                           negative values are clamped to zero
+     * @throws IllegalArgumentException if {@code amount} is zero
+     */
     public Event(String id, String name, int amount, String registration_start, String registration_end, String event_date, String description, String posterUrl, int sampleSize) {
         if (amount == 0) {
             throw new IllegalArgumentException("Amount cannot be zero");
@@ -271,10 +290,22 @@ public class Event implements Serializable {
         this.hostName = hostName;
     }
 
+    /**
+     * Returns the resolved profile picture URL of the event host.
+     * This field is transient and not stored in Firestore; it is populated at runtime
+     * by looking up the host user document.
+     *
+     * @return the host's profile picture URL, or {@code null} if not yet resolved
+     */
     public String getHostProfilePictureUrl() {
         return hostProfilePictureUrl;
     }
 
+    /**
+     * Sets the resolved profile picture URL of the event host.
+     *
+     * @param hostProfilePictureUrl a Firebase Storage download URL for the host's avatar
+     */
     public void setHostProfilePictureUrl(String hostProfilePictureUrl) {
         this.hostProfilePictureUrl = hostProfilePictureUrl;
     }
@@ -286,6 +317,11 @@ public class Event implements Serializable {
         return geolocationRequired;
     }
 
+    /**
+     * Sets whether entrants must grant location permission to join the event waitlist.
+     *
+     * @param geolocationRequired {@code true} to require geolocation; {@code false} to make it optional
+     */
     public void setGeolocationRequired(boolean geolocationRequired) {
         this.geolocationRequired = geolocationRequired;
     }

@@ -13,20 +13,46 @@ import com.bumptech.glide.Glide;
 
 import java.util.List;
 
+/**
+ * RecyclerView adapter that displays all registered users in the admin user-management screen.
+ * Each card shows the user's display name, account role, and avatar (profile photo or
+ * initial letter fallback). Tapping a card notifies the host via {@link OnUserClickListener}.
+ */
 public class AdminUserAdapter extends RecyclerView.Adapter<AdminUserAdapter.ViewHolder> {
 
+    /**
+     * Callback invoked when an admin taps a user card.
+     */
     public interface OnUserClickListener {
+        /**
+         * Called when the user card at the given position is clicked.
+         *
+         * @param user The {@link Users} object represented by the tapped card.
+         */
         void onUserClick(Users user);
     }
 
     private final List<Users> users;
     private final OnUserClickListener listener;
 
+    /**
+     * Constructs an AdminUserAdapter.
+     *
+     * @param users    The list of {@link Users} to display.
+     * @param listener Callback invoked when a user card is tapped; must not be {@code null}.
+     */
     public AdminUserAdapter(List<Users> users, OnUserClickListener listener) {
         this.users = users;
         this.listener = listener;
     }
 
+    /**
+     * Inflates the admin user card layout and wraps it in a {@link ViewHolder}.
+     *
+     * @param parent   The parent ViewGroup into which the new view will be added.
+     * @param viewType The view type of the new view (unused; only one type exists).
+     * @return A new {@link ViewHolder} backed by the inflated card view.
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -35,6 +61,14 @@ public class AdminUserAdapter extends RecyclerView.Adapter<AdminUserAdapter.View
         return new ViewHolder(v);
     }
 
+    /**
+     * Binds user data to the provided {@link ViewHolder}. Resolves a display name from
+     * {@code name}, then {@code firstName + lastName}, then falls back to {@code "Unknown"}.
+     * Loads the profile picture via Glide when available; otherwise shows the first initial.
+     *
+     * @param holder   The ViewHolder to update.
+     * @param position The position of the item within the data set.
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Users user = users.get(position);
@@ -64,15 +98,30 @@ public class AdminUserAdapter extends RecyclerView.Adapter<AdminUserAdapter.View
         holder.itemView.setOnClickListener(v -> listener.onUserClick(user));
     }
 
+    /**
+     * Returns the total number of users managed by this adapter.
+     *
+     * @return The size of the users list.
+     */
     @Override
     public int getItemCount() {
         return users.size();
     }
 
+    /**
+     * ViewHolder for a single admin user card.
+     * Holds references to the name, role, avatar image, and avatar-letter fallback views
+     * defined in {@code item_admin_user_card.xml}.
+     */
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvUserName, tvUserRole, tvAvatarLetter;
         ImageView ivAvatarImage;
 
+        /**
+         * Constructs a ViewHolder and resolves all child view references.
+         *
+         * @param itemView The inflated admin user card view.
+         */
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvUserName = itemView.findViewById(R.id.tvUserName);

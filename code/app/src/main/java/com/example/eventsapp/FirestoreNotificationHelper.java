@@ -20,14 +20,30 @@ public class FirestoreNotificationHelper {
     private static final String TAG = "NotificationHelper";
     private final FirebaseFirestore db;
 
+    /**
+     * Creates a helper backed by the default {@link FirebaseFirestore} instance.
+     */
     public FirestoreNotificationHelper() {
         this(FirebaseFirestore.getInstance());
     }
 
+    /**
+     * Creates a helper backed by the provided Firestore instance.
+     * Intended for dependency injection and testing.
+     *
+     * @param db the Firestore instance to use for all reads and writes
+     */
     FirestoreNotificationHelper(FirebaseFirestore db) {
         this.db = db;
     }
 
+    /**
+     * Sends an optional "waitlisted" notification to the user.
+     * The notification is suppressed if the user has disabled optional notifications.
+     *
+     * @param userId  the Firestore document ID of the recipient
+     * @param eventId the Firestore document ID of the event
+     */
     public void sendWaitlistedNotification(String userId, String eventId) {
         sendOptionalNotification(userId, eventId,
                 "Event waitlisted",
@@ -35,6 +51,14 @@ public class FirestoreNotificationHelper {
                 "waitlisted");
     }
 
+    /**
+     * Sends a critical "lottery invitation" notification to the user indicating they were
+     * selected from the waitlist. Critical notifications bypass the user's notification
+     * preference setting and are always delivered.
+     *
+     * @param userId  the Firestore document ID of the recipient
+     * @param eventId the Firestore document ID of the event
+     */
     public void sendInvitationNotification(String userId, String eventId) {
         sendCriticalNotification(userId, eventId,
                 "Event Invitation",
@@ -42,6 +66,13 @@ public class FirestoreNotificationHelper {
                 "invitation");
     }
 
+    /**
+     * Sends a critical notification informing the user that they have been invited to join
+     * the waitlist of a private event. Bypasses the user's optional notification preference.
+     *
+     * @param userId  the Firestore document ID of the recipient
+     * @param eventId the Firestore document ID of the private event
+     */
     public void sendPrivateWaitlistInvitationNotification(String userId, String eventId) {
         sendCriticalNotification(userId, eventId,
                 "Private Event Invitation",
@@ -49,6 +80,13 @@ public class FirestoreNotificationHelper {
                 "private_waitlist_invitation");
     }
 
+    /**
+     * Sends a critical notification inviting the user to become a co-organizer of the event.
+     * Bypasses the user's optional notification preference.
+     *
+     * @param userId  the Firestore document ID of the invited user
+     * @param eventId the Firestore document ID of the event
+     */
     public void sendCoOrganizerInvitationNotification(String userId, String eventId) {
         sendCriticalNotification(userId, eventId,
                 "Co-organizer Invitation",
@@ -56,6 +94,13 @@ public class FirestoreNotificationHelper {
                 "co_organizer_invitation");
     }
 
+    /**
+     * Sends an optional notification informing the user that they were not selected from the
+     * waitlist. Suppressed if the user has disabled optional notifications.
+     *
+     * @param userId  the Firestore document ID of the recipient
+     * @param eventId the Firestore document ID of the event
+     */
     public void sendNotSelectedNotification(String userId, String eventId) {
         sendOptionalNotification(userId, eventId,
                 "Removed from Event",
@@ -204,11 +249,32 @@ public class FirestoreNotificationHelper {
                 .addOnFailureListener(e -> Log.w(TAG, "Failed to write notification log", e));
     }
 
+    /**
+     * Builds a deterministic Firestore document ID for a notification of the given type and
+     * event, in the form {@code <type>_<eventId>}.
+     *
+     * <p>Using a deterministic ID means re-sending the same notification type for the same
+     * event overwrites the existing document rather than creating a duplicate.
+     *
+     * @param type    the notification type string (e.g. {@code "invitation"}); if {@code null},
+     *                {@code "notification"} is used
+     * @param eventId the Firestore document ID of the event
+     * @return a non-null document ID string
+     */
     @NonNull
     static String buildNotificationDocumentId(String type, String eventId) {
         return (type == null ? "notification" : type) + "_" + eventId;
     }
 
+    /**
+     * Attempts to derive a human-readable display name from a Firestore user document.
+     *
+     * <p>Resolution order: {@code name} field → concatenation of {@code firstName} and
+     * {@code lastName} fields → {@code "Unknown"} when none are present.
+     *
+     * @param userDoc the Firestore user document snapshot
+     * @return a non-null, non-empty display name string
+     */
     @NonNull
     String resolveUserName(@NonNull DocumentSnapshot userDoc) {
         String name = userDoc.getString("name");

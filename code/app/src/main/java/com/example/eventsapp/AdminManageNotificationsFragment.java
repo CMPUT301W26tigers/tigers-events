@@ -20,6 +20,14 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Admin fragment for reviewing all notification logs recorded in the
+ * {@code notification_logs} Firestore collection.
+ *
+ * <p>Displays a scrollable, searchable list of {@link NotificationLogItem} entries
+ * ordered by descending timestamp.  The search bar filters across organizer name,
+ * event name, notification title, and message body.
+ */
 public class AdminManageNotificationsFragment extends Fragment {
     private static final String TAG = "AdminManageNotifications";
 
@@ -28,10 +36,21 @@ public class AdminManageNotificationsFragment extends Fragment {
     private AdminNotificationLogAdapter adapter;
     private String currentQuery = "";
 
+    /**
+     * Required public no-arg constructor. Supplies the layout resource so the
+     * framework can recreate this fragment automatically.
+     */
     public AdminManageNotificationsFragment() {
         super(R.layout.fragment_admin_manage_notifications);
     }
 
+    /**
+     * Sets up the {@link RecyclerView}, attaches the search listener, and triggers
+     * the one-shot load of notification logs from Firestore.
+     *
+     * @param view               the inflated layout root
+     * @param savedInstanceState previously saved state, or {@code null}
+     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
