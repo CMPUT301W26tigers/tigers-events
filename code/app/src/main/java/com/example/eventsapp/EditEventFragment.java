@@ -180,6 +180,7 @@ public class EditEventFragment extends Fragment {
         view.findViewById(R.id.btn_share_qr).setOnClickListener(v -> shareQR());
         view.findViewById(R.id.btn_share_link).setOnClickListener(v -> shareLink());
         view.findViewById(R.id.btn_delete_event).setOnClickListener(v -> confirmDeleteEvent());
+        view.findViewById(R.id.btn_view_event).setOnClickListener(v -> viewEvent());
     }
 
     private void setupToolbar(View view) {
@@ -190,6 +191,8 @@ public class EditEventFragment extends Fragment {
             );
         }
     }
+
+
 
     private void setupDatePickers() {
         editEventDate.setOnClickListener(v -> showDatePicker(editEventDate));
@@ -416,6 +419,14 @@ public class EditEventFragment extends Fragment {
         } catch (ParseException e) {
             return false;
         }
+    }
+
+
+    private void viewEvent() {
+        Bundle args = new Bundle();
+        args.putString("eventId", eventId);
+        args.putBoolean("fromHistory", false);
+        Navigation.findNavController(requireView()).navigate(R.id.action_editEventFragment_to_eventDetailFragment, args);
     }
 
     private String getText(TextInputEditText et) {
