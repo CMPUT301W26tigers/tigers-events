@@ -512,7 +512,7 @@ public class CreateEventFragment extends Fragment {
         String eventCapacityStr = editEventCapacity != null && editEventCapacity.getText() != null ? editEventCapacity.getText().toString().trim() : "";
         String waitlistCapacityStr = editCapacity.getText() != null ? editCapacity.getText().toString().trim() : "";
         String sampleStr = editSampleSize != null && editSampleSize.getText() != null
-                ? editSampleSize.getText().toString().trim() : "0";
+                ? editSampleSize.getText().toString().trim() : "";
 
         String eventDate = getText(editEventDate);
         String registrationStart = getText(editRegistrationStart);
@@ -577,13 +577,16 @@ public class CreateEventFragment extends Fragment {
                 return null;
             }
         }
-        try {
-            sampleSize = Integer.parseInt(sampleStr);
-            if (sampleSize < 0) sampleSize = 0;
-        } catch (NumberFormatException e) {
-            sampleSize = 0;
-            TigerToast.show(requireContext(), "Invalid capacity", Toast.LENGTH_SHORT);
-            return null;
+        if (sampleStr.isEmpty()) {
+            sampleSize = eventCapacityVal;
+        } else {
+            try {
+                sampleSize = Integer.parseInt(sampleStr);
+                // If they enter 0 or a negative number, safely fall back to event capacity
+                if (sampleSize <= 0) sampleSize = eventCapacityVal;
+            } catch (NumberFormatException e) {
+                sampleSize = eventCapacityVal;
+            }
         }
 
         if (!isValidRegistrationPeriod(eventDate, registrationStart, registrationEnd)) {
