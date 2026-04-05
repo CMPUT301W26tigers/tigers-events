@@ -85,6 +85,8 @@ public class EventDetailFragment extends Fragment {
     private boolean isPrivateEvent = false;
     private boolean userIsOrganizer = false;
     private String currentEntrantDocId = null;
+    private String userStatus = null;
+    private boolean isRegistrationOpen = true;
     private int waitlistCount = 0;
     private int waitlistCapacity = 0;
     private int eventCapacity = 0;
@@ -311,6 +313,11 @@ public class EventDetailFragment extends Fragment {
                                 formatDate(doc, "registration_start", "TBD")
                                 + " - "
                                 + formatDate(doc, "registration_end", "TBD"));
+                        // Check if registration is open
+                        String regStart = doc.getString("registration_start");
+                        String regEnd = doc.getString("registration_end");
+                        checkRegistrationPeriod(regStart, regEnd);
+
                         isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
                         userIsOrganizer = isCurrentUserOrganizer(doc);
                         eventCreatorId = doc.getString("createdBy");
@@ -361,6 +368,36 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
+     * Checks if the current date is within the registration start and end range.
+     */
+    private void checkRegistrationPeriod(String startStr, String endStr) {
+        if (startStr == null || endStr == null || startStr.isEmpty() || endStr.isEmpty()) {
+            isRegistrationOpen = true;
+            return;
+        }
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CANADA);
+            sdf.setLenient(false);
+            Date startDate = sdf.parse(startStr);
+            Date endDate = sdf.parse(endStr);
+
+            // Adjust end date to the very end of the day (23:59:59)
+            if (endDate != null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.setTime(endDate);
+                cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+                cal.set(java.util.Calendar.MINUTE, 59);
+                cal.set(java.util.Calendar.SECOND, 59);
+                endDate = cal.getTime();
+            }
+
+            Date now = new Date();
+            isRegistrationOpen = now.compareTo(startDate) >= 0 && now.compareTo(endDate) <= 0;
+        } catch (java.text.ParseException e) {
+            isRegistrationOpen = true; // Fallback to open if parsing fails
+        }
+    }
+    /**
      * Fetches the current waitlist status for the event and the current user.
      */
     private void loadWaitlistStatus() {
@@ -382,16 +419,27 @@ public class EventDetailFragment extends Fragment {
             db.collection("events").document(eventId)
                     .collection("entrants")
                     .whereEqualTo("userId", currentUser.getId())
-                    .whereEqualTo("status", "APPLIED")
                     .addSnapshotListener((value, error) -> {
                         if (!isAdded()) return;
                         if (value != null && !value.isEmpty()) {
-                            isOnWaitlist = true;
-                            currentEntrantDocId = value.getDocuments().get(0).getId();
+//                            isOnWaitlist = true;
+//                            currentEntrantDocId = value.getDocuments().get(0).getId();
+//                            refreshWaitlistButtonState();
+//                            startWaitlistLocationSharingIfNeeded();
+                            DocumentSnapshot doc = value.getDocuments().get(0);
+                            userStatus = doc.getString("status");
+                            currentEntrantDocId = doc.getId();
+                            if ("APPLIED".equals(userStatus)) {
+                                isOnWaitlist = true;
+                                startWaitlistLocationSharingIfNeeded();
+                            } else {
+                                isOnWaitlist = false;
+                                stopWaitlistLocationSharing();
+                            }
                             refreshWaitlistButtonState();
-                            startWaitlistLocationSharingIfNeeded();
                         } else {
                             isOnWaitlist = false;
+                            userStatus = null;
                             currentEntrantDocId = null;
                             refreshWaitlistButtonState();
                             stopWaitlistLocationSharing();
@@ -875,6 +923,18 @@ public class EventDetailFragment extends Fragment {
             text = "Organizer Access";
             enabled = false;
             colorRes = R.color.colorPrimaryDark;
+
+        } else if ("ACCEPTED".equals(userStatus)) {
+            text = "Already Accepted";
+            text2 = "Already Accepted";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
+        } else if ("INVITED".equals(userStatus)) {
+            text = "Already Invited";
+            text2 = "Check Inbox";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
+
         } else if (isPrivateEvent && !isOnWaitlist) {
             text = "Private Event By Invitation";
             enabled = false;
@@ -886,6 +946,11 @@ public class EventDetailFragment extends Fragment {
             if (btnWaitlist2 != null) btnWaitlist2.setVisibility(View.GONE);
             updateWaitlistButton(btnWaitlist, text, colorRes, enabled);
             return;
+
+        } else if (!isRegistrationOpen) {
+            text = "Registration Closed";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
         } else if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity){
             text = getString(R.string.waitlist_full);
             enabled = false;
