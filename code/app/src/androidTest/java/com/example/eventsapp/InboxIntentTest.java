@@ -10,6 +10,7 @@ import org.junit.runner.RunWith;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static org.hamcrest.Matchers.allOf;
@@ -59,7 +60,7 @@ public class InboxIntentTest {
             prepareDemoInboxAndNavigateToAccount(scenario);
             onView(withId(R.id.btnTopIcon)).perform(click());
             onView(allOf(withText("Event Invitation"), isDisplayed())).perform(click());
-            onView(allOf(withId(R.id.btnAcceptInvitation), isDisplayed())).perform(click());
+            onView(allOf(withId(R.id.btnAcceptInvitation), isDisplayed())).perform(scrollTo(), click());
 
             onView(withText("Event Invitation")).check(doesNotExist());
             onView(withText("Event waitlisted")).check(matches(isDisplayed()));
@@ -72,7 +73,7 @@ public class InboxIntentTest {
             prepareDemoInboxAndNavigateToAccount(scenario);
             onView(withId(R.id.btnTopIcon)).perform(click());
             onView(allOf(withText("Event Invitation"), isDisplayed())).perform(click());
-            onView(allOf(withId(R.id.btnDeclineInvitation), isDisplayed())).perform(click());
+            onView(allOf(withId(R.id.btnDeclineInvitation), isDisplayed())).perform(scrollTo(), click());
 
             onView(withText("Event Invitation")).check(doesNotExist());
             onView(withText("Event waitlisted")).check(matches(isDisplayed()));
