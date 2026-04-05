@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,6 +16,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,10 +43,12 @@ import android.location.Location;
 import android.os.Looper;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * A fragment that displays the full details of a specific event.
@@ -66,7 +70,7 @@ public class EventDetailFragment extends Fragment {
     private TextView tvName, tvDescription, tvEventDate, tvRegistrationRange,
             tvCapacity, tvWaitlistCounter, tvExpiredBanner, tvHostName, tvHostAvatar, tvLocation;
     private ImageView ivPoster, ivHostPicture;
-    private MaterialButton btnWaitlist;
+    private MaterialButton btnWaitlist, btnWaitlist2;
 
     // Comment views
     private RecyclerView rvComments;
@@ -81,15 +85,16 @@ public class EventDetailFragment extends Fragment {
     private boolean isPrivateEvent = false;
     private boolean userIsOrganizer = false;
     private String currentEntrantDocId = null;
+    private String userStatus = null;
+    private boolean isRegistrationOpen = true;
     private int waitlistCount = 0;
     private int waitlistCapacity = 0;
     private int eventCapacity = 0;
+    private boolean hasPendingGroup = false;
     private String eventCreatorId = null;
     private boolean geolocationRequired = false;
     /** False until {@link #loadEventDetails()} finishes; avoids joining before we know if location is required. */
     private boolean eventDetailsLoaded = false;
-    /** Tracks the user's actual entrant status so we can block re-joining if INVITED/ACCEPTED. */
-    private String currentEntrantStatus = null;
     private FusedLocationProviderClient fusedLocationClient;
     private ActivityResultLauncher<String> requestLocationPermission;
 
@@ -112,14 +117,14 @@ public class EventDetailFragment extends Fragment {
                     if (!isAdded()) return;
                     Users u = UserManager.getInstance().getCurrentUser();
                     if (u == null || u.getId() == null) {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         return;
                     }
                     // This callback is only launched when geolocationRequired=true.
                     if (granted) {
                         fetchLocationAndCompleteJoin(true);
                     } else {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         TigerToast.show(requireContext(), "Location permission is required to join this event", Toast.LENGTH_LONG);
                     }
                 });
@@ -176,6 +181,7 @@ public class EventDetailFragment extends Fragment {
         ivPoster = view.findViewById(R.id.iv_poster);
         ivHostPicture = view.findViewById(R.id.iv_host_picture);
         btnWaitlist = view.findViewById(R.id.btnWaitlist);
+        btnWaitlist2 = view.findViewById(R.id.btnWaitlist2);
 
         if (preloadPosterUrl != null) {
             Glide.with(this).load(preloadPosterUrl).into(ivPoster);
@@ -214,13 +220,13 @@ public class EventDetailFragment extends Fragment {
 
         if (eventId.isEmpty()) {
             tvName.setText("Event not found");
-            btnWaitlist.setVisibility(View.GONE);
+            setWaitlistButtonsVisibility(View.GONE);
             return;
         }
 
         if (fromHistory) {
             // Load from user's personal history instead of global events
-            btnWaitlist.setVisibility(View.GONE);
+            setWaitlistButtonsVisibility(View.GONE);
             tvWaitlistCounter.setVisibility(View.GONE);
             if (tvExpiredBanner != null) {
                 tvExpiredBanner.setVisibility(View.VISIBLE);
@@ -237,16 +243,30 @@ public class EventDetailFragment extends Fragment {
                     joinWaitlist();
                 }
             });
+
+            btnWaitlist2.setOnClickListener(v -> {
+                if (isOnWaitlist) {
+                    leaveWaitlist();
+                } else {
+                    joinWaitlistWithGroup();
+                }
+            });
         }
 
         loadComments();
         btnPostComment.setOnClickListener(v -> postComment());
     }
 
-    /**
-     * Resumes location sharing via {@link WaitlistLocationForegroundService} when the user
-     * returns to this screen and is already on the waitlist.
-     */
+    private void setWaitlistButtonsEnabled(boolean enabled) {
+        if (btnWaitlist != null) btnWaitlist.setEnabled(enabled);
+        if (btnWaitlist2 != null) btnWaitlist2.setEnabled(enabled);
+    }
+
+    private void setWaitlistButtonsVisibility(int visibility) {
+        if (btnWaitlist != null) btnWaitlist.setVisibility(visibility);
+        if (btnWaitlist2 != null) btnWaitlist2.setVisibility(visibility);
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -256,13 +276,8 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Starts {@link WaitlistLocationForegroundService} if the current user is on the waitlist,
-     * has a valid entrant document ID, and has already granted fine-location permission.
-     *
-     * <p>Because the service is a foreground service, location updates continue even when the
-     * user navigates away from this screen — allowing the organizer map to stay fresh.
-     * A no-op if {@link #fromHistory} is {@code true}, the user is not on the waitlist, or
-     * location permission is absent.
+     * Near–real-time location for the organizer map: runs in a foreground service so updates
+     * continue when the user leaves this screen (not only while it is visible).
      */
     private void startWaitlistLocationSharingIfNeeded() {
         if (fromHistory || !isOnWaitlist || currentEntrantDocId == null || eventId.isEmpty()) {
@@ -278,10 +293,6 @@ public class EventDetailFragment extends Fragment {
         WaitlistLocationForegroundService.start(requireContext(), eventId, currentEntrantDocId, displayName);
     }
 
-    /**
-     * Stops the {@link WaitlistLocationForegroundService}, halting location uploads and removing
-     * the persistent notification. Called when the user leaves the waitlist.
-     */
     private void stopWaitlistLocationSharing() {
         WaitlistLocationForegroundService.stop(requireContext());
     }
@@ -302,6 +313,11 @@ public class EventDetailFragment extends Fragment {
                                 formatDate(doc, "registration_start", "TBD")
                                 + " - "
                                 + formatDate(doc, "registration_end", "TBD"));
+                        // Check if registration is open
+                        String regStart = doc.getString("registration_start");
+                        String regEnd = doc.getString("registration_end");
+                        checkRegistrationPeriod(regStart, regEnd);
+
                         isPrivateEvent = Boolean.TRUE.equals(doc.getBoolean("isPrivate"));
                         userIsOrganizer = isCurrentUserOrganizer(doc);
                         eventCreatorId = doc.getString("createdBy");
@@ -341,16 +357,46 @@ public class EventDetailFragment extends Fragment {
                         refreshWaitlistButtonState();
                     } else {
                         tvName.setText("Event not found");
-                        btnWaitlist.setVisibility(View.GONE);
+                        setWaitlistButtonsVisibility(View.GONE);
                     }
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
                     tvName.setText("Failed to load event");
-                    btnWaitlist.setVisibility(View.GONE);
+                    setWaitlistButtonsVisibility(View.GONE);
                 });
     }
 
+    /**
+     * Checks if the current date is within the registration start and end range.
+     */
+    private void checkRegistrationPeriod(String startStr, String endStr) {
+        if (startStr == null || endStr == null || startStr.isEmpty() || endStr.isEmpty()) {
+            isRegistrationOpen = true;
+            return;
+        }
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.CANADA);
+            sdf.setLenient(false);
+            Date startDate = sdf.parse(startStr);
+            Date endDate = sdf.parse(endStr);
+
+            // Adjust end date to the very end of the day (23:59:59)
+            if (endDate != null) {
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.setTime(endDate);
+                cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+                cal.set(java.util.Calendar.MINUTE, 59);
+                cal.set(java.util.Calendar.SECOND, 59);
+                endDate = cal.getTime();
+            }
+
+            Date now = new Date();
+            isRegistrationOpen = now.compareTo(startDate) >= 0 && now.compareTo(endDate) <= 0;
+        } catch (java.text.ParseException e) {
+            isRegistrationOpen = true; // Fallback to open if parsing fails
+        }
+    }
     /**
      * Fetches the current waitlist status for the event and the current user.
      */
@@ -359,31 +405,67 @@ public class EventDetailFragment extends Fragment {
         db.collection("events").document(eventId)
                 .collection("entrants")
                 .whereEqualTo("status", "APPLIED")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addSnapshotListener((value, error) -> {
                     if (!isAdded()) return;
-                    waitlistCount = querySnapshot.size();
-                    updateWaitlistCounter();
+                    if (value != null) {
+                        waitlistCount = value.size();
+                        updateWaitlistCounter();
+                    }
                 });
 
-        // Check if current user already has any entrant record for this event.
+        // Check if current user is already on the waitlist
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getId() != null) {
             db.collection("events").document(eventId)
                     .collection("entrants")
                     .whereEqualTo("userId", currentUser.getId())
-                    .get()
-                    .addOnSuccessListener(querySnapshot -> {
+                    .addSnapshotListener((value, error) -> {
                         if (!isAdded()) return;
-                        if (!querySnapshot.isEmpty()) {
-                            DocumentSnapshot entrantDoc = querySnapshot.getDocuments().get(0);
-                            currentEntrantDocId = entrantDoc.getId();
-                            currentEntrantStatus = entrantDoc.getString("status");
-                            isOnWaitlist = "APPLIED".equals(currentEntrantStatus);
+                        if (value != null && !value.isEmpty()) {
+//                            isOnWaitlist = true;
+//                            currentEntrantDocId = value.getDocuments().get(0).getId();
+//                            refreshWaitlistButtonState();
+//                            startWaitlistLocationSharingIfNeeded();
+                            DocumentSnapshot doc = value.getDocuments().get(0);
+                            userStatus = doc.getString("status");
+                            currentEntrantDocId = doc.getId();
+                            if ("APPLIED".equals(userStatus)) {
+                                isOnWaitlist = true;
+                                startWaitlistLocationSharingIfNeeded();
+                            } else {
+                                isOnWaitlist = false;
+                                stopWaitlistLocationSharing();
+                            }
                             refreshWaitlistButtonState();
-                            startWaitlistLocationSharingIfNeeded();
+                        } else {
+                            isOnWaitlist = false;
+                            userStatus = null;
+                            currentEntrantDocId = null;
+                            refreshWaitlistButtonState();
+                            stopWaitlistLocationSharing();
                         }
                     });
+
+            // Check if current user is part of a pending waitlist group
+            if (currentUser.getEmail() != null && !currentUser.getEmail().isEmpty()) {
+                db.collection("events").document(eventId)
+                        .collection("groups")
+                        .whereEqualTo("status", "PENDING")
+                        .whereArrayContains("acceptedEmails", currentUser.getEmail())
+                        .addSnapshotListener((value, error) -> {
+                            if (!isAdded()) return;
+                            if (error != null) {
+                                Log.e(TAG, "Error loading group status", error);
+                                return;
+                            }
+                            if (value != null && !value.isEmpty()) {
+                                hasPendingGroup = true;
+                            } else {
+                                hasPendingGroup = false;
+                            }
+                            refreshWaitlistButtonState();
+                        });
+            }
         }
     }
 
@@ -392,10 +474,6 @@ public class EventDetailFragment extends Fragment {
      */
     private void joinWaitlist() {
         if (userIsOrganizer || isPrivateEvent) {
-            return;
-        }
-        // Prevent re-joining if the user has already been invited or accepted.
-        if ("INVITED".equals(currentEntrantStatus) || "ACCEPTED".equals(currentEntrantStatus)) {
             return;
         }
 
@@ -413,13 +491,90 @@ public class EventDetailFragment extends Fragment {
             TigerToast.show(requireContext(), "The waitlist for this event is full", Toast.LENGTH_SHORT);
             return;
         }
-        btnWaitlist.setEnabled(false);
+        setWaitlistButtonsEnabled(false);
 
         if (!eventDetailsLoaded) {
             fetchEventSettingsThenContinueJoin(currentUser);
             return;
         }
         continueJoinWithResolvedGeoSetting(currentUser);
+    }
+
+    private void joinWaitlistWithGroup() {
+        if (userIsOrganizer || isPrivateEvent) {
+            return;
+        }
+
+        Users currentUser = UserManager.getInstance().getCurrentUser();
+        if (currentUser == null || currentUser.getId() == null || currentUser.getId().isEmpty()) {
+            TigerToast.show(requireContext(), "Please sign in to join the waitlist", Toast.LENGTH_SHORT);
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
+        builder.setTitle("Join Waitlist with Group");
+        builder.setMessage("Enter email addresses of friends to join with (comma-separated):");
+
+        final EditText input = new EditText(requireContext());
+        input.setHint("email1@example.com, email2@example.com");
+        builder.setView(input);
+
+        builder.setPositiveButton("Invite", (dialog, which) -> {
+            String emailsStr = input.getText().toString().trim();
+            if (emailsStr.isEmpty()) {
+                TigerToast.show(requireContext(), "Please enter at least one email", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            List<String> emails = new ArrayList<>();
+            for (String email : emailsStr.split(",")) {
+                String e = email.trim();
+                if (!e.isEmpty()) {
+                    emails.add(e);
+                }
+            }
+
+            if (emails.isEmpty()) {
+                TigerToast.show(requireContext(), "Please enter valid emails", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            createWaitlistGroup(currentUser, emails);
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    private void createWaitlistGroup(Users currentUser, List<String> emails) {
+        String groupId = UUID.randomUUID().toString();
+        Map<String, Object> groupData = new HashMap<>();
+        groupData.put("groupId", groupId);
+        groupData.put("eventId", eventId);
+        groupData.put("creatorId", currentUser.getId());
+        groupData.put("creatorEmail", currentUser.getEmail());
+        groupData.put("memberEmails", emails);
+        
+        List<String> acceptedEmails = new ArrayList<>();
+        acceptedEmails.add(currentUser.getEmail());
+        groupData.put("acceptedEmails", acceptedEmails);
+        groupData.put("status", "PENDING");
+        groupData.put("timestamp", FieldValue.serverTimestamp());
+
+        db.collection("events").document(eventId)
+                .collection("groups").document(groupId)
+                .set(groupData)
+                .addOnSuccessListener(unused -> {
+                    TigerToast.show(requireContext(), "Group invitations sent!", Toast.LENGTH_SHORT);
+                    // Send notifications to all invited emails
+                    for (String email : emails) {
+                        notificationHelper.sendGroupWaitlistInvitationNotification(email, eventId, groupId, currentUser.getName());
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    TigerToast.show(requireContext(), "Failed to create group", Toast.LENGTH_SHORT);
+                    Log.e(TAG, "Error creating group", e);
+                });
     }
 
     /**
@@ -432,7 +587,7 @@ public class EventDetailFragment extends Fragment {
                 .addOnSuccessListener(doc -> {
                     if (!isAdded()) return;
                     if (doc == null || !doc.exists()) {
-                        btnWaitlist.setEnabled(true);
+                        setWaitlistButtonsEnabled(true);
                         TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                         return;
                     }
@@ -442,7 +597,7 @@ public class EventDetailFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Could not load event", Toast.LENGTH_SHORT);
                     Log.e(TAG, "join: failed to load event settings", e);
                 });
@@ -470,16 +625,6 @@ public class EventDetailFragment extends Fragment {
         geolocationRequired = false;
     }
 
-    /**
-     * Completes the join flow once {@link #geolocationRequired} is definitively known.
-     *
-     * <p>If geolocation is required: requests fine-location permission (if not yet granted) or
-     * immediately fetches a fresh GPS fix before writing the entrant record.
-     * If geolocation is not required: writes the entrant document with placeholder coordinates
-     * ({@code 0.0, 0.0}) immediately.
-     *
-     * @param currentUser The signed-in user performing the join; must not be {@code null}.
-     */
     private void continueJoinWithResolvedGeoSetting(@NonNull Users currentUser) {
         if (geolocationRequired) {
             // Organizer requires location: ask for permission, then capture GPS.
@@ -494,11 +639,6 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
-    /**
-     * Returns whether the user has already granted {@link Manifest.permission#ACCESS_FINE_LOCATION}.
-     *
-     * @return {@code true} if the permission is granted, {@code false} otherwise.
-     */
     private boolean hasLocationPermission() {
         return ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
@@ -516,7 +656,7 @@ public class EventDetailFragment extends Fragment {
     private void fetchLocationAndCompleteJoin(boolean required) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
-            btnWaitlist.setEnabled(true);
+            setWaitlistButtonsEnabled(true);
             return;
         }
 
@@ -600,30 +740,15 @@ public class EventDetailFragment extends Fragment {
         }
     }
 
-    /**
-     * Called when all attempts to obtain a device location have failed.
-     *
-     * <p>If the event requires location, the join is aborted and the user is shown an error.
-     * If location is optional, the join proceeds with placeholder coordinates ({@code 0.0, 0.0}).
-     *
-     * @param required    {@code true} if the organizer requires a location to join.
-     * @param currentUser The user attempting to join; must not be {@code null}.
-     */
     private void onNoLocation(boolean required, @NonNull Users currentUser) {
         if (required) {
-            btnWaitlist.setEnabled(true);
+            setWaitlistButtonsEnabled(true);
             TigerToast.show(requireContext(), "Could not read your location. Check Google Play services or try again.", Toast.LENGTH_LONG);
         } else {
             writeEntrantToFirestore(currentUser, 0.0, 0.0, null);
         }
     }
 
-    /**
-     * Checks whether Google Play Services is available on this device so the Fused Location
-     * Provider can be used.  Returns {@code false} if the fragment is detached.
-     *
-     * @return {@code true} if Google Play Services reports {@link ConnectionResult#SUCCESS}.
-     */
     private boolean isGooglePlayServicesLocationAvailable() {
         if (!isAdded()) {
             return false;
@@ -632,20 +757,6 @@ public class EventDetailFragment extends Fragment {
         return status == ConnectionResult.SUCCESS;
     }
 
-    /**
-     * Creates or overwrites the entrant document for the current user under
-     * {@code events/{eventId}/entrants/{userId}} with status {@code "APPLIED"} and the
-     * supplied GPS coordinates.
-     *
-     * <p>On success: updates local waitlist state, starts the location-sharing foreground service,
-     * writes an event-history record for the user, and re-enables the waitlist button.
-     *
-     * @param currentUser   The signed-in user; must not be {@code null}.
-     * @param latitude      Latitude to store; {@code 0.0} when location was not captured.
-     * @param longitude     Longitude to store; {@code 0.0} when location was not captured.
-     * @param accuracyMeters GPS accuracy in metres, or {@code null} if unavailable or coordinates
-     *                       are placeholder zeros.
-     */
     private void writeEntrantToFirestore(@NonNull Users currentUser, double latitude, double longitude,
                                        @Nullable Float accuracyMeters) {
         String docId = currentUser.getId();
@@ -675,14 +786,14 @@ public class EventDetailFragment extends Fragment {
                     waitlistCount++;
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Joined the waitlist!", Toast.LENGTH_SHORT);
                     writeEventHistoryForCurrentUser(currentUser.getId());
                     startWaitlistLocationSharingIfNeeded();
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Failed to join waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error joining waitlist", e);
                 });
@@ -694,7 +805,7 @@ public class EventDetailFragment extends Fragment {
     private void leaveWaitlist() {
         if (currentEntrantDocId == null) return;
 
-        btnWaitlist.setEnabled(false);
+        setWaitlistButtonsEnabled(false);
         stopWaitlistLocationSharing();
 
         db.collection("events").document(eventId)
@@ -707,7 +818,7 @@ public class EventDetailFragment extends Fragment {
                     waitlistCount = Math.max(0, waitlistCount - 1);
                     refreshWaitlistButtonState();
                     updateWaitlistCounter();
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Removed from waitlist", Toast.LENGTH_SHORT);
                     // Delete history record since user voluntarily left
                     Users user = UserManager.getInstance().getCurrentUser();
@@ -717,7 +828,7 @@ public class EventDetailFragment extends Fragment {
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) return;
-                    btnWaitlist.setEnabled(true);
+                    setWaitlistButtonsEnabled(true);
                     TigerToast.show(requireContext(), "Failed to leave waitlist", Toast.LENGTH_SHORT);
                     Log.e(TAG, "Error leaving waitlist", e);
                 });
@@ -803,60 +914,72 @@ public class EventDetailFragment extends Fragment {
      * Updates the text and color of the waitlist button based on whether the user is on the waitlist.
      */
     private void refreshWaitlistButtonState() {
+        String text;
+        String text2 = null;
+        int colorRes;
+        boolean enabled = true;
+
         if (userIsOrganizer) {
-            btnWaitlist.setText("Organizer Access");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
-            return;
-        }
+            text = "Organizer Access";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
 
-        if ("INVITED".equals(currentEntrantStatus)) {
-            btnWaitlist.setText("You've been invited — check your inbox");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.colorPrimary, null)));
-            return;
-        }
+        } else if ("ACCEPTED".equals(userStatus)) {
+            text = "Already Accepted";
+            text2 = "Already Accepted";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
+        } else if ("INVITED".equals(userStatus)) {
+            text = "Already Invited";
+            text2 = "Check Inbox";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
 
-        if ("ACCEPTED".equals(currentEntrantStatus)) {
-            btnWaitlist.setText("You are enrolled in this event");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.colorPrimary, null)));
+        } else if (isPrivateEvent && !isOnWaitlist) {
+            text = "Private Event By Invitation";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
+        } else if (isOnWaitlist) {
+            text = getString(R.string.leave_waitlist);
+            colorRes = R.color.colorDanger;
+            // Hide the second button when on waitlist
+            if (btnWaitlist2 != null) btnWaitlist2.setVisibility(View.GONE);
+            updateWaitlistButton(btnWaitlist, text, colorRes, enabled);
             return;
-        }
 
-        if (isPrivateEvent && !isOnWaitlist) {
-            btnWaitlist.setText("Private Event By Invitation");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
-            return;
-        }
-
-        btnWaitlist.setEnabled(true);
-        if (isOnWaitlist) {
-            btnWaitlist.setText("Leave Waitlist");
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.colorDanger, null)));
+        } else if (!isRegistrationOpen) {
+            text = "Registration Closed";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
         } else if (waitlistCapacity > 0 && waitlistCount >= waitlistCapacity){
-            btnWaitlist.setText("Waitlist Full");
-            btnWaitlist.setEnabled(false);
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                            getResources().getColor(R.color.dark_grey, null)));
+            text = getString(R.string.waitlist_full);
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
+        } else if (hasPendingGroup) {
+            text = "Group Pending";
+            text2 = "Waiting for Group...";
+            enabled = false;
+            colorRes = R.color.colorPrimaryDark;
         } else {
-            btnWaitlist.setText("Join Waitlist");
-            btnWaitlist.setBackgroundTintList(
-                    android.content.res.ColorStateList.valueOf(
-                    getResources().getColor(R.color.colorPrimary, null)));
+            text = getString(R.string.join_waitlist);
+            text2 = getString(R.string.join_waitlist_with_group);
+            colorRes = R.color.colorPrimary;
         }
+
+        if (text2 == null) text2 = text;
+        if (btnWaitlist2 != null) btnWaitlist2.setVisibility(View.VISIBLE);
+
+        updateWaitlistButton(btnWaitlist, text, colorRes, enabled);
+        updateWaitlistButton(btnWaitlist2, text2, colorRes, enabled);
+    }
+
+    private void updateWaitlistButton(MaterialButton button, String text, int colorRes, boolean enabled) {
+        if (button == null) return;
+        button.setText(text);
+        button.setEnabled(enabled);
+        button.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(
+                        getResources().getColor(colorRes, null)));
     }
 
     /**
@@ -927,15 +1050,6 @@ public class EventDetailFragment extends Fragment {
         return (value != null && !value.isEmpty()) ? value : defaultValue;
     }
 
-    /**
-     * Determines whether the currently signed-in user has organizer privileges for this event.
-     *
-     * <p>A user is considered an organizer if their ID matches the {@code createdBy} field
-     * <em>or</em> appears in the {@code coOrganizerIds} list on the event document.
-     *
-     * @param eventDoc The Firestore document snapshot for this event; must not be {@code null}.
-     * @return {@code true} if the current user created or co-organizes the event.
-     */
     private boolean isCurrentUserOrganizer(@NonNull DocumentSnapshot eventDoc) {
         Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null || currentUser.getId() == null) {
@@ -953,16 +1067,8 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Reads a date string from the given Firestore document field and converts it from
-     * {@code yyyy-MM-dd} to {@code "MMMM d, yyyy"} format (e.g. "April 4, 2026").
-     *
-     * <p>Falls back to the raw stored string if parsing fails, or to {@code defaultValue} if the
-     * field is absent or empty.
-     *
-     * @param doc          The Firestore document snapshot.
-     * @param field        The name of the date field to read.
-     * @param defaultValue The fallback value when the field is missing or blank.
-     * @return A human-readable date string or {@code defaultValue}.
+     * Formats a yyyy-MM-dd date string to "Month Day, Year" format.
+     * Falls back to the raw string if parsing fails, or defaultValue if empty.
      */
     private String formatDate(DocumentSnapshot doc, String field, String defaultValue) {
         String value = doc.getString(field);
@@ -980,13 +1086,7 @@ public class EventDetailFragment extends Fragment {
     }
 
     /**
-     * Fetches the live event document from Firestore and writes a snapshot into the user's
-     * {@code users/{userId}/eventHistory/{eventId}} sub-collection with status {@code "APPLIED"}.
-     *
-     * <p>This record is used to display the event in the user's history screen after the main
-     * event document may have been deleted.
-     *
-     * @param userId The Firestore document ID of the current user.
+     * Fetches the event data from Firestore and writes a copy to the user's eventHistory.
      */
     private void writeEventHistoryForCurrentUser(String userId) {
         db.collection("events").document(eventId)
