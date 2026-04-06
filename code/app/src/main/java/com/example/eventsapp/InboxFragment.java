@@ -42,6 +42,7 @@ public class InboxFragment extends Fragment {
     private TextView emptyStateView;
     private FirebaseFirestore db;
     private ListenerRegistration notificationListener;
+    private int notificationLoadGeneration = 0;
 
     /**
      * Default constructor for InboxFragment.
@@ -125,7 +126,7 @@ public class InboxFragment extends Fragment {
      * when the user has no Firestore ID.
      */
     private void loadNotifications() {
-        Users currentUser = getActiveUser();
+        Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
             notifications.clear();
             renderNotifications(notifications);
@@ -144,12 +145,13 @@ public class InboxFragment extends Fragment {
         }
 
         String userId = currentUser.getId();
+        final int generation = ++notificationLoadGeneration;
 
         notificationListener = db.collection("users")
                 .document(userId)
                 .collection("notifications")
                 .addSnapshotListener((value, error) -> {
-                    if (error != null || value == null || !isAdded()) {
+                    if (error != null || value == null || !isAdded() || generation != notificationLoadGeneration) {
                         return;
                     }
 
@@ -168,7 +170,7 @@ public class InboxFragment extends Fragment {
                         DocumentSnapshot doc = docs.get(i);
                         NotificationItem item = doc.toObject(NotificationItem.class);
                         if (item == null) {
-                            onNotificationResolved(loadedNotifications, remaining, index, null);
+                            onNotificationResolved(loadedNotifications, remaining, index, null, generation);
                             continue;
                         }
 
@@ -177,7 +179,8 @@ public class InboxFragment extends Fragment {
                                 loadedNotifications,
                                 remaining,
                                 index,
-                                toUserNotification(doc.getId(), item, eventName, groupId)
+                                toUserNotification(doc.getId(), item, eventName, groupId),
+                                generation
                         ));
                     }
                 });
@@ -194,11 +197,11 @@ public class InboxFragment extends Fragment {
      * @param notification        The resolved notification, or {@code null} if resolution failed.
      */
     private void onNotificationResolved(UserNotification[] loadedNotifications, int[] remaining, int index,
-                                        @Nullable UserNotification notification) {
+                                        @Nullable UserNotification notification, int generation) {
         loadedNotifications[index] = notification;
         remaining[0]--;
 
-        if (remaining[0] != 0 || !isAdded()) {
+        if (remaining[0] != 0 || !isAdded() || generation != notificationLoadGeneration) {
             return;
         }
 
@@ -240,13 +243,6 @@ public class InboxFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(doc -> {
                     String eventName = getDisplayEventName(doc);
-                    if (!eventName.equals("Event update")) {
-                        db.collection("users")
-                                .document(userId)
-                                .collection("notifications")
-                                .document(notificationId)
-                                .update("eventName", eventName);
-                    }
                     callback.onResolved(eventName);
                 })
                 .addOnFailureListener(e -> callback.onResolved("Event update"));
@@ -432,7 +428,7 @@ public class InboxFragment extends Fragment {
      * @param accept       {@code true} if the user accepted; {@code false} if declined.
      */
     private void handleActionableNotificationResponse(UserNotification notification, boolean accept) {
-        Users currentUser = getActiveUser();
+        Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -740,7 +736,7 @@ public class InboxFragment extends Fragment {
      * @param decline      {@code true} if the user chose to leave the waitlist; {@code false} to stay.
      */
     private void handleWaitlistResponse(UserNotification notification, boolean decline) {
-        Users currentUser = getActiveUser();
+        Users currentUser = UserManager.getInstance().getCurrentUser();
         if (currentUser == null) {
             return;
         }
@@ -799,17 +795,6 @@ public class InboxFragment extends Fragment {
                         renderNotifications(notifications);
                     });
                 });
-    }
-
-    /**
-     * Returns the currently authenticated user, preferring {@link UserManager} and
-     * falling back to the legacy {@link UserSession} for in-memory sessions.
-     *
-     * @return The active {@link Users} object, or {@code null} if no session exists.
-     */
-    private Users getActiveUser() {
-        Users currentUser = UserManager.getInstance().getCurrentUser();
-        return currentUser != null ? currentUser : UserSession.getCurrentUser();
     }
 
     /**
@@ -943,6 +928,7 @@ public class InboxFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        notificationLoadGeneration++;
         if (notificationListener != null) {
             notificationListener.remove();
             notificationListener = null;

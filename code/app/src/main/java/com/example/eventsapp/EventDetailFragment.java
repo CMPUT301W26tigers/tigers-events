@@ -92,6 +92,7 @@ public class EventDetailFragment extends Fragment {
     private int eventCapacity = 0;
     private boolean hasPendingGroup = false;
     private String eventCreatorId = null;
+    private String eventCreatorEmail = null;
     private boolean geolocationRequired = false;
     /** False until {@link #loadEventDetails()} finishes; avoids joining before we know if location is required. */
     private boolean eventDetailsLoaded = false;
@@ -530,6 +531,10 @@ public class EventDetailFragment extends Fragment {
             for (String email : emailsStr.split(",")) {
                 String e = email.trim();
                 if (!e.isEmpty()) {
+                    if (eventCreatorEmail != null && e.equalsIgnoreCase(eventCreatorEmail)) {
+                        TigerToast.show(requireContext(), "You cannot invite the event owner", Toast.LENGTH_SHORT);
+                        return;
+                    }
                     emails.add(e);
                 }
             }
@@ -1009,6 +1014,7 @@ public class EventDetailFragment extends Fragment {
 
                     String first = doc.getString("firstName");
                     String last = doc.getString("lastName");
+                    eventCreatorEmail = doc.getString("email");
                     if (first == null || first.isEmpty()) {
                         String fullName = doc.getString("name");
                         if (fullName != null && !fullName.isEmpty()) {
@@ -1143,7 +1149,7 @@ public class EventDetailFragment extends Fragment {
 
                         String posterUrl = doc.getString("posterUrl");
                         if (posterUrl != null && !posterUrl.isEmpty()) {
-                            Glide.with(this).load(posterUrl).into(ivPoster);
+                            Glide.with(this).load(preloadPosterUrl).into(ivPoster);
                         } else {
                             ivPoster.setImageResource(android.R.color.darker_gray);
                         }

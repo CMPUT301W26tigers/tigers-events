@@ -207,7 +207,7 @@ public class AccountFragment extends Fragment {
                     db.collection("users").document(user.getId())
                             .set(updates, SetOptions.merge());
                 }
-                UserManager.getInstance().setCurrentUser(null);
+                UserManager.getInstance().logout();
                 Navigation.findNavController(view).navigate(R.id.signInFragment);
             });
         }
@@ -368,7 +368,7 @@ public class AccountFragment extends Fragment {
                     }
                     db.collection("users").document(userId).delete()
                             .addOnSuccessListener(aVoid -> {
-                                UserManager.getInstance().setCurrentUser(null);
+                                UserManager.getInstance().logout();
                                 Navigation.findNavController(requireView()).navigate(R.id.signInFragment);
                             });
                 });
