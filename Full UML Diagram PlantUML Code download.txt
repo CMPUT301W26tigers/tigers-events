@@ -1,0 +1,866 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' ==========================================
+' External Frameworks
+' ==========================================
+
+package java.util {
+    class Date
+    class ArrayList<T>
+    class HashSet<T>
+    interface List<T>
+    interface Set<T>
+    interface Map<K, V>
+}
+
+package java.io {
+    interface Serializable
+}
+
+package android.content {
+    class Context
+    class Bundle
+}
+
+package android.view {
+    class View
+    class ViewGroup
+}
+
+package android.widget {
+    class TextView
+    class ImageView
+    class ImageButton
+    class EditText
+    class ArrayAdapter<T>
+}
+
+package androidx.fragment.app {
+    class Fragment
+    class DialogFragment
+}
+
+package androidx.appcompat.app {
+    class AppCompatActivity
+}
+
+package android.app {
+    class Service
+}
+
+package com.google.android.material.bottomsheet {
+    class BottomSheetDialogFragment
+}
+
+package androidx.recyclerview.widget {
+    class RecyclerView
+    class "RecyclerView.Adapter" as RecyclerView_Adapter
+    class "RecyclerView.ViewHolder" as RecyclerView_ViewHolder
+}
+
+package com.google.firebase.firestore {
+    class FirebaseFirestore
+    class ListenerRegistration
+    class CollectionReference
+    class DocumentReference
+    class DocumentSnapshot
+    class QueryDocumentSnapshot
+    class QuerySnapshot
+}
+
+package com.journeyapps.barcodescanner {
+    class CaptureActivity
+}
+
+package org.osmdroid.views {
+    class MapView
+}
+
+package android.graphics {
+    class Bitmap
+}
+
+' ==========================================
+' Internal Application Package
+' ==========================================
+
+package com.example.eventsapp {
+
+    ' --- Enums & Interfaces ---
+
+    enum Status {
+        PRIVATE_INVITED
+        APPLIED
+        INVITED
+        ACCEPTED
+        DECLINED
+        CANCELLED
+    }
+
+    enum PeriodResult {
+        VALID
+        INVALID_FORMAT
+        START_AFTER_END
+        END_AFTER_EVENT
+    }
+
+    enum UserNotificationType {
+        INVITATION
+        WAITLIST_CONFIRM
+        NOT_SELECTED
+    }
+
+    enum UserNotification_Type <<enumeration>> {
+        INVITATION
+        PRIVATE_WAITLIST_INVITATION
+        CO_ORGANIZER_INVITATION
+        WAITLISTED
+        NOT_SELECTED
+        GROUP_WAITLIST_INVITATION
+    }
+
+    interface EventDialogListener {
+        + updateEvent(event : Event, title : String, amount : int) : void
+    }
+
+    interface HostResolutionCallback {
+        + onResolved(resolvedEvents : List<Event>)
+    }
+
+    interface OnEventClickListener {
+        + onEventClick(event : Event)
+    }
+
+    interface OnFilterAppliedListener {
+        + onFiltersApplied(availableOnly : boolean, dateFrom : String, dateTo : String) : void
+    }
+
+    interface SessionBootstrapCallback {
+        + onBootstrapComplete(user: Users)
+    }
+
+    interface OnFragmentInteractionListener {
+    }
+
+    ' --- Models ---
+
+    class Users {
+        - id : String
+        - name : String
+        - firstName : String
+        - lastName : String
+        - email : String
+        - password : String
+        - phoneNumber : String
+        - deviceId : String
+        - location : String
+        - accountType : String
+        - profilePictureUrl : String
+        - notifications : List<UserNotification>
+        - invitedEvents : List<String>
+        - registeredEvents : List<String>
+        - declinedInvitations : List<String>
+        - waitlistedEvents : List<String>
+        - notificationsEnabled : boolean
+        + Users()
+        + Users(name, email, password, phoneNumber)
+        + Users(firstName, lastName, email, location, accountType, notificationsEnabled)
+        + getId() : String
+        + getName() : String
+        + getFullName() : String
+        + getEmail() : String
+        + getPhoneNumber() : String
+        + getAccountType() : String
+        + login(email: String, password: String) : boolean
+        + addNotification(notification: UserNotification)
+        + acceptInvitation(eventName: String)
+        + declineInvitation(eventName: String)
+    }
+
+    class UserManager {
+        - {static} instance : UserManager
+        - currentUser : Users
+        - sessionBootstrapComplete : boolean
+        - UserManager()
+        + {static} getInstance() : UserManager
+        + getCurrentUser() : Users
+        + setCurrentUser(user: Users)
+        + isLoggedIn() : boolean
+        + bootstrapSession(context: Context, callback: SessionBootstrapCallback)
+        + logout()
+    }
+
+    class Event {
+        - id : String
+        - name : String
+        - description : String
+        - amount : int
+        - sampleSize : int
+        - waitlistCapacity : int
+        - registration_start : String
+        - registration_end : String
+        - event_date : String
+        - posterUrl : String
+        - location : String
+        - hostId : String
+        - hostName : String
+        - hostProfilePictureUrl : String
+        - geolocationRequired : boolean
+        - entrantStatus : String
+        - fromHistory : boolean
+        + Event()
+        + Event(id, name, amount, description, posterUrl, date, regStart, regEnd, sampleSize)
+        + getId() : String
+        + setId(id : String) : void
+        + getName() : String
+        + getEventDeepLink() : String
+        + getPosterUrl() : String
+        + getFormattedEventDate() : String
+        + getHostId() : String
+        + getEvent_date() : String
+    }
+
+    class Entrant {
+        - id : String
+        - eventId : String
+        - name : String
+        - email : String
+        - userId : String
+        - status : Status
+        - statusCode : int
+        - latitude : double
+        - longitude : double
+        - groupId : String
+        + Entrant()
+        + Entrant(id: String, eventId: String, name: String, email: String, status: Status)
+        + getId() : String
+        + getEventId() : String
+        + getName() : String
+        + getEmail() : String
+        + getUserId() : String
+        + getStatus() : Status
+        + isChosenInvited() : boolean
+        + hasLocation() : boolean
+        + getLatitude() : double
+        + getLongitude() : double
+    }
+
+    class Comment {
+        - id : String
+        - userId : String
+        - userName : String
+        - text : String
+        - timestamp : Date
+        + Comment()
+        + Comment(userId : String, userName : String, text : String)
+        + getId() : String
+        + setId(id : String) : void
+        + getText() : String
+        + setText(text : String) : void
+        + getTimestamp() : Date
+    }
+
+    class UserNotification {
+        - type : UserNotification_Type
+        - title : String
+        - message : String
+        - eventId : String
+        - notificationId : String
+        - groupId : String
+        + UserNotification(type, title, eventName, message)
+        + getType() : UserNotification_Type
+    }
+
+    class NotificationItem {
+        - title : String
+        - message : String
+        - eventId : String
+        - read : boolean
+        + isRead() : boolean
+    }
+
+    class NotificationLogItem {
+        - organizerName : String
+        - title : String
+        - timestamp : Timestamp
+        - recipients : List<Map<String, String>>
+        + getOrganizerName() : String
+        + getTitle() : String
+        + getRecipientNames() : List<String>
+    }
+
+    ' --- Activities ---
+
+    class MainActivity {
+        - {static} TAG : String
+        - db : FirebaseFirestore
+        - eventsRef : CollectionReference
+        - userRef : CollectionReference
+        # onCreate(savedInstanceState : Bundle) : void
+        + addUser(user : Users) : void
+        + updateEvent(event : Event, title : String, amount : int) : void
+        + addEvent(event : Event) : void
+        + onConfirmPressed(eventName : String) : void
+        # onNewIntent(intent : Intent) : void
+        - handleDeepLink(intent : Intent) : void
+        - saveEvent(documentId : String, event : Event) : void
+    }
+
+    class SplashActivity {
+        # onCreate(savedInstanceState: Bundle)
+    }
+
+    class AdminActivity {
+        # onCreate(savedInstanceState : Bundle) : void
+    }
+
+    ' --- Fragments ---
+
+    class SignInFragment {
+        - isSignUpMode : boolean
+        - bootstrapHandled : boolean
+        + SignInFragment()
+        + onViewCreated(view: View, savedInstanceState: Bundle)
+        - handleSignIn(db: FirebaseFirestore, email: String, password: String)
+        - handleSignUp(db: FirebaseFirestore, etFirstName: TextInputEditText, ..., email: String, password: String)
+        - navigateToExplore()
+        - setAuthInputsEnabled(enabled: boolean, views: View[])
+    }
+
+    class AccountFragment {
+        - db : FirebaseFirestore
+        + onResume() : void
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - displayUserData() : void
+        - updateUserField(field : String, newValue : Object) : void
+        - deleteAccount() : void
+        - uploadProfilePicture(uri : Uri) : void
+    }
+
+    class AdminEventDetailFragment {
+        - {static} ARG_EVENT : String
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - deletePoster(event : Event, ...) : void
+        - deleteEvent(view : View, event : Event) : void
+    }
+
+    class AdminManageEventsFragment {
+        - allEvents : List<Event>
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - loadAllEvents() : void
+    }
+
+    class AdminManageNotificationsFragment {
+        - allLogs : List<NotificationLogItem>
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - loadNotificationLogs() : void
+    }
+
+    class AdminManageProfilesFragment {
+        - allUsers : List<Users>
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - loadUsers() : void
+    }
+
+    class AdminUserDetailBottomSheet {
+        + {static} newInstance(user : Users) : AdminUserDetailBottomSheet
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - deleteUserAndEvents(user : Users) : void
+    }
+
+    class EventsFragment {
+        - TAG : String
+        - eventList : List<Event>
+        - adapter : EventCardAdapter
+        - rvMyEvents : RecyclerView
+        - emptyStateContainer : LinearLayout
+        - toggleEventType : MaterialButtonToggleGroup
+        - btnCreateEvent : MaterialButton
+        - chipGroupFilter : ChipGroup
+        - loadGeneration : int
+        + EventsFragment()
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - updateCreateButtonVisibility() : void
+        - loadEvents() : void
+        - loadCreatedEvents(userId : String, generation : int) : void
+        - loadRegisteredEvents(userId : String, generation : int) : void
+        - parseEvent(snapshot : QueryDocumentSnapshot) : Event
+        - updateEmptyState() : void
+        - loadHistoryEvents(userId : String, statusFilter : String, activeEventIds : Set<String>, generation : int) : void
+        - parseHistoryEvent(doc : DocumentSnapshot) : Event
+        - resolveHostNames(events : List<Event>, onComplete : Runnable) : void
+        - getSelectedChipFilter() : String
+        - filterEventsByDate() : void
+    }
+
+    class ExploreFragment {
+        - TAG : String
+        - allEvents : List<Event>
+        - displayEvents : List<Event>
+        - adapter : ExploreEventAdapter
+        - rvEvents : RecyclerView
+        - chipGroupFilters : ChipGroup
+        - filterAvailableOnly : boolean
+        - filterDateFrom : String
+        - filterDateTo : String
+        - eventsListener : ListenerRegistration
+        - eventsLoadGeneration : int
+        - qrCodeLauncher : ActivityResultLauncher<ScanOptions>
+        + ExploreFragment()
+        + onViewCreated(view : View, savedInstanceState : Bundle)
+        - scanQRCode()
+        - handleScanResult(contents : String)
+        - navigateToDetailById(eventId : String)
+        - navigateToDetail(view : View, event : Event)
+        - openInbox(view : View)
+        - openFilterBottomSheet()
+        - applyFilters()
+        - updateFilterChips()
+        - formatDateChipLabel(from : String, to : String) : String
+        - formatShortDate(dateStr : String) : String
+        - loadAllEvents()
+        - resolveHostNames(events : List<Event>, generation : int, callback : HostResolutionCallback)
+        + onDestroyView()
+    }
+
+    class EventDetailFragment {
+        - TAG : String
+        - notificationHelper : FirestoreNotificationHelper
+        - eventId : String
+        - fromHistory : boolean
+        - db : FirebaseFirestore
+        - tvName : TextView
+        - isOnWaitlist : boolean
+        - isRegistrationOpen : boolean
+        - fusedLocationClient : FusedLocationProviderClient
+        + onCreate(savedInstanceState : Bundle) : void
+        + onCreateView(inflater : LayoutInflater, container : ViewGroup, savedInstanceState : Bundle) : View
+        - loadEventDetails() : void
+        - joinWaitlist() : void
+        - leaveWaitlist() : void
+        - postComment() : void
+    }
+
+    class InboxFragment {
+        - invitationResponseController : InvitationResponseController
+        - notifications : List<UserNotification>
+        - notificationContainer : LinearLayout
+        - db : FirebaseFirestore
+        - notificationListener : ListenerRegistration
+        + InboxFragment()
+        + onViewCreated(view : View, savedInstanceState : Bundle)
+        - renderNotifications(notificationItems : List<UserNotification>)
+        - loadNotifications()
+        - handleActionableNotificationResponse(notification : UserNotification, accept : boolean)
+        + onDestroyView()
+    }
+
+    class OrganizerCancelledFragment {
+        - {static} ARG_EVENT_ID : String
+        - eventId : String
+        - db : FirebaseFirestore
+        - waitlistRef : CollectionReference
+        - allCancelledEntrants : ArrayList<Entrant>
+        - filteredCancelledEntrants : ArrayList<Entrant>
+        - adapter : CancelledEntrantAdapter
+        + OrganizerCancelledFragment()
+        + {static} newInstance(eventId : String) : OrganizerCancelledFragment
+        + onCreate(savedInstanceState : Bundle) : void
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - loadCancelledEntrants() : void
+        - filterEntrants(query : String) : void
+        - containsIgnoreCase(value : String, query : String) : boolean
+    }
+
+    class OrganizerEnrolledFragment {
+        - {static} ARG_EVENT_ID : String
+        - eventId : String
+        - db : FirebaseFirestore
+        - entrantsRef : CollectionReference
+        - allEnrolledEntrants : ArrayList<Entrant>
+        - filteredEnrolledEntrants : ArrayList<Entrant>
+        - adapter : EnrolledEntrantAdapter
+        + OrganizerEnrolledFragment()
+        + {static} newInstance(eventId : String) : OrganizerEnrolledFragment
+        + onCreate(savedInstanceState : Bundle) : void
+        + onViewCreated(view : View, savedInstanceState : Bundle) : void
+        - loadEnrolledEntrants() : void
+        - confirmCancelEntrant(entrant : Entrant) : void
+        - cancelEntrant(entrant : Entrant) : void
+        - filterEntrants(query : String) : void
+        - openCancelledFragment() : void
+    }
+
+    class OrganizerWaitlistFragment {
+        - notificationHelper : FirestoreNotificationHelper
+        - eventId : String
+        - db : FirebaseFirestore
+        - adapter : EntrantAdapter
+        - allEntrants : List<Entrant>
+        - filteredEntrants : List<Entrant>
+        - isPrivateEvent : boolean
+        - eventCapacity : int
+        - eventSampleSize : int
+        + onCreate(savedInstanceState : Bundle) : void
+        + onCreateView(inflater, container, savedInstanceState) : View
+        + onViewCreated(view, savedInstanceState) : void
+        - loadEventConfiguration() : void
+        - runLottery() : void
+        - notifyWaitlistedEntrants() : void
+        - notifySelectedEntrants() : void
+        - inviteEntrant(user : Users) : void
+        - showEntrantPickerDialog() : void
+    }
+
+    class EventDialogFragment {
+        - listener : EventDialogListener
+        + {static} newInstance(event : Event) : EventDialogFragment
+        + onAttach(context : Context) : void
+        + onCreateDialog(savedInstanceState : Bundle) : Dialog
+    }
+
+    class ExploreFilterBottomSheet {
+        - switchAvailableOnly : MaterialSwitch
+        - tvDateFrom : TextView
+        - tvDateTo : TextView
+        - listener : OnFilterAppliedListener
+        + {static} newInstance(availableOnly : boolean, dateFrom : String, dateTo : String) : ExploreFilterBottomSheet
+        + setOnFilterAppliedListener(listener : OnFilterAppliedListener) : void
+        - showDatePicker(isFrom : boolean) : void
+    }
+
+    class CreateEventFragment {
+        - eventId : String
+        + onCreateView(...) : View
+        - updateQRCode(event : Event) : void
+        - saveEventToFirestore(...) : void
+    }
+
+    class EditEventFragment {
+        - eventId : String
+        + onViewCreated(...) : void
+        - loadEventData() : void
+        - saveEventChanges() : void
+    }
+
+    class EntrantMapFragment {
+        - eventId : String
+        - mapView : MapView
+        - registration : ListenerRegistration
+        - applyEntrantsSnapshot(snapshot: QuerySnapshot) : void
+    }
+
+    class CaptureActivityPortrait {
+    }
+
+    class DeleteEventDialogFragment {
+        + onCreateDialog(savedInstanceState : Bundle) : Dialog
+    }
+
+    ' --- Adapters ---
+
+    class EventCardAdapter {
+        - events : List<Event>
+        - listener : OnEventClickListener
+        + onCreateViewHolder(parent : ViewGroup, viewType : int) : RecyclerView_ViewHolder
+        + onBindViewHolder(holder : RecyclerView_ViewHolder, position : int) : void
+    }
+
+    class ExploreEventAdapter {
+        - events : List<Event>
+        - listener : OnEventClickListener
+        + updateEvents(newList : List<Event>)
+    }
+
+    class CancelledEntrantAdapter {
+        - entrants : ArrayList<Entrant>
+        + onBindViewHolder(holder : CancelledViewHolder, position : int) : void
+    }
+
+    class CommentAdapter {
+        - commentList : List<Comment>
+        + onBindViewHolder(holder : CommentViewHolder, position : int) : void
+        + setOnCommentDeleteListener(listener : Consumer) : void
+    }
+
+    class AdminNotificationLogAdapter {
+        - logs : List<NotificationLogItem>
+        + onBindViewHolder(holder : RecyclerView_ViewHolder, position : int) : void
+    }
+
+    class AdminUserAdapter {
+        - users : List<Users>
+        + onBindViewHolder(holder : RecyclerView_ViewHolder, position : int) : void
+    }
+
+    class AdminUserEventAdapter {
+        - events : List<Event>
+        + onBindViewHolder(holder : RecyclerView_ViewHolder, position : int) : void
+    }
+
+    class EnrolledEntrantAdapter {
+        - entrants : ArrayList<Entrant>
+        + onBindViewHolder(holder: EnrolledViewHolder, position: int) : void
+    }
+
+    class EntrantAdapter {
+        - entrants : List<Entrant>
+        + getStatusLabel(status: Status) : String
+    }
+
+    class EventArrayAdapter {
+        - events : ArrayList<Event>
+        + getView(position: int, convertView: View, parent: ViewGroup) : View
+    }
+
+    class RecipientAdapter {
+        - recipients : List<Map<String, String>>
+        + onCreateViewHolder(parent, viewType) : RecyclerView_ViewHolder
+        + getItemCount() : int
+    }
+
+    class EnrolledViewHolder {
+        ~ tvName : TextView
+        ~ ivCancel : ImageView
+    }
+
+    ' --- Logic, Helpers & Utilities ---
+
+    class EventCleanupHelper {
+        - {static} TAG : String
+        + {static} cleanupExpiredEvents() : void
+        + {static} deleteEventCompletely(eventId: String, ...) : void
+        + {static} deleteUserCompletely(userId: String, ...) : void
+        + {static} writeHistoryRecord(userId : String, eventId : String, data : Map, status : String) : void
+        - {static} isExpired(eventDateStr: String, now: Date) : boolean
+    }
+
+    class FirestoreNotificationHelper {
+        - db : FirebaseFirestore
+        + sendWaitlistedNotification(userId : String, eventId : String) : void
+        + sendInvitationNotification(userId : String, eventId : String) : void
+        + sendGroupWaitlistInvitationNotification(email : String, eventId : String, groupId : String, inviterName : String) : void
+        + sendCoOrganizerInvitationNotification(userId : String, eventId : String) : void
+        - upsertNotification(userId : String, eventId : String, title : String, message : String, type : String) : void
+    }
+
+    class InvitationResponseController {
+        + acceptInvitation(user : Users, notification : UserNotification) : boolean
+        + declineInvitation(user : Users, notification : UserNotification) : boolean
+    }
+
+    class LotteryNotificationController {
+        + notifyWaitlisted(user : Users, eventName : String)
+        + performSelection(allEntrants : List<Entrant>, targetCapacity : int, occupiedCount : int) : List<Entrant>
+    }
+
+    class ExploreFilterHelper {
+        + {static} applyAllFilters(events : List<Event>, query : String, availableOnly : boolean, dateFrom : String, dateTo : String, todayDateStr : String) : List<Event>
+    }
+
+    class FirestoreDataUtils {
+        + {static} getStringList(doc : DocumentSnapshot, field : String) : List<String>
+    }
+
+    class EventValidator {
+        + {static} validateRegistrationPeriod(eventDateStr : String, registrationStartStr : String, registrationEndStr : String) : PeriodResult
+    }
+
+    class CoOrganizerInviteHelper {
+        + {static} showInviteDialog(fragment : Fragment, db : FirebaseFirestore, eventId : String) : void
+        + {static} inviteCoOrganizer(...) : void
+    }
+
+    class CSVExporter {
+        + {static} exportToCsv(...) : boolean
+        + {static} escapeCsv(value : String) : String
+    }
+
+    class TigerToast {
+        + {static} show(context : Context, text : String, length : int) : void
+    }
+
+    class QRCodeUtil {
+        + {static} generateQRCode(content : String, width : int, height : int) : Bitmap
+    }
+
+    class WaitlistLocationForegroundService {
+        - {static} TAG : String
+        - fused : FusedLocationProviderClient
+        - db : FirebaseFirestore
+        - eventId : String
+        + {static} start(context : Context, eventId : String, entrantId : String, name : String) : void
+        + {static} stop(context : Context) : void
+        + onStartCommand(intent, flags, startId) : int
+        - buildNotification(eventDisplayName: String) : Notification
+    }
+
+    class "R" as R {
+    }
+}
+
+' ==========================================
+' Inheritance & Implementations
+' ==========================================
+
+Serializable <|.. Entrant
+Serializable <|.. Event
+Serializable <|.. Users
+Serializable <|.. UserNotification
+
+AppCompatActivity <|-- MainActivity
+AppCompatActivity <|-- SplashActivity
+AppCompatActivity <|-- AdminActivity
+
+Service <|-- WaitlistLocationForegroundService
+
+Fragment <|-- SignInFragment
+Fragment <|-- AccountFragment
+Fragment <|-- AdminEventDetailFragment
+Fragment <|-- AdminManageEventsFragment
+Fragment <|-- AdminManageNotificationsFragment
+Fragment <|-- AdminManageProfilesFragment
+Fragment <|-- CreateEventFragment
+Fragment <|-- DeleteEventDialogFragment
+Fragment <|-- EditEventFragment
+Fragment <|-- EntrantMapFragment
+Fragment <|-- EventsFragment
+Fragment <|-- ExploreFragment
+Fragment <|-- EventDetailFragment
+Fragment <|-- InboxFragment
+Fragment <|-- OrganizerCancelledFragment
+Fragment <|-- OrganizerEnrolledFragment
+Fragment <|-- OrganizerWaitlistFragment
+
+DialogFragment <|-- EventDialogFragment
+BottomSheetDialogFragment <|-- AdminUserDetailBottomSheet
+BottomSheetDialogFragment <|-- ExploreFilterBottomSheet
+
+CaptureActivity <|-- CaptureActivityPortrait
+
+RecyclerView_Adapter <|-- CancelledEntrantAdapter
+RecyclerView_Adapter <|-- CommentAdapter
+RecyclerView_Adapter <|-- AdminNotificationLogAdapter
+RecyclerView_Adapter <|-- AdminUserAdapter
+RecyclerView_Adapter <|-- AdminUserEventAdapter
+RecyclerView_Adapter <|-- EnrolledEntrantAdapter
+RecyclerView_Adapter <|-- EntrantAdapter
+RecyclerView_Adapter <|-- EventCardAdapter
+RecyclerView_Adapter <|-- ExploreEventAdapter
+RecyclerView_Adapter <|-- RecipientAdapter
+ArrayAdapter <|-- EventArrayAdapter
+
+RecyclerView_ViewHolder <|-- EnrolledViewHolder
+
+EventDialogListener <|.. MainActivity
+OnFragmentInteractionListener <|.. MainActivity
+
+' ==========================================
+' Nesting / Inner Enums & Interfaces
+' ==========================================
+
+Entrant +-- Status
+ExploreFragment +-- HostResolutionCallback
+ExploreEventAdapter +-- OnEventClickListener
+EventsFragment +-- EventCardAdapter
+UserNotification +-- UserNotification_Type
+EventValidator +-- PeriodResult
+UserManager +-- SessionBootstrapCallback
+
+' ==========================================
+' Relationships & Associations
+' ==========================================
+' Activity & Navigation
+SplashActivity ..> MainActivity : "triggers >"
+MainActivity --> FirebaseFirestore
+MainActivity ..> EventCleanupHelper : "uses >"
+MainActivity ..> Users : "manages >"
+MainActivity ..> Event : "manages >"
+
+' User & Session
+UserManager "1" o-- "0..1" Users : "manages >"
+UserManager "1" o-- "0..*" SessionBootstrapCallback : "notifies >"
+Users "1" o-- "0..*" UserNotification : "contains >"
+
+' Sign In
+SignInFragment ..> UserManager : "accesses session >"
+SignInFragment ..> TigerToast : "shows feedback >"
+SignInFragment ..> Users : "creates/authenticates >"
+SignInFragment ..> R : "references layouts >"
+
+' Account
+AccountFragment ..> UserManager : "uses"
+AccountFragment ..> Users : "manages"
+AccountFragment ..> TigerToast : "uses"
+
+' Admin
+AdminEventDetailFragment ..> Event : "displays"
+AdminEventDetailFragment ..> EventCleanupHelper : "uses"
+AdminManageEventsFragment "1" o-- "0..*" Event : "filters"
+AdminManageNotificationsFragment "1" o-- "0..*" NotificationLogItem : "manages"
+AdminManageNotificationsFragment ..> AdminNotificationLogAdapter : "creates"
+AdminManageProfilesFragment "1" o-- "0..*" Users : "manages"
+AdminManageProfilesFragment ..> AdminUserAdapter : "creates"
+AdminUserDetailBottomSheet "1" o-- "0..*" Event : "displays"
+AdminUserDetailBottomSheet ..> EventCleanupHelper : "uses"
+
+' Events & Explore Fragments
+EventsFragment --> EventCardAdapter : "manages"
+EventsFragment ..> EventCleanupHelper : "triggers"
+ExploreFragment --> ExploreEventAdapter : "manages"
+ExploreFragment ..> ExploreFilterBottomSheet : "opens"
+ExploreFragment ..> ExploreFilterHelper : "filters"
+
+' Event Detail
+EventDetailFragment --> CommentAdapter : "uses"
+EventDetailFragment ..> FirestoreNotificationHelper : "triggers"
+EventDetailFragment ..> WaitlistLocationForegroundService : "controls"
+EventDetailFragment ..> UserManager : "accesses"
+
+' Inbox
+InboxFragment --> InvitationResponseController : "uses"
+InboxFragment ..> FirestoreNotificationHelper : "sends alerts"
+InboxFragment ..> UserManager : "accesses"
+
+' Organizer Fragments
+OrganizerCancelledFragment "1" o-- "0..*" Entrant : "filters >"
+OrganizerCancelledFragment --> CancelledEntrantAdapter
+OrganizerEnrolledFragment "1" o-- "0..*" Entrant : "displays >"
+OrganizerEnrolledFragment --> EnrolledEntrantAdapter
+OrganizerWaitlistFragment "1" o-- "0..*" Entrant : "manages >"
+OrganizerWaitlistFragment --> EntrantAdapter
+OrganizerWaitlistFragment --> FirestoreNotificationHelper
+OrganizerWaitlistFragment ..> Users : "invites >"
+
+' Adapters & Data
+CancelledEntrantAdapter "1" o-- "0..*" Entrant : "displays"
+CommentAdapter "1" o-- "0..*" Comment : "displays"
+AdminNotificationLogAdapter "1" o-- "0..*" NotificationLogItem : "displays"
+AdminUserAdapter "1" o-- "0..*" Users : "displays"
+AdminUserEventAdapter "1" o-- "0..*" Event : "displays"
+EnrolledEntrantAdapter "1" o-- "0..*" Entrant : "displays"
+EntrantAdapter "1" o-- "0..*" Entrant : "displays"
+EventArrayAdapter "1" o-- "0..*" Event : "displays"
+NotificationLogItem "1" o-- "0..*" Map : "contains recipients >"
+
+' Create & Edit Event
+CreateEventFragment ..> Event : "creates"
+CreateEventFragment ..> QRCodeUtil : "uses"
+CreateEventFragment ..> CoOrganizerInviteHelper : "triggers"
+EditEventFragment ..> Event : "modifies"
+EditEventFragment ..> QRCodeUtil : "uses"
+
+' Map
+EntrantMapFragment --> MapView : "manages"
+EntrantMapFragment ..> Entrant : "visualizes"
+EntrantMapFragment ..> TigerToast : "uses"
+
+' Helpers & Utilities
+EventCleanupHelper ..> Event : "cleans up"
+EventCleanupHelper ..> FirestoreDataUtils : "uses"
+CoOrganizerInviteHelper ..> Users : "selects"
+CoOrganizerInviteHelper ..> FirestoreNotificationHelper : "uses"
+LotteryNotificationController ..> UserNotification : "creates"
+WaitlistLocationForegroundService ..> Users : "references participant >"
+@enduml
