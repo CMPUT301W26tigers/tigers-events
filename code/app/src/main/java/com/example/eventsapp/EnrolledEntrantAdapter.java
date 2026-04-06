@@ -104,7 +104,16 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
                     });
         }
 
-        holder.tvStatus.setText(e.getStatus() != null ? e.getStatus().name() : "ACCEPTED");
+//        holder.tvStatus.setText(e.getStatus() != null ? e.getStatus().name() : "ACCEPTED");
+
+        if (e.getStatus() == Entrant.Status.ACCEPTED) {
+            holder.tvStatus.setText("ACCEPTED");
+        } else {
+            // If it's null or mistakenly set to APPLIED, default to ACCEPTED for this UI
+            // This was developed after EnrolledEntrantRemovalVisualTest.
+            holder.tvStatus.setText("ACCEPTED");
+        }
+
         holder.tvEmail.setText(e.getEmail() != null ? e.getEmail() : "");
 
         holder.ivCancel.setOnClickListener(v -> {

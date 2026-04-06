@@ -102,7 +102,8 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
                     });
         }
 
-        holder.tvEmail.setText(e.getEmail() != null ? e.getEmail() : "No email");
+        String emailText = (e.getEmail() != null && !e.getEmail().trim().isEmpty()) ? e.getEmail() : "No email";
+        holder.tvEmail.setText(emailText);
     }
 
     /**
