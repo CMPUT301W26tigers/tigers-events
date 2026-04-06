@@ -33,8 +33,8 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
     }
 
     /**
-     +     * Triggers when the organizer cancels an invited entrant.
-     +     */
+     * Triggers when the organizer cancels an invited entrant.
+     */
     public interface OnCancelEntrantListener {
         void onCancel(Entrant entrant);
     }

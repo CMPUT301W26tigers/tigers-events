@@ -21,8 +21,17 @@ import java.util.ArrayList;
  */
 public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrantAdapter.EnrolledViewHolder> {
 
+
+    /**
+     * Triggers when the organizer cancels an enrolled entrant.
+     */
+    public interface OnCancelEntrantListener {
+        void onCancel(Entrant entrant);
+    }
+
     private final Context context;
     private final ArrayList<Entrant> entrants;
+    private EntrantAdapter.OnCancelEntrantListener onCancelEntrantListener;
 
     /**
      * Constructs an EnrolledEntrantAdapter.
@@ -33,6 +42,10 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
     public EnrolledEntrantAdapter(Context context, ArrayList<Entrant> entrants) {
         this.context = context;
         this.entrants = entrants;
+    }
+
+    public void setOnCancelEntrantListener(EntrantAdapter.OnCancelEntrantListener listener) {
+        this.onCancelEntrantListener = listener;
     }
 
     /**
@@ -93,6 +106,12 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
 
         holder.tvStatus.setText(e.getStatus() != null ? e.getStatus().name() : "ACCEPTED");
         holder.tvEmail.setText(e.getEmail() != null ? e.getEmail() : "");
+
+        holder.ivCancel.setOnClickListener(v -> {
+            if (onCancelEntrantListener != null) {
+                onCancelEntrantListener.onCancel(e);
+            }
+        });
     }
 
     /**
@@ -116,6 +135,7 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
         TextView tvStatus;
         ImageView ivProfilePic;
         TextView tvAvatarInitial;
+        ImageView ivCancel;
 
         /**
          * Constructs an EnrolledViewHolder and resolves all child view references.
@@ -129,6 +149,7 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
             tvStatus = itemView.findViewById(R.id.tv_status);
             ivProfilePic = itemView.findViewById(R.id.iv_profile_pic);
             tvAvatarInitial = itemView.findViewById(R.id.tv_avatar_initial);
+            ivCancel = itemView.findViewById(R.id.iv_cancel_entrant);
         }
     }
 }
