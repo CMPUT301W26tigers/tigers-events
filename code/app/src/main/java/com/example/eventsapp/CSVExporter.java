@@ -63,7 +63,7 @@ public class CSVExporter {
                 for (int i = 0; i < row.length; i++) {
                     row[i] = escapeCsv(row[i]);
                 }
-                writer.write(TextUtils.join(",", row));
+                writer.write(join(",", row));
                 writer.newLine();
             }
             return true;
@@ -74,10 +74,26 @@ public class CSVExporter {
     }
 
     /**
+     * Internal helper to join strings without relying on Android-specific TextUtils.
+     * This allows for an easier time with being unit-tested.
+     */
+    private static String join(String delimiter, String[] tokens) {
+        if (tokens == null || tokens.length == 0) return "";
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < tokens.length; i++) {
+            sb.append(tokens[i]);
+            if (i < tokens.length - 1) {
+                sb.append(delimiter);
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
      * Escapes a string to be written properly to a CSV.
      * Wraps in quotes if there are commas, newlines, or quotes.
      */
-    private static String escapeCsv(String value) {
+    static String escapeCsv(String value) {
         if (value == null) return "";
         String escaped = value.replace("\"", "\"\"");
         if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {

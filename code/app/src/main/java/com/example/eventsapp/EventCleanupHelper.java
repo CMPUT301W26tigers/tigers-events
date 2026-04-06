@@ -5,6 +5,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -13,6 +14,7 @@ import com.google.firebase.storage.FirebaseStorage;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -28,6 +30,7 @@ public class EventCleanupHelper {
 
     private static final String TAG = "EventCleanupHelper";
     private static final int EXPIRATION_HOURS = 12;
+    private static final int MAX_BATCH_DELETES = 450;
 
     /**
      * Checks all events in Firestore and deletes any that have expired
@@ -207,6 +210,7 @@ public class EventCleanupHelper {
                                              @Nullable Runnable onSuccess,
                                              @Nullable java.util.function.Consumer<Exception> onFailure) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference eventRef = db.collection("events").document(eventId);
 
         // Delete poster from Storage (fire-and-forget)
         FirebaseStorage.getInstance().getReference()
@@ -214,30 +218,35 @@ public class EventCleanupHelper {
                 .delete()
                 .addOnFailureListener(e -> Log.d(TAG, "No poster to delete for event: " + eventId));
 
-        // Fetch entrants and comments, then batch-delete everything
-        db.collection("events").document(eventId).collection("entrants").get()
+        // Fetch event-related documents, then batch-delete everything.
+        eventRef.collection("entrants").get()
                 .addOnSuccessListener(entrantSnapshot -> {
-                    db.collection("events").document(eventId).collection("comments").get()
+                    eventRef.collection("comments").get()
                             .addOnSuccessListener(commentSnapshot -> {
-                                WriteBatch batch = db.batch();
+                                fetchNotificationRefsForEvent(db, eventId, notificationRefs ->
+                                        fetchNotificationLogRefsForEvent(db, eventId, logRefs -> {
+                                            List<DocumentReference> refsToDelete = new ArrayList<>();
 
-                                for (DocumentSnapshot doc : entrantSnapshot.getDocuments()) {
-                                    batch.delete(doc.getReference());
-                                }
-                                for (DocumentSnapshot doc : commentSnapshot.getDocuments()) {
-                                    batch.delete(doc.getReference());
-                                }
-                                batch.delete(db.collection("events").document(eventId));
+                                            for (DocumentSnapshot doc : entrantSnapshot.getDocuments()) {
+                                                refsToDelete.add(doc.getReference());
+                                            }
+                                            for (DocumentSnapshot doc : commentSnapshot.getDocuments()) {
+                                                refsToDelete.add(doc.getReference());
+                                            }
+                                            refsToDelete.addAll(notificationRefs);
+                                            refsToDelete.addAll(logRefs);
+                                            refsToDelete.add(eventRef);
 
-                                batch.commit()
-                                        .addOnSuccessListener(v -> {
-                                            Log.d(TAG, "Completely deleted event: " + eventId);
-                                            if (onSuccess != null) onSuccess.run();
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Log.e(TAG, "Failed to delete event completely", e);
-                                            if (onFailure != null) onFailure.accept(e);
-                                        });
+                                            deleteReferencesInBatches(db, refsToDelete,
+                                                    () -> {
+                                                        Log.d(TAG, "Completely deleted event: " + eventId);
+                                                        if (onSuccess != null) onSuccess.run();
+                                                    },
+                                                    e -> {
+                                                        Log.e(TAG, "Failed to delete event completely", e);
+                                                        if (onFailure != null) onFailure.accept(e);
+                                                    });
+                                        }));
                             })
                             .addOnFailureListener(e -> {
                                 Log.e(TAG, "Failed to fetch comments for deletion", e);
@@ -248,6 +257,110 @@ public class EventCleanupHelper {
                     Log.e(TAG, "Failed to fetch entrants for deletion", e);
                     if (onFailure != null) onFailure.accept(e);
                 });
+    }
+
+    private static void fetchNotificationRefsForEvent(FirebaseFirestore db,
+                                                      String eventId,
+                                                      @NonNull java.util.function.Consumer<List<DocumentReference>> onComplete) {
+        db.collection("users").get()
+                .addOnSuccessListener(userSnapshot -> {
+                    List<DocumentReference> notificationRefs = new ArrayList<>();
+                    List<QueryDocumentSnapshot> userDocs = new ArrayList<>();
+                    for (QueryDocumentSnapshot userDoc : userSnapshot) {
+                        userDocs.add(userDoc);
+                    }
+
+                    if (userDocs.isEmpty()) {
+                        onComplete.accept(notificationRefs);
+                        return;
+                    }
+
+                    AtomicInteger remainingUsers = new AtomicInteger(userDocs.size());
+                    for (QueryDocumentSnapshot userDoc : userDocs) {
+                        userDoc.getReference()
+                                .collection("notifications")
+                                .whereEqualTo("eventId", eventId)
+                                .get()
+                                .addOnSuccessListener(notificationSnapshot -> {
+                                    for (DocumentSnapshot doc : notificationSnapshot.getDocuments()) {
+                                        notificationRefs.add(doc.getReference());
+                                    }
+                                    if (remainingUsers.decrementAndGet() == 0) {
+                                        onComplete.accept(notificationRefs);
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.w(TAG, "Failed to fetch notifications for user during event deletion", e);
+                                    if (remainingUsers.decrementAndGet() == 0) {
+                                        onComplete.accept(notificationRefs);
+                                    }
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.w(TAG, "Failed to fetch users for notification cleanup", e);
+                    onComplete.accept(new ArrayList<>());
+                });
+    }
+
+    private static void fetchNotificationLogRefsForEvent(FirebaseFirestore db,
+                                                         String eventId,
+                                                         @NonNull java.util.function.Consumer<List<DocumentReference>> onComplete) {
+        db.collection("notification_logs")
+                .whereEqualTo("eventId", eventId)
+                .get()
+                .addOnSuccessListener(logSnapshot -> {
+                    List<DocumentReference> logRefs = new ArrayList<>();
+                    for (QueryDocumentSnapshot doc : logSnapshot) {
+                        logRefs.add(doc.getReference());
+                    }
+                    onComplete.accept(logRefs);
+                })
+                .addOnFailureListener(e -> {
+                    Log.w(TAG, "Failed to fetch notification logs for deletion", e);
+                    onComplete.accept(new ArrayList<>());
+                });
+    }
+
+    private static void deleteReferencesInBatches(FirebaseFirestore db,
+                                                  List<DocumentReference> refsToDelete,
+                                                  @Nullable Runnable onSuccess,
+                                                  @Nullable java.util.function.Consumer<Exception> onFailure) {
+        if (refsToDelete.isEmpty()) {
+            if (onSuccess != null) onSuccess.run();
+            return;
+        }
+
+        int totalBatches = calculateBatchCount(refsToDelete.size());
+        AtomicInteger remainingBatches = new AtomicInteger(totalBatches);
+
+        for (int start = 0; start < refsToDelete.size(); start += MAX_BATCH_DELETES) {
+            int end = Math.min(start + MAX_BATCH_DELETES, refsToDelete.size());
+            WriteBatch batch = db.batch();
+
+            for (int i = start; i < end; i++) {
+                batch.delete(refsToDelete.get(i));
+            }
+
+            batch.commit()
+                    .addOnSuccessListener(unused -> {
+                        if (remainingBatches.decrementAndGet() == 0 && onSuccess != null) {
+                            onSuccess.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (remainingBatches.getAndSet(-1) > 0 && onFailure != null) {
+                            onFailure.accept(e);
+                        }
+                    });
+        }
+    }
+
+    static int calculateBatchCount(int deleteCount) {
+        if (deleteCount <= 0) {
+            return 0;
+        }
+        return (deleteCount + MAX_BATCH_DELETES - 1) / MAX_BATCH_DELETES;
     }
 
     /**

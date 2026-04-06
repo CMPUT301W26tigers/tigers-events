@@ -71,9 +71,10 @@ public class LotteryNotificationController {
 
     /**
      * Performs selection from a list of entrants, treating groups as a single entity.
+     * Ensures that groups are only selected if there is enough remaining capacity for ALL group members.
      *
      * @param allEntrants The list of all entrants for the event.
-     * @param targetCapacity The maximum number of "entities" (individuals or groups) to select.
+     * @param targetCapacity The maximum number of individuals allowed to be selected.
      * @param occupiedCount The number of spots already taken (invited/accepted).
      * @return A list of Entrants selected by the lottery.
      */
@@ -96,26 +97,31 @@ public class LotteryNotificationController {
             }
         }
 
-        int available = targetCapacity - occupiedCount;
-        if (available <= 0 || candidates.isEmpty()) {
+        int availableSpots = targetCapacity - occupiedCount;
+        if (availableSpots <= 0 || candidates.isEmpty()) {
             return new ArrayList<>();
         }
 
         Collections.shuffle(candidates);
         List<Entrant> selectedEntrants = new ArrayList<>();
-        int currentCount = 0;
+        int currentPeopleCount = 0;
 
         for (Object candidate : candidates) {
             if (candidate instanceof Entrant) {
-                selectedEntrants.add((Entrant) candidate);
-                currentCount++;
+                if (currentPeopleCount + 1 <= availableSpots) {
+                    selectedEntrants.add((Entrant) candidate);
+                    currentPeopleCount++;
+                }
             } else if (candidate instanceof List) {
                 @SuppressWarnings("unchecked")
                 List<Entrant> group = (List<Entrant>) candidate;
-                selectedEntrants.addAll(group);
-                currentCount++; // The entire group counts as one entity
+                // Only add the group if there is enough room for EVERYONE in it
+                if (currentPeopleCount + group.size() <= availableSpots) {
+                    selectedEntrants.addAll(group);
+                    currentPeopleCount += group.size();
+                }
             }
-            if (currentCount >= available) break;
+            if (currentPeopleCount >= availableSpots) break;
         }
 
         return selectedEntrants;

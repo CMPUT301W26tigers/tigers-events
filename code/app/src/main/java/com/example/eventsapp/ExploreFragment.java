@@ -29,6 +29,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
@@ -56,6 +57,8 @@ public class ExploreFragment extends Fragment {
     private boolean filterAvailableOnly = false;
     private String filterDateFrom = null;
     private String filterDateTo = null;
+    private ListenerRegistration eventsListener;
+    private int eventsLoadGeneration = 0;
 
     private final ActivityResultLauncher<ScanOptions> qrCodeLauncher = registerForActivityResult(
             new ScanContract(),
@@ -184,7 +187,12 @@ public class ExploreFragment extends Fragment {
      * event list. Updates the adapter with the result and refreshes the chip strip.
      */
     private void applyFilters() {
-        EditText etSearch = requireView().findViewById(R.id.etSearch);
+        View view = getView();
+        if (!isAdded() || view == null || adapter == null || chipGroupFilters == null) {
+            return;
+        }
+
+        EditText etSearch = view.findViewById(R.id.etSearch);
         String query = etSearch.getText().toString();
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CANADA).format(new Date());
 
@@ -201,6 +209,10 @@ public class ExploreFragment extends Fragment {
      * The chip group is hidden entirely when no filters are active.
      */
     private void updateFilterChips() {
+        if (!isAdded() || chipGroupFilters == null) {
+            return;
+        }
+
         chipGroupFilters.removeAllViews();
 
         if (filterAvailableOnly) {
@@ -273,13 +285,18 @@ public class ExploreFragment extends Fragment {
      */
     private void loadAllEvents() {
         CollectionReference eventsRef = FirebaseFirestore.getInstance().collection("events");
-        eventsRef.addSnapshotListener((value, error) -> {
+        if (eventsListener != null) {
+            eventsListener.remove();
+        }
+
+        eventsListener = eventsRef.addSnapshotListener((value, error) -> {
             if (error != null) {
                 Log.e(TAG, "Error loading events", error);
                 return;
             }
             if (value != null && isAdded()) {
-                allEvents.clear();
+                int generation = ++eventsLoadGeneration;
+                List<Event> snapshotEvents = new ArrayList<>();
                 for (QueryDocumentSnapshot snapshot : value) {
                     Boolean isPrivate = snapshot.getBoolean("isPrivate");
                     if (Boolean.TRUE.equals(isPrivate)) continue;
@@ -309,10 +326,18 @@ public class ExploreFragment extends Fragment {
                         Event e = new Event(id, name, amount, registrationStart, registrationEnd, eventDate, description, posterUrl, sampleSize);
                         e.setHostId(snapshot.getString("createdBy"));
                         e.setLocation(location);
-                        allEvents.add(e);
+                        snapshotEvents.add(e);
                     }
                 }
-                resolveHostNames(allEvents, this::applyFilters);
+                resolveHostNames(snapshotEvents, generation, resolvedEvents -> {
+                    if (!isAdded() || generation != eventsLoadGeneration) {
+                        return;
+                    }
+
+                    allEvents.clear();
+                    allEvents.addAll(resolvedEvents);
+                    applyFilters();
+                });
             }
         });
     }
@@ -326,13 +351,15 @@ public class ExploreFragment extends Fragment {
      * @param events     The list of events whose host metadata should be populated.
      * @param onComplete Callback executed after all host data has been resolved.
      */
-    private void resolveHostNames(List<Event> events, Runnable onComplete) {
+    private void resolveHostNames(List<Event> events, int generation, HostResolutionCallback callback) {
         Set<String> hostIds = new HashSet<>();
         for (Event e : events) {
             if (e.getHostId() != null && !e.getHostId().isEmpty()) hostIds.add(e.getHostId());
         }
         if (hostIds.isEmpty()) {
-            onComplete.run();
+            if (isAdded() && getView() != null && generation == eventsLoadGeneration) {
+                callback.onResolved(new ArrayList<>(events));
+            }
             return;
         }
 
@@ -366,24 +393,54 @@ public class ExploreFragment extends Fragment {
                         }
                         remaining[0]--;
                         if (remaining[0] == 0) {
-                            for (Event e : events) {
-                                e.setHostName(nameMap.getOrDefault(e.getHostId(), ""));
-                                e.setHostProfilePictureUrl(urlMap.get(e.getHostId()));
+                            if (generation != eventsLoadGeneration) {
+                                return;
                             }
-                            onComplete.run();
+
+                            List<Event> resolvedEvents = new ArrayList<>(events.size());
+                            for (Event event : events) {
+                                event.setHostName(nameMap.getOrDefault(event.getHostId(), ""));
+                                event.setHostProfilePictureUrl(urlMap.get(event.getHostId()));
+                                resolvedEvents.add(event);
+                            }
+                            if (isAdded() && getView() != null) {
+                                callback.onResolved(resolvedEvents);
+                            }
                         }
                     })
                     .addOnFailureListener(e -> {
                         remaining[0]--;
                         if (remaining[0] == 0) {
-                            for (Event ev : events) {
-                                ev.setHostName(nameMap.getOrDefault(ev.getHostId(), ""));
-                                ev.setHostProfilePictureUrl(urlMap.get(ev.getHostId()));
+                            if (generation != eventsLoadGeneration) {
+                                return;
                             }
-                            onComplete.run();
+
+                            List<Event> resolvedEvents = new ArrayList<>(events.size());
+                            for (Event event : events) {
+                                event.setHostName(nameMap.getOrDefault(event.getHostId(), ""));
+                                event.setHostProfilePictureUrl(urlMap.get(event.getHostId()));
+                                resolvedEvents.add(event);
+                            }
+                            if (isAdded() && getView() != null) {
+                                callback.onResolved(resolvedEvents);
+                            }
                         }
                     });
         }
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        eventsLoadGeneration++;
+        if (eventsListener != null) {
+            eventsListener.remove();
+            eventsListener = null;
+        }
+    }
+
+    private interface HostResolutionCallback {
+        void onResolved(List<Event> resolvedEvents);
     }
 
     /**
