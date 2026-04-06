@@ -1,23 +1,15 @@
 package com.example.eventsapp;
 
-import static androidx.test.espresso.Espresso.onView;
-import static androidx.test.espresso.action.ViewActions.scrollTo;
-import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
-import static androidx.test.espresso.matcher.ViewMatchers.withId;
-import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import static androidx.test.espresso.matcher.ViewMatchers.Visibility.GONE;
 
 /**
  * Instrumented test to verify that the AccountFragment correctly displays
@@ -38,18 +30,23 @@ public class AccountFragmentVisualTest {
 
     @Test
     public void testAccountInfoMatchesUser() {
-        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+        try (ActivityScenario<TestHostActivity> scenario = ActivityScenario.launch(TestHostActivity.class)) {
             scenario.onActivity(activity -> {
-                BottomNavigationView bottomNav = activity.findViewById(R.id.bottomNav);
-                bottomNav.setSelectedItemId(R.id.accountFragment);
-            });
+                AccountFragment fragment = new AccountFragment();
+                activity.getSupportFragmentManager().beginTransaction()
+                        .replace(android.R.id.content, fragment)
+                        .commitNow();
 
-            onView(withId(R.id.tvGreeting)).perform(scrollTo());
-            onView(withId(R.id.tvGreeting)).check(matches(withText(containsString("Visual"))));
-            onView(withId(R.id.tvNameValue)).check(matches(withText("Visual Test")));
-            onView(withId(R.id.tvEmailValue)).check(matches(withText("visual@example.com")));
-            onView(withId(R.id.tvLocationValue)).check(matches(withEffectiveVisibility(GONE)));
-            onView(withId(R.id.tvAccountTypeValue)).check(matches(withText("Test Type")));
+                assertThat(activity.<android.widget.TextView>findViewById(R.id.tvGreeting)
+                        .getText().toString(), containsString("Visual"));
+                assertEquals("Visual Test", activity.<android.widget.TextView>findViewById(R.id.tvNameValue)
+                        .getText().toString());
+                assertEquals("visual@example.com", activity.<android.widget.TextView>findViewById(R.id.tvEmailValue)
+                        .getText().toString());
+                assertEquals(android.view.View.GONE, activity.findViewById(R.id.tvLocationValue).getVisibility());
+                assertEquals("Test Type", activity.<android.widget.TextView>findViewById(R.id.tvAccountTypeValue)
+                        .getText().toString());
+            });
         }
     }
 }

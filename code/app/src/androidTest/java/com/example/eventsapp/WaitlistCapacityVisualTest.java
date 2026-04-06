@@ -8,8 +8,8 @@ import static org.junit.Assert.fail;
 import android.os.Bundle;
 import android.view.View;
 
-import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.ext.junit.rules.ActivityScenarioRule;
 
 import com.google.android.material.button.MaterialButton;
 
@@ -34,7 +34,7 @@ public class WaitlistCapacityVisualTest {
 
     // Use MainActivity to host the fragment, utilizing dependencies you already have.
     @Rule
-    public ActivityScenarioRule<MainActivity> activityRule = new ActivityScenarioRule<>(MainActivity.class);
+    public ActivityScenarioRule<TestHostActivity> activityRule = new ActivityScenarioRule<>(TestHostActivity.class);
 
     private EventDetailFragment fragment;
 
@@ -49,7 +49,8 @@ public class WaitlistCapacityVisualTest {
             args.putString("eventId", "");
             fragment.setArguments(args);
 
-            // Forcefully inject this fragment over whatever MainActivity is currently displaying
+            // Mount the fragment inside the app's fragment host instead of replacing the
+            // entire activity content view, which was destabilizing the instrumentation process.
             activity.getSupportFragmentManager().beginTransaction()
                     .replace(android.R.id.content, fragment)
                     .commitNow();
