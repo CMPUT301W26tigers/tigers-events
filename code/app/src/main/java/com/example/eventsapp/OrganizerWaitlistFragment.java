@@ -618,9 +618,9 @@ public class OrganizerWaitlistFragment extends Fragment {
             }
         }
 
-        int available = targetCapacity - occupied;
+        int availableSpots = targetCapacity - occupied;
 
-        if (available <= 0) {
+        if (availableSpots <= 0) {
             TigerToast.show(requireContext(), "No more event space to run a lottery.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -634,30 +634,34 @@ public class OrganizerWaitlistFragment extends Fragment {
         tempSelectedIds.clear();
 
         Collections.shuffle(candidates);
-        int currentCount = 0;
+        int currentPeopleCount = 0;
+        int entityCount = 0;
         
         for (Object candidate : candidates) {
             if (candidate instanceof Entrant) {
-                if (currentCount < available) {
+                if (currentPeopleCount + 1 <= availableSpots) {
                     tempSelectedIds.add(((Entrant) candidate).getId());
-                    currentCount++;
+                    currentPeopleCount++;
+                    entityCount++;
                 }
             } else if (candidate instanceof List) {
                 List<Entrant> group = (List<Entrant>) candidate;
-                if (currentCount < available) {
-                    // Entire group selected as one entity
+                // Only add the group if there is enough room for EVERYONE in it
+                if (currentPeopleCount + group.size() <= availableSpots) {
+                    // Entire group selected
                     for (Entrant ge : group) {
                         tempSelectedIds.add(ge.getId());
                     }
-                    currentCount++; // The group counts as one entity for selection
+                    currentPeopleCount += group.size();
+                    entityCount++;
                 }
             }
-            if (currentCount >= available) break;
+            if (currentPeopleCount >= availableSpots) break;
         }
 
         // Apply draft highlights to EntrantAdapter
         adapter.setTempSelectedIds(tempSelectedIds);
-        TigerToast.show(requireContext(), "Lottery pulled " + currentCount + " entity/entities! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
+        TigerToast.show(requireContext(), "Lottery pulled " + currentPeopleCount + " entrant(s) from " + entityCount + " entity/entities! Click 'Selected' to notify.", Toast.LENGTH_LONG).show();
     }
 
     private interface NotificationAction {void send(String userId);}
@@ -759,7 +763,7 @@ public class OrganizerWaitlistFragment extends Fragment {
                     "No selected entrants to notify",
                     "Failed to notify selected entrants",
                     userId -> notificationHelper.sendInvitationNotification(userId, eventId)
-            );
+                );
         }
     }
     private void notifyNotSelectedEntrants() {

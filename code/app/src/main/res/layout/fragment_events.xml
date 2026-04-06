@@ -168,7 +168,7 @@
         android:paddingEnd="28dp"
         android:visibility="gone"
         app:cornerRadius="26dp"
-        app:backgroundTint="@color/colorPrimary"
+        app:backgroundTint="@color/colorPrimaryContainer"
         android:layout_marginBottom="20dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
