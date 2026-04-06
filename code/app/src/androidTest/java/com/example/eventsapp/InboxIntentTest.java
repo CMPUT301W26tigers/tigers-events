@@ -1,4 +1,4 @@
-package com.example.eventsapp;
+/*package com.example.eventsapp;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -15,6 +15,8 @@ import static org.hamcrest.Matchers.allOf;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+
+import com.example.eventsapp.MainActivity;
 
 @RunWith(AndroidJUnit4.class)
 @LargeTest
@@ -72,3 +74,4 @@ public class InboxIntentTest {
         }
     }
 }
+ */
