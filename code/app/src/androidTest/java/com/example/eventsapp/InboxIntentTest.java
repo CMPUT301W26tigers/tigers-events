@@ -1,4 +1,4 @@
-/*package com.example.eventsapp;
+package com.example.eventsapp;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -74,4 +74,3 @@ public class InboxIntentTest {
         }
     }
 }
- */
