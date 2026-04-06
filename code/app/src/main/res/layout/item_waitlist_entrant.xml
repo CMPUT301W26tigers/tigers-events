@@ -16,76 +16,112 @@
         android:paddingHorizontal="14dp"
         android:paddingVertical="14dp">
 
-        <ImageView
-            android:id="@+id/iv_pin"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:contentDescription="Entrant"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cv_profile_container"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/colorPrimary"
+            app:strokeWidth="0dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:srcCompat="@android:drawable/ic_menu_mylocation"
-            app:tint="@color/colorTextPrimary" />
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/iv_profile_pic"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:contentDescription="Profile picture"/>
+
+            <TextView
+                android:id="@+id/tv_avatar_initial"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"/>
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:id="@+id/tv_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="8dp"
             android:text="First Name Last Name"
             android:textColor="@color/colorTextPrimary"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintStart_toEndOf="@id/iv_pin"
-            app:layout_constraintTop_toTopOf="@id/iv_pin" />
-
-        <ImageView
-            android:id="@+id/iv_mail_icon"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:layout_marginEnd="4dp"
-            android:visibility="gone"
-            app:srcCompat="@android:drawable/ic_dialog_email"
-            app:tint="@color/colorTextSecondary"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintTop_toTopOf="@id/tv_action"
-            app:layout_constraintBottom_toBottomOf="@id/tv_action" />
-        <ImageView
-            android:id="@+id/iv_cancel_entrant"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:visibility="gone"
-            app:srcCompat="@android:drawable/ic_menu_delete"
-            app:tint="@android:color/holo_red_dark"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/iv_pin"
+            app:layout_constraintStart_toEndOf="@id/cv_profile_container"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-        <TextView
-            android:id="@+id/tv_action"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Invited"
-            android:textColor="@color/colorTextSecondary"
-            android:textSize="12sp"
-            app:layout_constraintEnd_toStartOf="@id/iv_cancel_entrant"
-            app:layout_constraintTop_toTopOf="@id/tv_name" />
+            app:layout_constraintBottom_toTopOf="@id/tv_action_sub"
+            app:layout_constraintVertical_chainStyle="packed" />
 
         <TextView
             android:id="@+id/tv_action_sub"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:layout_marginTop="4dp"
-            android:layout_marginEnd="12dp"
+            android:layout_marginEnd="8dp"
             android:text="email@example.com"
             android:textColor="@color/colorTextSecondary"
             android:textSize="12sp"
-            app:layout_constraintEnd_toStartOf="@id/tv_action"
-            app:layout_constraintStart_toEndOf="@id/iv_pin"
-            app:layout_constraintTop_toBottomOf="@id/tv_name" />
+            app:layout_constraintEnd_toStartOf="@id/iv_pin"
+            app:layout_constraintStart_toEndOf="@id/cv_profile_container"
+            app:layout_constraintTop_toBottomOf="@id/tv_name"
+            app:layout_constraintBottom_toTopOf="@id/tv_action" />
+
+        <TextView
+            android:id="@+id/tv_action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Invited"
+            android:textColor="@color/colorTextSecondary"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/cv_profile_container"
+            app:layout_constraintTop_toBottomOf="@id/tv_action_sub"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageView
+            android:id="@+id/iv_mail_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="4dp"
+            android:visibility="gone"
+            app:srcCompat="@android:drawable/ic_dialog_email"
+            app:tint="@color/colorTextSecondary"
+            app:layout_constraintStart_toEndOf="@id/tv_action"
+            app:layout_constraintTop_toTopOf="@id/tv_action"
+            app:layout_constraintBottom_toBottomOf="@id/tv_action" />
+
+        <ImageView
+            android:id="@+id/iv_pin"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:contentDescription="Location"
+            app:layout_constraintEnd_toStartOf="@id/iv_cancel_entrant"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:srcCompat="@android:drawable/ic_menu_mylocation"
+            app:tint="@color/colorTextPrimary" />
+
+        <ImageView
+            android:id="@+id/iv_cancel_entrant"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:visibility="gone"
+            app:srcCompat="@android:drawable/ic_menu_delete"
+            app:tint="@android:color/holo_red_dark"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
