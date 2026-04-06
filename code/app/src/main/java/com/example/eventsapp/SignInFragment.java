@@ -1,7 +1,6 @@
 package com.example.eventsapp;
 
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.CheckBox;
@@ -12,7 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavOptions;
-import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -26,6 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
  */
 public class SignInFragment extends Fragment {
     private boolean isSignUpMode = false;
+    private boolean bootstrapHandled = false;
 
     /**
      * Default constructor for SignInFragment.
@@ -47,25 +47,7 @@ public class SignInFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Try auto-login via remembered device
-        String deviceId = Settings.Secure.getString(
-                requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-        if (deviceId != null && !deviceId.isEmpty()) {
-            db.collection("users").whereEqualTo("deviceId", deviceId).get()
-                    .addOnSuccessListener(querySnapshot -> {
-                        if (!querySnapshot.isEmpty()) {
-                            Users user = querySnapshot.getDocuments().get(0).toObject(Users.class);
-                            if (user != null) {
-                                user.setId(querySnapshot.getDocuments().get(0).getId());
-                                UserManager.getInstance().setCurrentUser(user);
-                                TigerToast.show(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT);
-                                navigateToExplore(view);
-                            }
-                        }
-                    });
-        }
 
         // Find views
         TextInputEditText etUsername = view.findViewById(R.id.etUsername);
@@ -93,6 +75,25 @@ public class SignInFragment extends Fragment {
                 tvPhoneNumber, tilPhoneNumber, tvConfirmPassword, tilConfirmPassword,
                 cbRememberDevice
         };
+
+        setAuthInputsEnabled(false, etUsername, etPassword, etFirstName, etLastName, etPhoneNumber,
+                etConfirmPassword, btnSignIn, tvToggleMode, cbRememberDevice);
+
+        UserManager.getInstance().bootstrapSession(requireContext(), user -> {
+            if (!isAdded() || getView() == null || bootstrapHandled) {
+                return;
+            }
+
+            bootstrapHandled = true;
+            if (user != null) {
+                TigerToast.show(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT);
+                navigateToExplore();
+                return;
+            }
+
+            setAuthInputsEnabled(true, etUsername, etPassword, etFirstName, etLastName, etPhoneNumber,
+                    etConfirmPassword, btnSignIn, tvToggleMode, cbRememberDevice);
+        });
 
         // Toggle between sign-in and sign-up
         tvToggleMode.setOnClickListener(v -> {
@@ -123,10 +124,10 @@ public class SignInFragment extends Fragment {
             }
 
             if (isSignUpMode) {
-                handleSignUp(view, db, etFirstName, etLastName, etPhoneNumber,
-                        etConfirmPassword, cbRememberDevice, email, password, deviceId);
+                handleSignUp(db, etFirstName, etLastName, etPhoneNumber,
+                        etConfirmPassword, cbRememberDevice, email, password);
             } else {
-                handleSignIn(view, db, email, password);
+                handleSignIn(db, email, password);
             }
         });
     }
@@ -134,12 +135,11 @@ public class SignInFragment extends Fragment {
     /**
      * Processes a sign-in request by verifying credentials against Firestore.
      *
-     * @param view The current view.
      * @param db The Firestore database instance.
      * @param email The user's email.
      * @param password The user's password.
      */
-    private void handleSignIn(View view, FirebaseFirestore db, String email, String password) {
+    private void handleSignIn(FirebaseFirestore db, String email, String password) {
         db.collection("users").whereEqualTo("email", email).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
@@ -150,7 +150,7 @@ public class SignInFragment extends Fragment {
                             if (user.login(email, password)) {
                                 UserManager.getInstance().setCurrentUser(user);
                                 TigerToast.show(getContext(), "Welcome " + user.getName(), Toast.LENGTH_SHORT);
-                                navigateToExplore(view);
+                                navigateToExplore();
                             } else {
                                 TigerToast.show(getContext(), "Invalid password", Toast.LENGTH_SHORT);
                             }
@@ -166,7 +166,6 @@ public class SignInFragment extends Fragment {
     /**
      * Processes a sign-up request by creating a new user document in Firestore.
      *
-     * @param view The current view.
      * @param db The Firestore database instance.
      * @param etFirstName Input field for first name.
      * @param etLastName Input field for last name.
@@ -177,10 +176,10 @@ public class SignInFragment extends Fragment {
      * @param password The user's password.
      * @param deviceId The unique ID of the device.
      */
-    private void handleSignUp(View view, FirebaseFirestore db,
+    private void handleSignUp(FirebaseFirestore db,
                               TextInputEditText etFirstName, TextInputEditText etLastName,
                               TextInputEditText etPhoneNumber, TextInputEditText etConfirmPassword,
-                              CheckBox cbRememberDevice, String email, String password, String deviceId) {
+                              CheckBox cbRememberDevice, String email, String password) {
         String firstName = etFirstName.getText().toString().trim();
         String lastName = etLastName.getText().toString().trim();
         String phone = etPhoneNumber.getText().toString().trim();
@@ -204,6 +203,8 @@ public class SignInFragment extends Fragment {
                         return;
                     }
 
+                    String deviceId = android.provider.Settings.Secure.getString(
+                            requireContext().getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
                     String userDeviceId = cbRememberDevice.isChecked() ? deviceId : null;
                     Users newUser = new Users(firstName, lastName, email, password, phone, userDeviceId);
 
@@ -213,7 +214,7 @@ public class SignInFragment extends Fragment {
                             .addOnSuccessListener(aVoid -> {
                                 UserManager.getInstance().setCurrentUser(newUser);
                                 TigerToast.show(getContext(), "Account created! Welcome " + newUser.getName(), Toast.LENGTH_SHORT);
-                                navigateToExplore(view);
+                                navigateToExplore();
                             })
                             .addOnFailureListener(e ->
                                     TigerToast.show(getContext(), "Error creating account: " + e.getMessage(), Toast.LENGTH_SHORT));
@@ -225,12 +226,24 @@ public class SignInFragment extends Fragment {
     /**
      * Navigates to the explore events screen and removes the sign-in fragment from the back stack.
      *
-     * @param view The current view.
      */
-    private void navigateToExplore(View view) {
+    private void navigateToExplore() {
+        if (!isAdded()) {
+            return;
+        }
+
         NavOptions navOptions = new NavOptions.Builder()
                 .setPopUpTo(R.id.signInFragment, true)
                 .build();
-        Navigation.findNavController(view).navigate(R.id.exploreFragment, null, navOptions);
+
+        NavHostFragment.findNavController(this).navigate(R.id.exploreFragment, null, navOptions);
+    }
+
+    private void setAuthInputsEnabled(boolean enabled, View... views) {
+        for (View control : views) {
+            if (control != null) {
+                control.setEnabled(enabled);
+            }
+        }
     }
 }
