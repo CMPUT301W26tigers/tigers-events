@@ -1,5 +1,6 @@
 package com.example.eventsapp;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -19,8 +20,10 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -33,7 +36,7 @@ import java.util.Locale;
  *
  * <p>Features:
  * <ul>
- *   <li>Real-time synchronisation with the {@code enrolled} sub-collection.</li>
+ *   <li>Real-time synchronisation with the {@code entrants} sub-collection (filtered by ACCEPTED).</li>
  *   <li>Name/email search filter.</li>
  *   <li>CSV export via the system document-creator contract.</li>
  *   <li>Navigation to the cancelled-entrants screen.</li>
@@ -51,8 +54,7 @@ public class OrganizerEnrolledFragment extends Fragment {
     private MaterialButton btnSeeCancelled;
 
     private FirebaseFirestore db;
-    private CollectionReference enrolledRef;
-
+    private CollectionReference entrantsRef;
     private final ArrayList<Entrant> allEnrolledEntrants = new ArrayList<>();
     private final ArrayList<Entrant> filteredEnrolledEntrants = new ArrayList<>();
     private EnrolledEntrantAdapter adapter;
@@ -141,11 +143,12 @@ public class OrganizerEnrolledFragment extends Fragment {
         }
 
         db = FirebaseFirestore.getInstance();
-        enrolledRef = db.collection("events")
+        entrantsRef = db.collection("events")
                 .document(eventId)
-                .collection("enrolled");
+                .collection("entrants");
 
         adapter = new EnrolledEntrantAdapter(requireContext(), filteredEnrolledEntrants);
+        adapter.setOnCancelEntrantListener(this::confirmCancelEntrant);
         rvEnrolled.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvEnrolled.setAdapter(adapter);
 
@@ -180,40 +183,67 @@ public class OrganizerEnrolledFragment extends Fragment {
     }
 
     private void loadEnrolledEntrants() {
-        enrolledRef.addSnapshotListener((value, error) -> {
-            if (error != null) {
-                TigerToast.show(requireContext(), "Failed to load enrolled entrants", Toast.LENGTH_SHORT);
-                return;
-            }
-
-            allEnrolledEntrants.clear();
-
-            if (value != null) {
-                for (QueryDocumentSnapshot snapshot : value) {
-                    String userId = snapshot.getId();
-                    String name = snapshot.getString("name");
-                    String email = snapshot.getString("email");
-                    String statusStr = snapshot.getString("status");
-
-                    if (name == null) name = "Unknown User";
-                    if (email == null) email = "No email";
-
-                    Entrant.Status statusEnum;
-                    try {
-                        statusEnum = (statusStr != null) ? Entrant.Status.valueOf(statusStr) : Entrant.Status.ACCEPTED;
-                    } catch (IllegalArgumentException e) {
-                        statusEnum = Entrant.Status.ACCEPTED;
+        entrantsRef.whereEqualTo("status", Entrant.Status.ACCEPTED.name())
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        TigerToast.show(requireContext(), "Failed to load enrolled entrants", Toast.LENGTH_SHORT);
+                        return;
                     }
 
-                    Entrant entrant = new Entrant(userId, eventId, name, email, statusEnum);
-                    entrant.setUserId(userId);
-                    allEnrolledEntrants.add(entrant);
-                }
-            }
+                    allEnrolledEntrants.clear();
 
-            String query = etSearchEnrolled.getText() != null ? etSearchEnrolled.getText().toString() : "";
-            filterEntrants(query);
-        });
+                    if (value != null) {
+                        for (QueryDocumentSnapshot snapshot : value) {
+                            String userId = snapshot.getId();
+                            String name = snapshot.getString("name");
+                            String email = snapshot.getString("email");
+                            String statusStr = snapshot.getString("status");
+
+                            if (name == null) name = "Unknown User";
+                            if (email == null) email = "No email";
+
+                            Entrant.Status statusEnum;
+                            try {
+                                statusEnum = (statusStr != null) ? Entrant.Status.valueOf(statusStr) : Entrant.Status.ACCEPTED;
+                            } catch (IllegalArgumentException e) {
+                                statusEnum = Entrant.Status.ACCEPTED;
+                            }
+
+                            Entrant entrant = new Entrant(userId, eventId, name, email, statusEnum);
+                            entrant.setUserId(userId);
+                            allEnrolledEntrants.add(entrant);
+                        }
+                    }
+                    String query = etSearchEnrolled.getText() != null ? etSearchEnrolled.getText().toString() : "";
+                    filterEntrants(query);
+                });
+    }
+
+    private void confirmCancelEntrant(Entrant entrant) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Remove Participant")
+                .setMessage("Are you sure you want to remove " + entrant.getName() + " from the event?\nThey will be removed from the enrolled list.")
+                .setPositiveButton("Remove", (dialog, which) -> cancelEntrant(entrant))
+                .setNegativeButton("Keep", null)
+                .show();
+    }
+
+    private void cancelEntrant(Entrant entrant) {
+        db.collection("events")
+                .document(eventId)
+                .collection("entrants")
+                .document(entrant.getId())
+                .update("status", Entrant.Status.CANCELLED.name())
+                .addOnSuccessListener(aVoid -> {
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), entrant.getName() + " was removed", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (getContext() != null) {
+                        Toast.makeText(requireContext(), "Failed to remove entrant", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void filterEntrants(@NonNull String query) {
