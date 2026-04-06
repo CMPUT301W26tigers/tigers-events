@@ -4,10 +4,14 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 
@@ -55,19 +59,50 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
      */
     @Override
     public void onBindViewHolder(@NonNull CancelledViewHolder holder, int position) {
-        Entrant entrant = entrants.get(position);
 
-        holder.tvName.setText(entrant.getName() != null && !entrant.getName().isEmpty() ? entrant.getName() : "Unknown");
-        holder.tvEmail.setText(entrant.getEmail() != null ? entrant.getEmail() : "No email");
+        Entrant e = entrants.get(position);
 
         // Formally label whether they cancelled or declined
-        if (entrant.getStatus() == Entrant.Status.DECLINED) {
+        if (e.getStatus() == Entrant.Status.DECLINED) {
             holder.tvStatus.setText("Declined");
-        } else if (entrant.getStatus() == Entrant.Status.CANCELLED) {
+        } else if (e.getStatus() == Entrant.Status.CANCELLED) {
             holder.tvStatus.setText("Cancelled");
         } else {
             holder.tvStatus.setText("Unknown");
         }
+
+        String nameText = e.getName() != null && !e.getName().trim().isEmpty() ? e.getName().trim() : "Unknown";
+        holder.tvName.setText(nameText);
+
+        // Default Avatar Initial state (clears old data for view recycling)
+        String initial = nameText.equals("Unknown") ? "?" : nameText.substring(0, 1).toUpperCase();
+        holder.tvAvatarInitial.setText(initial);
+        holder.tvAvatarInitial.setVisibility(View.VISIBLE);
+        holder.ivProfilePic.setVisibility(View.GONE);
+        Glide.with(holder.itemView.getContext()).clear(holder.ivProfilePic);
+
+        // Fetch Profile Picture dynamically
+        String userId = e.getId();
+        holder.itemView.setTag(userId); // Tag prevents image loading into the wrong row if scrolled fast
+        if (userId != null && !userId.isEmpty()) {
+            FirebaseFirestore.getInstance().collection("users").document(userId).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        // Ensure view hasn't been recycled for another entrant
+                        if (userId.equals(holder.itemView.getTag()) && documentSnapshot.exists()) {
+                            String url = documentSnapshot.getString("profilePictureUrl");
+                            if (url != null && !url.isEmpty()) {
+                                holder.ivProfilePic.setVisibility(View.VISIBLE);
+                                holder.tvAvatarInitial.setVisibility(View.GONE);
+                                Glide.with(holder.itemView.getContext())
+                                        .load(url)
+                                        .circleCrop()
+                                        .into(holder.ivProfilePic);
+                            }
+                        }
+                    });
+        }
+
+        holder.tvEmail.setText(e.getEmail() != null ? e.getEmail() : "No email");
     }
 
     /**
@@ -89,6 +124,8 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
         TextView tvName;
         TextView tvEmail;
         TextView tvStatus;
+        ImageView ivProfilePic;
+        TextView tvAvatarInitial;
 
         /**
          * Constructs a CancelledViewHolder and resolves all child view references.
@@ -100,6 +137,8 @@ public class CancelledEntrantAdapter extends RecyclerView.Adapter<CancelledEntra
             tvName = itemView.findViewById(R.id.tv_name);
             tvEmail = itemView.findViewById(R.id.tv_email);
             tvStatus = itemView.findViewById(R.id.tv_status);
+            ivProfilePic = itemView.findViewById(R.id.iv_profile_pic);
+            tvAvatarInitial = itemView.findViewById(R.id.tv_avatar_initial);
         }
     }
 }

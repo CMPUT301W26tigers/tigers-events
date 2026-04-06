@@ -4,10 +4,14 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 
@@ -54,10 +58,41 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
      */
     @Override
     public void onBindViewHolder(@NonNull EnrolledViewHolder holder, int position) {
-        Entrant entrant = entrants.get(position);
-        holder.tvName.setText(entrant.getName());
-        holder.tvEmail.setText(entrant.getEmail());
-        holder.tvStatus.setText(entrant.getStatus() != null ? entrant.getStatus().name() : "ACCEPTED");
+        Entrant e = entrants.get(position);
+
+        String nameText = e.getName() != null && !e.getName().trim().isEmpty() ? e.getName().trim() : "Unknown";
+        holder.tvName.setText(nameText);
+
+        // Default Avatar Initial state (clears old data for view recycling)
+        String initial = nameText.equals("Unknown") ? "?" : nameText.substring(0, 1).toUpperCase();
+        holder.tvAvatarInitial.setText(initial);
+        holder.tvAvatarInitial.setVisibility(View.VISIBLE);
+        holder.ivProfilePic.setVisibility(View.GONE);
+        Glide.with(holder.itemView.getContext()).clear(holder.ivProfilePic);
+
+        // Fetch Profile Picture dynamically
+        String userId = e.getId();
+        holder.itemView.setTag(userId); // Tag prevents image loading into the wrong row if scrolled fast
+        if (userId != null && !userId.isEmpty()) {
+            FirebaseFirestore.getInstance().collection("users").document(userId).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        // Ensure view hasn't been recycled for another entrant
+                        if (userId.equals(holder.itemView.getTag()) && documentSnapshot.exists()) {
+                            String url = documentSnapshot.getString("profilePictureUrl");
+                            if (url != null && !url.isEmpty()) {
+                                holder.ivProfilePic.setVisibility(View.VISIBLE);
+                                holder.tvAvatarInitial.setVisibility(View.GONE);
+                                Glide.with(holder.itemView.getContext())
+                                        .load(url)
+                                        .circleCrop()
+                                        .into(holder.ivProfilePic);
+                            }
+                        }
+                    });
+        }
+
+        holder.tvStatus.setText(e.getStatus() != null ? e.getStatus().name() : "ACCEPTED");
+        holder.tvEmail.setText(e.getEmail() != null ? e.getEmail() : "");
     }
 
     /**
@@ -79,6 +114,8 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
         TextView tvName;
         TextView tvEmail;
         TextView tvStatus;
+        ImageView ivProfilePic;
+        TextView tvAvatarInitial;
 
         /**
          * Constructs an EnrolledViewHolder and resolves all child view references.
@@ -90,6 +127,8 @@ public class EnrolledEntrantAdapter extends RecyclerView.Adapter<EnrolledEntrant
             tvName = itemView.findViewById(R.id.tv_name);
             tvEmail = itemView.findViewById(R.id.tv_email);
             tvStatus = itemView.findViewById(R.id.tv_status);
+            ivProfilePic = itemView.findViewById(R.id.iv_profile_pic);
+            tvAvatarInitial = itemView.findViewById(R.id.tv_avatar_initial);
         }
     }
 }
