@@ -11,7 +11,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashSet;
 import java.util.List;
@@ -118,7 +120,38 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Entrant e = entrants.get(position);
-        holder.tvName.setText(e.getName() != null && !e.getName().isEmpty() ? e.getName() : "Unknown");
+
+        String nameText = e.getName() != null && !e.getName().trim().isEmpty() ? e.getName().trim() : "Unknown";
+        holder.tvName.setText(nameText);
+
+        // Default Avatar Initial state (clears old data for view recycling)
+        String initial = nameText.equals("Unknown") ? "?" : nameText.substring(0, 1).toUpperCase();
+        holder.tvAvatarInitial.setText(initial);
+        holder.tvAvatarInitial.setVisibility(View.VISIBLE);
+        holder.ivProfilePic.setVisibility(View.GONE);
+        Glide.with(holder.itemView.getContext()).clear(holder.ivProfilePic);
+
+        // Fetch Profile Picture dynamically
+        String userId = e.getId();
+        holder.itemView.setTag(userId); // Tag prevents image loading into the wrong row if scrolled fast
+        if (userId != null && !userId.isEmpty()) {
+            FirebaseFirestore.getInstance().collection("users").document(userId).get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        // Ensure view hasn't been recycled for another entrant
+                        if (userId.equals(holder.itemView.getTag()) && documentSnapshot.exists()) {
+                            String url = documentSnapshot.getString("profilePictureUrl");
+                            if (url != null && !url.isEmpty()) {
+                                holder.ivProfilePic.setVisibility(View.VISIBLE);
+                                holder.tvAvatarInitial.setVisibility(View.GONE);
+                                Glide.with(holder.itemView.getContext())
+                                        .load(url)
+                                        .circleCrop()
+                                        .into(holder.ivProfilePic);
+                            }
+                        }
+                    });
+        }
+
         holder.tvAction.setText(getStatusLabel(e.getStatus()));
         holder.tvActionSub.setText(e.getEmail() != null ? e.getEmail() : "");
 
@@ -214,6 +247,9 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
         ImageView ivPin;
         ImageView ivMailIcon;
         ImageView ivCancel;
+        ImageView ivProfilePic;
+        TextView tvAvatarInitial;
+
         ColorStateList defaultActionTextColor;
 
         /**
@@ -232,6 +268,8 @@ public class EntrantAdapter extends RecyclerView.Adapter<EntrantAdapter.ViewHold
             ivPin = itemView.findViewById(R.id.iv_pin);
             ivMailIcon = itemView.findViewById(R.id.iv_mail_icon);
             ivCancel = itemView.findViewById(R.id.iv_cancel_entrant);
+            ivProfilePic = itemView.findViewById(R.id.iv_profile_pic);
+            tvAvatarInitial = itemView.findViewById(R.id.tv_avatar_initial);
             defaultActionTextColor = tvAction.getTextColors();
         }
     }
