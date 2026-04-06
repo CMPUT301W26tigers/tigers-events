@@ -1,7 +1,6 @@
 package com.example.eventsapp;
 
 import android.os.Bundle;
-import android.provider.Settings;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.CheckBox;
@@ -26,6 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
  */
 public class SignInFragment extends Fragment {
     private boolean isSignUpMode = false;
+    private boolean bootstrapHandled = false;
 
     /**
      * Default constructor for SignInFragment.
@@ -47,30 +47,7 @@ public class SignInFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        if (UserManager.getInstance().isLoggedIn()) {
-            navigateToExplore();
-            return;
-        }
-
-        // Try auto-login via remembered device
-        String deviceId = Settings.Secure.getString(
-                requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-
-        if (deviceId != null && !deviceId.isEmpty()) {
-            db.collection("users").whereEqualTo("deviceId", deviceId).get()
-                    .addOnSuccessListener(querySnapshot -> {
-                        if (!querySnapshot.isEmpty()) {
-                            Users user = querySnapshot.getDocuments().get(0).toObject(Users.class);
-                            if (user != null) {
-                                user.setId(querySnapshot.getDocuments().get(0).getId());
-                                UserManager.getInstance().setCurrentUser(user);
-                                TigerToast.show(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT);
-                                navigateToExplore();
-                            }
-                        }
-                    });
-        }
 
         // Find views
         TextInputEditText etUsername = view.findViewById(R.id.etUsername);
@@ -98,6 +75,25 @@ public class SignInFragment extends Fragment {
                 tvPhoneNumber, tilPhoneNumber, tvConfirmPassword, tilConfirmPassword,
                 cbRememberDevice
         };
+
+        setAuthInputsEnabled(false, etUsername, etPassword, etFirstName, etLastName, etPhoneNumber,
+                etConfirmPassword, btnSignIn, tvToggleMode, cbRememberDevice);
+
+        UserManager.getInstance().bootstrapSession(requireContext(), user -> {
+            if (!isAdded() || getView() == null || bootstrapHandled) {
+                return;
+            }
+
+            bootstrapHandled = true;
+            if (user != null) {
+                TigerToast.show(getContext(), "Welcome back, " + user.getName(), Toast.LENGTH_SHORT);
+                navigateToExplore();
+                return;
+            }
+
+            setAuthInputsEnabled(true, etUsername, etPassword, etFirstName, etLastName, etPhoneNumber,
+                    etConfirmPassword, btnSignIn, tvToggleMode, cbRememberDevice);
+        });
 
         // Toggle between sign-in and sign-up
         tvToggleMode.setOnClickListener(v -> {
@@ -129,7 +125,7 @@ public class SignInFragment extends Fragment {
 
             if (isSignUpMode) {
                 handleSignUp(db, etFirstName, etLastName, etPhoneNumber,
-                        etConfirmPassword, cbRememberDevice, email, password, deviceId);
+                        etConfirmPassword, cbRememberDevice, email, password);
             } else {
                 handleSignIn(db, email, password);
             }
@@ -183,7 +179,7 @@ public class SignInFragment extends Fragment {
     private void handleSignUp(FirebaseFirestore db,
                               TextInputEditText etFirstName, TextInputEditText etLastName,
                               TextInputEditText etPhoneNumber, TextInputEditText etConfirmPassword,
-                              CheckBox cbRememberDevice, String email, String password, String deviceId) {
+                              CheckBox cbRememberDevice, String email, String password) {
         String firstName = etFirstName.getText().toString().trim();
         String lastName = etLastName.getText().toString().trim();
         String phone = etPhoneNumber.getText().toString().trim();
@@ -207,6 +203,8 @@ public class SignInFragment extends Fragment {
                         return;
                     }
 
+                    String deviceId = android.provider.Settings.Secure.getString(
+                            requireContext().getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
                     String userDeviceId = cbRememberDevice.isChecked() ? deviceId : null;
                     Users newUser = new Users(firstName, lastName, email, password, phone, userDeviceId);
 
@@ -239,5 +237,13 @@ public class SignInFragment extends Fragment {
                 .build();
 
         NavHostFragment.findNavController(this).navigate(R.id.exploreFragment, null, navOptions);
+    }
+
+    private void setAuthInputsEnabled(boolean enabled, View... views) {
+        for (View control : views) {
+            if (control != null) {
+                control.setEnabled(enabled);
+            }
+        }
     }
 }

@@ -49,7 +49,7 @@ public class LotteryNotificationControllerIntentTest {
     }
 
     @Test
-    public void performSelection_keepsFriendGroupTogetherWhenOnlyOneEntityFits() {
+    public void performSelection_skipsFriendGroupWhenWholeGroupCannotFit() {
         LotteryNotificationController controller = new LotteryNotificationController();
         Entrant friendOne = new Entrant("grp-1", "evt-20", "Emma Clarke", "emma@example.com", Entrant.Status.APPLIED);
         Entrant friendTwo = new Entrant("grp-2", "evt-20", "Priya Nair", "priya@example.com", Entrant.Status.APPLIED);
@@ -58,9 +58,7 @@ public class LotteryNotificationControllerIntentTest {
 
         List<Entrant> selected = controller.performSelection(Arrays.asList(friendOne, friendTwo), 1, 0);
 
-        assertEquals(2, selected.size());
-        assertTrue(selected.contains(friendOne));
-        assertTrue(selected.contains(friendTwo));
+        assertTrue(selected.isEmpty());
     }
 
     @Test

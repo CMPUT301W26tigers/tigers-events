@@ -4,8 +4,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class SessionAndCleanupRegressionTest {
@@ -34,31 +34,27 @@ public class SessionAndCleanupRegressionTest {
     }
 
     @Test
-    public void userSession_resetDemoUserRestoresExpectedNotifications() {
-        UserSession.resetDemoUser();
+    public void userManager_logoutClearsCurrentUser() {
+        UserManager manager = UserManager.getInstance();
+        manager.setCurrentUser(new Users("Rishawn", "Paramapathy", "rishawn@ualberta.ca",
+                "Edmonton, AB", "Entrant", true));
 
-        Users demoUser = UserSession.getCurrentUser();
-        assertNotNull(demoUser);
-        assertEquals("Rishawn Paramapathy", demoUser.getName());
-        assertEquals(2, demoUser.getNotifications().size());
-        assertEquals("Event Invitation", demoUser.getNotifications().get(0).getTitle());
-        assertEquals("Event waitlisted", demoUser.getNotifications().get(1).getTitle());
+        manager.logout();
+
+        assertFalse(manager.isLoggedIn());
+        assertNull(manager.getCurrentUser());
     }
 
     @Test
-    public void userSession_resetDemoUserReplacesMutatedSessionState() {
-        UserSession.resetDemoUser();
-        Users original = UserSession.getCurrentUser();
-        original.acceptInvitation("Campus Startup Showcase");
-        original.removeNotification(original.getNotifications().get(0));
+    public void userManager_logoutPreservesBootstrapCompletionState() {
+        UserManager manager = UserManager.getInstance();
+        manager.setCurrentUser(new Users("Rishawn", "Paramapathy", "rishawn@ualberta.ca",
+                "Edmonton, AB", "Entrant", true));
 
-        UserSession.resetDemoUser();
-        Users reset = UserSession.getCurrentUser();
+        manager.logout();
 
-        assertNotNull(reset);
-        assertEquals(2, reset.getNotifications().size());
-        assertTrue(reset.getInvitedEvents().contains("Campus Startup Showcase"));
-        assertFalse(reset.getRegisteredEvents().contains("Campus Startup Showcase"));
+        assertTrue(manager.isSessionBootstrapComplete());
+        assertFalse(manager.isSessionBootstrapInProgress());
     }
 
     @Test

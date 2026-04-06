@@ -1,6 +1,7 @@
 package com.example.eventsapp;
 
 import static androidx.test.espresso.Espresso.onView;
+import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
@@ -9,7 +10,8 @@ import static org.hamcrest.Matchers.containsString;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.espresso.action.ViewActions;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -37,8 +39,12 @@ public class AccountFragmentVisualTest {
     @Test
     public void testAccountInfoMatchesUser() {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-            onView(withId(R.id.accountFragment)).perform(ViewActions.click());
+            scenario.onActivity(activity -> {
+                BottomNavigationView bottomNav = activity.findViewById(R.id.bottomNav);
+                bottomNav.setSelectedItemId(R.id.accountFragment);
+            });
 
+            onView(withId(R.id.tvGreeting)).perform(scrollTo());
             onView(withId(R.id.tvGreeting)).check(matches(withText(containsString("Visual"))));
             onView(withId(R.id.tvNameValue)).check(matches(withText("Visual Test")));
             onView(withId(R.id.tvEmailValue)).check(matches(withText("visual@example.com")));
